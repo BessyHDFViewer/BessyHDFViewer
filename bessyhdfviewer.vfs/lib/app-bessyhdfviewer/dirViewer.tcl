@@ -210,16 +210,18 @@ namespace eval dirViewer {} {
 				
 				set dirname [file normalize $dirname]
 				set dirtail [file tail $dirname]
-				
-				lappend itemList [list [list directory $dirtail] {*}[uplevel #0 $options(-classifycommand) [list directory $dirname]] $dirname]
+				set class [uplevel #0 $options(-classifycommand) [list directory $dirname]]
+				if {$class != {}} {
+					lappend itemList [list [list directory $dirtail] {*}$class $dirname]
+				}
 
 			}
 			
 			foreach fn [glob -nocomplain -types f -directory $dir {*}$options(-globpattern)] {
 				set fullname [file normalize $fn]
 				set tail [file tail $fn]
-				
-				lappend itemList [list [list file $tail] {*}[uplevel #0 $options(-classifycommand) [list file $fullname]] $fullname]
+				set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
+				lappend itemList [list [list file $tail] {*}$class $fullname]
 
 
 			}

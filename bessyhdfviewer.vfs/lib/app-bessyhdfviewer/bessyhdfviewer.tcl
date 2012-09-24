@@ -1,3 +1,5 @@
+package provide app-bessyhdfviewer 1.0
+
 set basedir [file dirname [info script]]
 lappend auto_path [file join $basedir lib]
 
@@ -67,17 +69,22 @@ proc InitGUI {} {
 
 proc ClassifyHDF {type fn} {
 	variable w
+	
+	if {[catch {file mtime $fn} mtime]} {
+		# could not get mtime - something is wrong
+		return {}
+	}
+
 	if {$type == "directory"} {
-		return [list "" "" [file mtime $fn] ""]
+		return [list "" "" $mtime ""]
 	}
 
 	if {[catch {bessy_class [bessy_reshape $fn]} class]} {
 		puts "Error reading hdf file $fn"
-		return [list "" "" [file mtime $fn] [IconGet unknown]]
+		return [list "" "" $mtime [IconGet unknown]]
 	} else {
 		puts "$fn $class"
 		lassign $class img motor detector
-		set mtime [file mtime $fn]
 		if {$img} {
 			return [list $motor $detector $mtime [IconGet image-x-generic]]
 		} elseif {$motor != ""} {
