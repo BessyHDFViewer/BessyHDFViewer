@@ -1,7 +1,174 @@
-lappend auto_path 
+set basedir [file dirname [info script]]
+lappend auto_path [file join $basedir lib]
 
 package require hdfpp
 package require ukaz
+package require tablelist_tile
+
+variable ns [namespace current]
+
+source [file join $basedir dirViewer.tcl]
+
+proc InitGUI {} {
+	variable w
+	variable ns
+	# paned window, left file selection, right plot window
+	set w(mainfr) [ttk::panedwindow .mainfr -orient horizontal]
+	pack $w(mainfr) -expand yes -fill both
+
+	set w(listfr) [ttk::frame $w(mainfr).listfr]
+	set w(plotfr) [ttk::frame $w(mainfr).plotfr]
+
+	$w(mainfr) add $w(listfr)
+	$w(mainfr) add $w(plotfr)
+
+	set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
+	variable browsepath [file normalize [pwd]]
+
+	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist [pwd] \
+		-columns \
+		{
+			0 "Motor" left
+			0 "Detector" left
+			0 "Modified" left
+		} \
+		-classifycommand ${ns}::ClassifyHDF \
+		-selectcommand ${ns}::PreviewFile \
+		-globpattern {*.hdf} \
+		-columnoptions [list {} {} [list -sortmode integer -formatcommand ${ns}::formatDate ]]]
+
+	grid $w(pathent) -sticky nsew 
+	grid $w(filelist) -sticky nsew
+	grid rowconfigure $w(listfr) $w(filelist) -weight 1
+	grid columnconfigure $w(listfr) 0 -weight 1
+
+	set w(canv) [canvas $w(plotfr).c]
+	set w(bbar) [ttk::frame $w(plotfr).bbar]
+	grid $w(bbar) -sticky nsew
+	grid $w(canv) -sticky nsew
+	grid columnconfigure $w(plotfr) 0 -weight 1
+	grid rowconfigure $w(plotfr) 1 -weight 1
+
+	# Toolbar
+	set w(xlbl) [ttk::label $w(bbar).xlbl -text "X axis:"]
+	set w(xent) [ttk::combobox $w(bbar).xent -textvariable ${ns}::xformat -exportselection 0]
+	set w(ylbl) [ttk::label $w(bbar).ylbl -text "Y axis:"]
+	set w(yent) [ttk::combobox $w(bbar).yent -textvariable ${ns}::yformat -exportselection 0]
+	
+	bind $w(xent) <<ComboboxSelected>> ${ns}::RePlot
+	bind $w(yent) <<ComboboxSelected>> ${ns}::RePlot
+
+
+	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky nsew
+
+	set w(Graph) [ukaz::box %AUTO% $w(canv)]
+	
+}
+
+proc ClassifyHDF {type fn} {
+	variable w
+	if {$type == "directory"} {
+		return [list "" "" [file mtime $fn] ""]
+	}
+
+	if {[catch {bessy_class [bessy_reshape $fn]} class]} {
+		puts "Error reading hdf file $fn"
+		return [list "" "" [file mtime $fn] [IconGet unknown]]
+	} else {
+		puts "$fn $class"
+		lassign $class img motor detector
+		set mtime [file mtime $fn]
+		if {$img} {
+			return [list $motor $detector $mtime [IconGet image-x-generic]]
+		} elseif {$motor != ""} {
+			return [list $motor $detector $mtime [IconGet graph]]
+		} else {
+			return [list $motor $detector $mtime [IconGet unknown]]
+		}
+	}
+}
+
+proc PreviewFile {fn} {
+	# get selected file from list
+	variable w
+
+	variable hdfdata [bessy_reshape $fn]
+
+	# insert available axes into axis choosers
+	if {[catch {
+		set motors [dict keys [dict get $hdfdata Motor]]
+		set detectors [dict keys [dict get $hdfdata Detector]]
+		set axes $motors
+		lappend axes {*}$detectors
+
+		$w(xent) configure -values $motors 
+		$w(yent) configure -values $detectors
+	}]} {
+		# could not get sensible plot axes - not BESSY hdf?
+		$w(xent) configure -values {}
+		$w(yent) configure -values {}
+		return 
+	}
+
+	# select the motor/det from plot
+	variable xformat
+	variable yformat
+	if {[catch {dict get $hdfdata Plot Motor} motor]} {
+		# use the first motor, if no plot available
+		set motor [lindex $motors 0]
+	}
+
+	if {[catch {dict get $hdfdata Plot Detector} detector]} {
+		# use the first motor, if no plot available
+		set detector [lindex $detectors 0]
+	}
+	
+	set xformat $motor
+	set yformat $detector
+
+	RePlot
+}
+
+
+proc RePlot {} {
+	variable w
+	variable hdfdata
+	variable xformat
+	variable yformat
+
+	# plot the data 
+	set xdata [dict get $hdfdata Motor $xformat data]
+	set ydata [dict get $hdfdata Detector $yformat data]
+
+	set data [zip $xdata $ydata]
+
+	variable plotid
+	if {[info exists plotid]} {
+		$w(Graph) remove $plotid
+	}
+
+	if {[llength $data] > 4} {
+		if {[catch {dict get $hdfdata Motor $xformat attrs Unit} xunit]} {
+			$w(Graph) configure -xlabel "$xformat"
+		} else {
+			$w(Graph) configure -xlabel "$xformat ($xunit)"
+		}
+		
+		if {[catch {dict get $hdfdata Detector $yformat attrs Unit} yunit]} {
+			$w(Graph) configure -ylabel "$yformat"
+		} else {
+			$w(Graph) configure -ylabel "$yformat ($yunit)"
+		}
+
+		set plotid [$w(Graph) connectpoints_autodim $data black]
+		lappend plotid [$w(Graph) showpoints $data red circle]
+	}
+
+}
+
+proc formatDate {date} {
+	clock format $date -format {%Y-%m-%d %H:%S}
+}
 
 proc bessy_reshape {fn} {
 	set hdf [HDFpp %AUTO% $fn]
@@ -25,12 +192,13 @@ proc bessy_reshape {fn} {
 		} else {	
 			# filter all data entries to the last occurence >= BESSY_INF
 			set BESSY_INF 9.9e36
-			set data [dict get $datast data]
-			set index 0
+			set data [dict get $dataset data]
+			set index -1
 			set lastindex end
 			foreach v $data {
 				if {abs($v) >= $BESSY_INF} {
 					set lastindex $index
+					break
 				}
 				incr index
 			}
@@ -45,11 +213,41 @@ proc bessy_reshape {fn} {
 proc bessy_class {data} {
 	# classify dataset into Images, Plot and return plot axes
 	set images [dict exists $data Detector Pilatus_Tiff]
-	set motor {}
-	catch {dict get $data Plot Motor} motor
-	set detector {}
-	catch {dict get $data Plot Detector} detector
+	if {[catch {dict get $data Plot Motor} motor]} {
+		set motor {}
+	}
+		
+	if {[catch {dict get $data Plot Detector} detector]} {
+		set detector {}
+	}
+
 	list $images $motor $detector
 }
 
+proc zip {l1 l2} {
+	# create intermixed list
+	set result {}
+	foreach v1 $l1 v2 $l2 {
+		lappend result $v1 $v2
+	}
+	return $result
+}
 
+
+variable iconcache {}
+proc IconGet {name} {
+	variable iconcache
+	variable basedir
+	if {[dict exists $iconcache $name]} {
+		return [dict get $iconcache $name]
+	} else {
+		if {[catch {image create photo -file [file join $basedir icons $name.png]} iname]} {
+			return {} ;# not found
+		} else {
+			dict set iconcache $name $iname
+			return $iname
+		}
+	}
+}
+
+InitGUI

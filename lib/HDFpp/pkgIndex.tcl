@@ -8,4 +8,4 @@
 # script is sourced, the variable $dir must contain the
 # full path name of this file's directory.
 
-package ifneeded hdfpp 0.5 [list load [file join $dir hdfpp64.dylib]]
+package ifneeded hdfpp 0.5 [list load [file join $dir hdfpp[expr {8*$::tcl_platform(pointerSize)}][info sharedlibextension]]]
