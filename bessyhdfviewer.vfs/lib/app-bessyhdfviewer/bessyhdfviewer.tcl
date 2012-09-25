@@ -88,13 +88,28 @@ proc ClassifyHDF {type fn} {
 		return [list "" "" $mtime [IconGet unknown]]
 	} else {
 		puts "$fn $class"
-		lassign $class img motor detector
-		if {$img} {
-			return [list $motor $detector $mtime [IconGet image-x-generic]]
-		} elseif {$motor != ""} {
-			return [list $motor $detector $mtime [IconGet graph]]
-		} else {
-			return [list $motor $detector $mtime [IconGet unknown]]
+		lassign $class type motor detector
+		switch $type {
+			MCA {
+				return [list $motor $detector $mtime [IconGet mca]]
+			}
+
+			MULTIPLE_IMG {
+				return [list $motor $detector $mtime [IconGet image-multiple]]
+			}
+
+			SINGLE_IMG {
+				return [list $motor $detector $mtime [IconGet image-x-generic]]
+			}
+
+			PLOT {
+				return [list $motor $detector $mtime [IconGet graph]]
+			}
+
+			default -
+			UNKNOWN {
+				return [list $motor $detector $mtime [IconGet unknown]]
+			}
 		}
 	}
 }
@@ -255,16 +270,50 @@ proc bessy_reshape {fn} {
 
 proc bessy_class {data} {
 	# classify dataset into Images, Plot and return plot axes
-	set images [dict exists $data Detector Pilatus_Tiff]
+	set images [dict exists $data Detector Pilatus_Tiff data]
+	set mca [dict exists $data MCA]
+
+	set Plot true
 	if {[catch {dict get $data Plot Motor} motor]} {
-		set motor {}
+		# if Plot is unavailable take the first motor
+		# if that fails, give up
+		set Plot false
+		if {[catch {lindex [dict keys [dict get $data Motor]] 0} motor} {
+			set motor {}
+		}
 	}
 		
 	if {[catch {dict get $data Plot Detector} detector]} {
-		set detector {}
+		set Plot false
+		if {[catch {lindex [dict keys [dict get $data Detector]] 0} motor} {
+			set detector {}
+		}
 	}
 
-	list $images $motor $detector
+	# now check for different classes. MCA has only this dataset, no motors etc.
+	if {$mca} {
+		return [list MCA "" ""]
+	}
+
+	if {$images} {
+		# file contains Pilatus images. Check for one or more
+		set nimages [llength [dict get $data Detector Pilatus_Tiff data]]
+		if {$nimages == 1} {
+			return [list SINGLE_IMG $motor $detector]
+		}
+
+		if {$nimages > 1} {
+			return [list MULTIPLE_IMG $motor $detector]
+		}
+		# otherwise no images are found
+	}
+
+	if {$Plot} {
+		# there is a valid Plot
+		return [list PLOT $motor $detector]
+	}
+	# could not identify 
+	return [list UNKNOWN $motor $detector]
 }
 
 proc zip {l1 l2} {
