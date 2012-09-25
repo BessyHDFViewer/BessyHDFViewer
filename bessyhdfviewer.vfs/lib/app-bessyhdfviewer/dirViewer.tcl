@@ -70,8 +70,9 @@ namespace eval dirViewer {} {
 		component vsb
 		component hsb
 		component bf
-		component b1
-		component b2
+		component brefresh
+		component bupwards
+		component bhome
 
 		option -globpattern -default {*}
 		option -columns -default {}
@@ -132,8 +133,8 @@ namespace eval dirViewer {} {
 			# Create three buttons within a frame child of the main widget
 			#
 			install bf using ttk::frame $win.bf
-			install b1 using ttk::button $bf.b1 -width 10 -text "Refresh"
-			install b2 using ttk::button $bf.b2 -width 10 -text "Parent"
+			install brefresh using ttk::button $bf.brefresh -width 10 -text "Refresh"
+			install bupwards using ttk::button $bf.bupwards -width 10 -text "Parent"
 
 			#
 			# Manage the widgets
@@ -148,7 +149,7 @@ namespace eval dirViewer {} {
 			grid $hsb -row 2 -column 0 -sticky ew
 			grid rowconfigure    $tf 1 -weight 1
 			grid columnconfigure $tf 0 -weight 1
-			pack $b1 $b2 -side left -expand yes -pady 10
+			pack $brefresh $bupwards -side left -expand yes -pady 10
 			pack $bf -side bottom -fill x
 			pack $tf -side top -expand yes -fill both
 
@@ -197,16 +198,26 @@ namespace eval dirViewer {} {
 				set row [expr {$nodeIdx + 1}]
 			}
 
+			# create list of directories and files. If $dir == ""
+			# special case on Windows (list volumes)
+			if {$dir == ""} {
+				set directories [file volumes]
+				set files {}
+			} else {
+				set directories [glob -nocomplain -types d -directory $dir *]
+				set files [glob -nocomplain -types f -directory $dir {*}$options(-globpattern)]
+			}
+			
 			#
 			# Build a list from the data of the subdirectories and
 			# files of the directory dir.
 			# structure is: First column contains a list with file|directory and relative name
 			# then comes the data to be displayed in the additional columns, then an image
 			# for directories, the image is ignored
-			
+		
 			set itemList {}
 			
-			foreach dirname [glob -nocomplain -types d -directory $dir *] {
+			foreach dirname $directories {
 				
 				set dirname [file normalize $dirname]
 				set dirtail [file tail $dirname]
@@ -217,7 +228,7 @@ namespace eval dirViewer {} {
 
 			}
 			
-			foreach fn [glob -nocomplain -types f -directory $dir {*}$options(-globpattern)] {
+			foreach fn $files {
 				set fullname [file normalize $fn]
 				set tail [file tail $fn]
 				set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
@@ -261,16 +272,31 @@ namespace eval dirViewer {} {
 				#
 				# Configure the "Refresh" and "Parent" buttons
 				#
-				$b1 configure -command [mymethod refreshView $dir]
+				$brefresh configure -command [mymethod refreshView $dir]
 				set p [file dirname $dir]
-				if {[string compare $p $dir] == 0} {
-					# top level
-					$b2 state disabled
+				if {$p == $dir} {
+					# we are on the top level of this volume
+					# set parent to "" to signal displaying of volumes
+					set p ""
+				}
+
+				if {$dir == ""} {
+					# top level, can't go further up
+					$bupwards state disabled
 				} else {
-					$b2 state !disabled
-					$b2 configure -command [mymethod putContents $p root]
+					$bupwards state !disabled
+					$bupwards configure -command [mymethod displayCmd $p]
 				}
 			}
+		}
+
+		method display {dir} {
+			$self putContents $dir root
+		}
+
+		method displayCmd {dir} {
+			$self display $dir
+			event generate $win <<DirviewerSelect>> -data $dir
 		}
 
 		#------------------------------------------------------------------------------
@@ -339,7 +365,7 @@ namespace eval dirViewer {} {
 			puts "Double click, isdir == $isdir, [lindex [$tbl get $row] 0]"
 			if {$isdir} {		;# directory item
 				set dir [$tbl rowattrib $row pathName]
-				$self putContents $dir root
+				$self displayCmd $dir
 			} else {						;# file item
 				bell
 			}

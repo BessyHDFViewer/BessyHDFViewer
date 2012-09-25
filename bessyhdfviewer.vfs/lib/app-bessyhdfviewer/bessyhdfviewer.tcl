@@ -26,8 +26,10 @@ proc InitGUI {} {
 
 	set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
 	variable browsepath [file normalize [pwd]]
+	bind $w(pathent) <FocusOut> ${ns}::DirUpdate
+	bind $w(pathent) <Key-Return> ${ns}::DirUpdate
 
-	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist [pwd] \
+	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
 		-columns \
 		{
 			0 "Motor" left
@@ -38,6 +40,8 @@ proc InitGUI {} {
 		-selectcommand ${ns}::PreviewFile \
 		-globpattern {*.hdf} \
 		-columnoptions [list {} {} [list -sortmode integer -formatcommand ${ns}::formatDate ]]]
+
+	bind $w(filelist) <<DirviewerSelect>> [list ${ns}::DirChanged %d]
 
 	grid $w(pathent) -sticky nsew 
 	grid $w(filelist) -sticky nsew
@@ -169,9 +173,41 @@ proc RePlot {} {
 
 		set plotid [$w(Graph) connectpoints_autodim $data black]
 		lappend plotid [$w(Graph) showpoints $data red circle]
+		$w(Graph) autoresize
 	}
 
 }
+
+proc DirChanged {dir} {
+	# dir was changed by double clicking in dirviewer
+	variable browsepath
+	set browsepath $dir
+}
+
+proc DirUpdate {} {
+	# dir was entered into entry
+	variable browsepath
+	variable w
+	set errmsg ""
+	if {[catch {expr {[file isdirectory $browsepath] && [file readable $browsepath]}} result]} {
+		# I/O error during check
+		set errmsg $result
+		set isdir 0
+	} else {
+		set isdir $result
+		if {!$isdir} {
+			set errmsg "Directory unreadable"
+		}
+	}
+
+	if {$isdir} {
+		$w(filelist) display $browsepath
+	} else {
+		tk_messageBox -type ok -icon error -title "Error opening directory" \
+			-message $errmsg -detail "when opening '$browsepath'"
+	}
+}
+
 
 proc formatDate {date} {
 	clock format $date -format {%Y-%m-%d %H:%S}
