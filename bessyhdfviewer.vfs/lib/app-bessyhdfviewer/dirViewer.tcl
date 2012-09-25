@@ -73,6 +73,8 @@ namespace eval dirViewer {} {
 		component brefresh
 		component bupwards
 		component bhome
+		component bcollapse
+		variable homedir
 
 		option -globpattern -default {*}
 		option -columns -default {}
@@ -91,6 +93,7 @@ namespace eval dirViewer {} {
 			# width columns and interactive sort capability
 			#
 			$self configurelist $args
+			set homedir $dir
 
 			if {$options(-classifycommand) == ""} {
 				set options(-classifycommand) [myproc classifydefault]
@@ -133,8 +136,10 @@ namespace eval dirViewer {} {
 			# Create three buttons within a frame child of the main widget
 			#
 			install bf using ttk::frame $win.bf
-			install brefresh using ttk::button $bf.brefresh -width 10 -text "Refresh"
-			install bupwards using ttk::button $bf.bupwards -width 10 -text "Parent"
+			install brefresh using ttk::button $bf.brefresh -text "Refresh" -image [IconGet view-refresh] -compound left
+			install bupwards using ttk::button $bf.bupwards -text "Parent" -image [IconGet go-up] -compound left
+			install bhome using ttk::button $bf.bhome -text "Home" -image [IconGet go-home] -compound left -command [mymethod goHome]
+			install bcollapse using ttk::button $bf.coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [mymethod collapseCurrent]
 
 			#
 			# Manage the widgets
@@ -149,7 +154,7 @@ namespace eval dirViewer {} {
 			grid $hsb -row 2 -column 0 -sticky ew
 			grid rowconfigure    $tf 1 -weight 1
 			grid columnconfigure $tf 0 -weight 1
-			pack $brefresh $bupwards -side left -expand yes -pady 10
+			pack $bhome $bupwards $bcollapse $brefresh -side left -expand no -pady 2
 			pack $bf -side bottom -fill x
 			pack $tf -side top -expand yes -fill both
 
@@ -208,6 +213,12 @@ namespace eval dirViewer {} {
 				set files [glob -nocomplain -types f -directory $dir {*}$options(-globpattern)]
 			}
 			
+
+			set prog_max [expr {max(1,[llength $directories]+[llength $files]-1)}]
+			event generate $win <<ProgressStart>> -data $prog_max
+			set progress 0
+			event generate $win <<Progress>> -data $progress
+
 			#
 			# Build a list from the data of the subdirectories and
 			# files of the directory dir.
@@ -225,6 +236,8 @@ namespace eval dirViewer {} {
 				if {$class != {}} {
 					lappend itemList [list [list directory $dirtail] {*}$class $dirname]
 				}
+				incr progress
+				event generate $win <<Progress>> -data $progress
 
 			}
 			
@@ -234,6 +247,8 @@ namespace eval dirViewer {} {
 				set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
 				lappend itemList [list [list file $tail] {*}$class $fullname]
 
+				incr progress
+				event generate $win <<Progress>> -data $progress
 
 			}
 
@@ -288,6 +303,8 @@ namespace eval dirViewer {} {
 					$bupwards configure -command [mymethod displayCmd $p]
 				}
 			}
+
+			event generate $win <<ProgressFinished>>
 		}
 
 		method display {dir} {
@@ -297,6 +314,23 @@ namespace eval dirViewer {} {
 		method displayCmd {dir} {
 			$self display $dir
 			event generate $win <<DirviewerSelect>> -data $dir
+		}
+
+		method goHome {} {
+			$self displayCmd $homedir
+		}
+
+		method collapseCurrent {} {
+			set id ""
+			lassign [$tbl curselection] id
+			if {$id != ""} {
+				set parent [$tbl parent $id]
+				if {$parent != "root"} {
+					$tbl collapse $parent -partly
+					$tbl selection clear 0 end
+					$tbl selection set $parent
+				}
+			}
 		}
 
 		#------------------------------------------------------------------------------

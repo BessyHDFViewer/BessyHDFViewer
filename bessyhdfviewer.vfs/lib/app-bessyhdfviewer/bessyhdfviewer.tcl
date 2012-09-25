@@ -7,9 +7,39 @@ package require hdfpp
 package require ukaz
 package require tablelist_tile
 
+set tversion [package require tkcon]
+# setup tkcon, as in http://wiki.tcl.tk/17616
+#------------------------------------------------------
+#  The console doesn't exist yet.  If we create it
+#  with show/hide, then it flashes on the screen.
+#  So we cheat, and call tkcon internals to create
+#  the console and customize it to our application.
+#------------------------------------------------------
+set tkcon::PRIV(showOnStartup) 0
+set tkcon::PRIV(root) .console
+#set tkcon::PRIV(protocol) {tkcon hide}
+set tkcon::OPT(exec) ""
+tkcon::Init
+tkcon title "BessyHDFViewer Console (tkcon $tversion)"
+
 variable ns [namespace current]
 
 source [file join $basedir dirViewer.tcl]
+
+proc Init {} {
+	variable temphdf
+	variable CopyHDF false
+	if {[string match win* $::tcl_platform(platform)] && false} {
+		# on Windows, we need to locally copy HDF files before opening
+		# because of performance problems in remote file systems :-(
+		close [file tempfile temphdf]
+		# this creates a temp file and removes it again - the same name will be used while browsing
+		set CopyHDF true
+	}
+
+	InitGUI
+}
+
 
 proc InitGUI {} {
 	variable w
@@ -25,7 +55,12 @@ proc InitGUI {} {
 	$w(mainfr) add $w(plotfr)
 
 	set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
-	variable browsepath [file normalize [pwd]]
+	
+	variable browsepath /messung/kmc/daten 
+	if {![file isdirectory $browsepath]} {
+		set browsepath [file normalize [pwd]]
+	}
+
 	bind $w(pathent) <FocusOut> ${ns}::DirUpdate
 	bind $w(pathent) <Key-Return> ${ns}::DirUpdate
 
@@ -43,8 +78,16 @@ proc InitGUI {} {
 
 	bind $w(filelist) <<DirviewerSelect>> [list ${ns}::DirChanged %d]
 
+	bind $w(filelist) <<ProgressStart>> [list ${ns}::OpenStart %d]
+	bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
+	bind $w(filelist) <<ProgressFinished>> ${ns}::OpenFinished
+
+
+	set w(progbar) [ttk::progressbar $w(listfr).progbar]
 	grid $w(pathent) -sticky nsew 
 	grid $w(filelist) -sticky nsew
+	grid $w(progbar) -sticky nsew
+
 	grid rowconfigure $w(listfr) $w(filelist) -weight 1
 	grid columnconfigure $w(listfr) 0 -weight 1
 
@@ -63,6 +106,7 @@ proc InitGUI {} {
 	
 	bind $w(xent) <<ComboboxSelected>> ${ns}::RePlot
 	bind $w(yent) <<ComboboxSelected>> ${ns}::RePlot
+	bind $w(xlbl) <1> { tkcon show }
 
 
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky nsew
@@ -87,7 +131,7 @@ proc ClassifyHDF {type fn} {
 		puts "Error reading hdf file $fn"
 		return [list "" "" $mtime [IconGet unknown]]
 	} else {
-		puts "$fn $class"
+		# puts "$fn $class"
 		lassign $class type motor detector
 		switch $type {
 			MCA {
@@ -119,38 +163,51 @@ proc PreviewFile {fn} {
 	variable w
 
 	variable hdfdata [bessy_reshape $fn]
+	variable plotdata {}
 
-	# insert available axes into axis choosers
-	if {[catch {
-		set motors [dict keys [dict get $hdfdata Motor]]
-		set detectors [dict keys [dict get $hdfdata Detector]]
-		set axes $motors
-		lappend axes {*}$detectors
-
-		$w(xent) configure -values $motors 
-		$w(yent) configure -values $detectors
-	}]} {
-		# could not get sensible plot axes - not BESSY hdf?
-		$w(xent) configure -values {}
-		$w(yent) configure -values {}
-		return 
-	}
-
-	# select the motor/det from plot
+	# select the motor/det 
 	variable xformat
 	variable yformat
-	if {[catch {dict get $hdfdata Plot Motor} motor]} {
-		# use the first motor, if no plot available
-		set motor [lindex $motors 0]
-	}
+	lassign [bessy_class $hdfdata] type xformat yformat
+	
+	if {$type == "MCA"} {
+		set xformat Row
+		set yformat MCA
+		$w(xent) configure -values {Row}
+		$w(yent) configure -values {MCA}
+		set plotdata $hdfdata
+	} else {
 
-	if {[catch {dict get $hdfdata Plot Detector} detector]} {
-		# use the first motor, if no plot available
-		set detector [lindex $detectors 0]
+		# insert available axes into axis choosers
+		if {[catch {
+			set motors [dict keys [dict get $hdfdata Motor]]
+			set detectors [dict keys [dict get $hdfdata Detector]]
+			set axes $motors
+			lappend axes {*}$detectors
+
+			$w(xent) configure -values $motors 
+			$w(yent) configure -values $detectors
+
+			set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+		}]} {
+			# could not get sensible plot axes - not BESSY hdf?
+			$w(xent) configure -values {}
+			$w(yent) configure -values {}
+			return 
+		}
 	}
 	
-	set xformat $motor
-	set yformat $detector
+	# create Row column from first key of data
+	set firstkey [lindex [dict keys $plotdata] 0]
+	if {$firstkey != {}} {
+		set nrows [llength [dict get $plotdata $firstkey data]]
+		set rowdata {}
+		for {set i 0} {$i<$nrows} {incr i} {
+			lappend rowdata $i
+		}
+		dict set plotdata Row data $rowdata
+	}
+
 
 	RePlot
 }
@@ -158,13 +215,13 @@ proc PreviewFile {fn} {
 
 proc RePlot {} {
 	variable w
-	variable hdfdata
+	variable plotdata
 	variable xformat
 	variable yformat
 
 	# plot the data 
-	set xdata [dict get $hdfdata Motor $xformat data]
-	set ydata [dict get $hdfdata Detector $yformat data]
+	set xdata [dict get $plotdata $xformat data]
+	set ydata [dict get $plotdata $yformat data]
 
 	set data [zip $xdata $ydata]
 
@@ -174,13 +231,13 @@ proc RePlot {} {
 	}
 
 	if {[llength $data] > 4} {
-		if {[catch {dict get $hdfdata Motor $xformat attrs Unit} xunit]} {
+		if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
 			$w(Graph) configure -xlabel "$xformat"
 		} else {
 			$w(Graph) configure -xlabel "$xformat ($xunit)"
 		}
 		
-		if {[catch {dict get $hdfdata Detector $yformat attrs Unit} yunit]} {
+		if {[catch {dict get $plotdata $yformat attrs Unit} yunit]} {
 			$w(Graph) configure -ylabel "$yformat"
 		} else {
 			$w(Graph) configure -ylabel "$yformat ($yunit)"
@@ -223,15 +280,40 @@ proc DirUpdate {} {
 	}
 }
 
+proc OpenStart {max} {
+	variable w
+	$w(progbar) configure -maximum $max
+	tk busy hold .
+}
+
+proc OpenProgress {i} {
+	variable w
+	$w(progbar) configure -value $i
+	update idletask
+}
+
+proc OpenFinished {} {
+	variable w
+	$w(progbar) configure -value 0
+	tk busy forget .
+}
 
 proc formatDate {date} {
 	clock format $date -format {%Y-%m-%d %H:%S}
 }
 
 proc bessy_reshape {fn} {
-	set hdf [HDFpp %AUTO% $fn]
+	variable CopyHDF
+	variable temphdf
+
+	if {$CopyHDF} {
+		file copy -force $fn $temphdf
+		autovar hdf HDFpp %AUTO% $temphdf
+	} else {
+		autovar hdf HDFpp %AUTO% $fn
+	}
 	set hlist [$hdf dump]
-	$hdf -delete
+	
 	foreach dataset $hlist {
 		set dname [dict get $dataset name]
 		dict unset dataset name
@@ -278,14 +360,14 @@ proc bessy_class {data} {
 		# if Plot is unavailable take the first motor
 		# if that fails, give up
 		set Plot false
-		if {[catch {lindex [dict keys [dict get $data Motor]] 0} motor} {
+		if {[catch {lindex [dict keys [dict get $data Motor]] 0} motor]} {
 			set motor {}
 		}
 	}
 		
 	if {[catch {dict get $data Plot Detector} detector]} {
 		set Plot false
-		if {[catch {lindex [dict keys [dict get $data Detector]] 0} motor} {
+		if {[catch {lindex [dict keys [dict get $data Detector]] 0} detector]} {
 			set detector {}
 		}
 	}
@@ -316,6 +398,17 @@ proc bessy_class {data} {
 	return [list UNKNOWN $motor $detector]
 }
 
+proc autovar {var args} {
+	upvar 1 $var v
+	set v [uplevel 1 $args]
+	trace add variable v unset [list autodestroy $v]
+}
+
+proc autodestroy {cmd args} {
+	# puts "RAII destructing $cmd"
+	rename $cmd ""
+}
+
 proc zip {l1 l2} {
 	# create intermixed list
 	set result {}
@@ -342,4 +435,4 @@ proc IconGet {name} {
 	}
 }
 
-InitGUI
+Init
