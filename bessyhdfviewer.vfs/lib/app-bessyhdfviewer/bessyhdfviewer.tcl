@@ -12,7 +12,7 @@ if {[tk windowingsystem]=="x11"} {
 	package require fsdialog
 	interp alias {} tk_getOpenFile {} ttk::getOpenFile
 	interp alias {} tk_getSaveFile {} ttk::getSaveFile
-	interp alias {} tk_chooseDirectory {} ttk::chooseDirectory
+	interp alias {} tk_chooseDirectory {} ttk::getDirectory
 }
 
 set tversion [package require tkcon]
@@ -33,6 +33,7 @@ tkcon title "BessyHDFViewer Console (tkcon $tversion)"
 variable ns [namespace current]
 
 source [file join $basedir dirViewer.tcl]
+source [file join $basedir dictunsupported.tcl]
 
 proc Init {} {
 	variable temphdf
@@ -320,58 +321,81 @@ proc PreviewFile {files} {
 	}
 }
 
+proc DumpAttrib {data {indent ""}} {
+	set result ""
+	dict for {key val} $data {
+		append result "# ${indent}${key}\t = ${val}\n"
+	}
+	return $result
+}
+
 proc Dump {hdfdata} {
 	# create readable ASCII representation of Bessy HDF files
 	set result ""
-	foreach key {MotorPositions DetectorValues OptionalValues Plot} {
-		if {[dict exists $hdfdata $key]} {
-			append result "# $key:\n"
-			dict for {subkey subval} [dict get $hdfdata $key] {
-				append result "# \t$subkey\t = $subval\n"
+
+
+	if {[dict exists $hdfdata MCA]} {
+		# MCA file, has only one key with attribs and data
+		append result "# MCA:\n"
+		append result [DumpAttrib [dict get $hdfdata MCA attrs] \t]
+		append result "# Channel\tcounts\n"
+		set ch 0
+		foreach v [dict get $hdfdata MCA data] {
+			append result "$ch\t$v\n"
+			incr ch
+		}
+
+		return $result
+	}
+
+	if {[dict exists $hdfdata Motor]} {
+		# usual scan
+		foreach key {MotorPositions DetectorValues OptionalValues Plot} {
+			if {[dict exists $hdfdata $key]} {
+				append result "# $key:\n"
+				append result [DumpAttrib [dict get $hdfdata $key] \t]
+				append result "#\n"
 			}
-			append result "#\n"
-		}
-	}
-
-	set motors [dict keys [dict get $hdfdata Motor]]
-	set detectors [dict keys [dict get $hdfdata Detector]]
-	set variables [list {*}$motors {*}$detectors]
-	set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
-
-
-	# write header line
-	append result "# Motors:\n"
-	foreach motor $motors {
-		append result "# \t$motor:\n"
-		dict for  {subkey subval} [dict get $table $motor attrs] {
-			append result "# \t\t$subkey\t = $subval\n"
-		}
-	}
-	append result "# Detectors:\n"
-	foreach detector $detectors {
-		append result "# \t$detector:\n"
-		dict for  {subkey subval} [dict get $table $motor attrs] {
-			append result "# \t\t$subkey\t = $subval\n"
 		}
 
-	}
+		set motors [dict keys [dict get $hdfdata Motor]]
+		set detectors [dict keys [dict get $hdfdata Detector]]
+		set variables [list {*}$motors {*}$detectors]
+		set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
 
-	append result "# [join $variables \t]\n"
-	
-	# compute maximum length for each data column - might be different due to BESSY_INF trimming
-	set maxlength 0
-	dict for {var entry} $table {
-		set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
-	}
-	for {set i 0} {$i<$maxlength} {incr i} {
-		set line {}
-		foreach {var entry} $table {
-			lappend line [lindex [dict get $entry data] $i]
+
+		# write header line
+		append result "# Motors:\n"
+		foreach motor $motors {
+			append result "# \t$motor:\n"
+			append result [DumpAttrib [dict get $table $motor attrs] \t\t]
 		}
-		append result "[join $line \t]\n"
+		append result "# Detectors:\n"
+		foreach detector $detectors {
+			append result "# \t$detector:\n"
+			append result [DumpAttrib [dict get $table $detector attrs] \t\t]
+		}
+
+		append result "# [join $variables \t]\n"
+		
+		# compute maximum length for each data column - might be different due to BESSY_INF trimming
+		set maxlength 0
+		dict for {var entry} $table {
+			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+		}
+		for {set i 0} {$i<$maxlength} {incr i} {
+			set line {}
+			foreach {var entry} $table {
+				lappend line [lindex [dict get $entry data] $i]
+			}
+			append result "[join $line \t]\n"
+		}
+
+		return $result
 	}
 
-	return $result
+	# if we are here, it is not a BESSY HDF file. Dump the internal representation
+	dict format $hdfdata
 }
 
 proc DumpToFile {hdf dat} {
