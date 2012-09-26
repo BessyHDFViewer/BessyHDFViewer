@@ -7,6 +7,14 @@ package require hdfpp
 package require ukaz
 package require tablelist_tile
 
+if {[tk windowingsystem]=="x11"} {
+	ttk::setTheme default
+	package require fsdialog
+	interp alias {} tk_getOpenFile {} ttk::getOpenFile
+	interp alias {} tk_getSaveFile {} ttk::getSaveFile
+	interp alias {} tk_chooseDirectory {} ttk::chooseDirectory
+}
+
 set tversion [package require tkcon]
 # setup tkcon, as in http://wiki.tcl.tk/17616
 #------------------------------------------------------
@@ -75,9 +83,10 @@ proc InitGUI {} {
 		-classifycommand ${ns}::ClassifyHDF \
 		-selectcommand ${ns}::PreviewFile \
 		-globpattern {*.hdf} \
-		-columnoptions [list {} {} [list -sortmode integer -formatcommand ${ns}::formatDate ]]]
+		-columnoptions [list {} {} [list -sortmode integer -formatcommand ${ns}::formatDate ]] \
+		-selectmode extended]
 
-	bind $w(filelist) <<DirviewerSelect>> [list ${ns}::DirChanged %d]
+	bind $w(filelist) <<DirviewerChDir>> [list ${ns}::DirChanged %d]
 
 	bind $w(filelist) <<ProgressStart>> [list ${ns}::OpenStart %d]
 	bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
@@ -109,8 +118,10 @@ proc InitGUI {} {
 	bind $w(yent) <<ComboboxSelected>> ${ns}::RePlot
 	bind $w(xlbl) <1> { tkcon show }
 
+	set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::DumpCmd -text "Dump" -image [IconGet document-export] -style Toolbutton]
 
-	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky nsew
+
+	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(dumpButton) -sticky ew
 
 	set w(Graph) [ukaz::box %AUTO% $w(canv)]
 	
@@ -121,9 +132,9 @@ proc InitCache {} {
 	variable HDFCacheFile {}
 	variable HDFCacheDirty false
 	# find user profile directory
-	switch $::tcl_platform(platform) {
+	switch -glob $::tcl_platform(platform) {
 		win* {
-			set profiledir $::env(AppData)/BessyHDFViewer
+			set profiledir $::env(APPDATA)/BessyHDFViewer
 		}
 		unix {
 			set profiledir $::env(HOME)/.BessyHDFViewer
@@ -191,10 +202,8 @@ proc ClassifyHDF {type fn} {
 	}
 
 	# check cache
-	if {[dict exists $HDFCache $fn]} {
-		if {$mtime==[dict get $HDFCache $fn mtime]} {
-			set class [dict get $HDFCache $fn class]
-		}
+	if {[dict exists $HDFCache $fn] && ($mtime==[dict get $HDFCache $fn mtime])} {
+		set class [dict get $HDFCache $fn class]
 	} else {
 		if {[catch {bessy_class [bessy_reshape $fn]} class]} {
 			puts "Error reading hdf file $fn"
@@ -232,58 +241,179 @@ proc ClassifyHDF {type fn} {
 	}
 }
 
-proc PreviewFile {fn} {
+proc PreviewFile {files} {
 	# get selected file from list
 	variable w
+	variable HDFFiles $files
 
-	variable hdfdata [bessy_reshape $fn]
-	variable plotdata {}
+	switch [llength $files]  {
 
-	# select the motor/det 
-	variable xformat
-	variable yformat
-	lassign [bessy_class $hdfdata] type xformat yformat
+		0 {
+			# nothing selected
+			return
+		}
+
+		1 {
+			# focus on one single file - plot this
+			variable hdfdata [bessy_reshape [lindex $files 0]]
+			variable plotdata {}
+
+			# select the motor/det 
+			variable xformat
+			variable yformat
+			lassign [bessy_class $hdfdata] type xformat yformat
+			
+			if {$type == "MCA"} {
+				set xformat Row
+				set yformat MCA
+				$w(xent) configure -values {Row}
+				$w(yent) configure -values {MCA}
+				$w(xent) state !disabled
+				$w(yent) state !disabled
+				set plotdata $hdfdata
+			} else {
+
+				# insert available axes into axis choosers
+				if {[catch {
+					set motors [dict keys [dict get $hdfdata Motor]]
+					set detectors [dict keys [dict get $hdfdata Detector]]
+					set axes $motors
+					lappend axes {*}$detectors
+
+					$w(xent) configure -values $motors 
+					$w(yent) configure -values $detectors
+					$w(xent) state !disabled
+					$w(yent) state !disabled
+
+					set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+				}]} {
+					# could not get sensible plot axes - not BESSY hdf?
+					$w(xent) configure -values {}
+					$w(yent) configure -values {}
+					$w(xent) state disabled
+					$w(yent) state disabled
+
+					return 
+				}
+			}
+			
+			# create Row column from first key of data
+			set firstkey [lindex [dict keys $plotdata] 0]
+			if {$firstkey != {}} {
+				set nrows [llength [dict get $plotdata $firstkey data]]
+				set rowdata {}
+				for {set i 0} {$i<$nrows} {incr i} {
+					lappend rowdata $i
+				}
+				dict set plotdata Row data $rowdata
+			}
+
+
+			RePlot
+		}
+
+		default {
+			# multiple files selected - prepare for batch work
+			$w(xent) state disabled
+			$w(yent) state disabled
+		}
+	}
+}
+
+proc Dump {hdfdata} {
+	# create readable ASCII representation of Bessy HDF files
+	set result ""
+	foreach key {MotorPositions DetectorValues OptionalValues Plot} {
+		if {[dict exists $hdfdata $key]} {
+			append result "# $key:\n"
+			dict for {subkey subval} [dict get $hdfdata $key] {
+				append result "# \t$subkey\t = $subval\n"
+			}
+			append result "#\n"
+		}
+	}
+
+	set motors [dict keys [dict get $hdfdata Motor]]
+	set detectors [dict keys [dict get $hdfdata Detector]]
+	set variables [list {*}$motors {*}$detectors]
+	set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+
+
+	# write header line
+	append result "# Motors:\n"
+	foreach motor $motors {
+		append result "# \t$motor:\n"
+		dict for  {subkey subval} [dict get $table $motor attrs] {
+			append result "# \t\t$subkey\t = $subval\n"
+		}
+	}
+	append result "# Detectors:\n"
+	foreach detector $detectors {
+		append result "# \t$detector:\n"
+		dict for  {subkey subval} [dict get $table $motor attrs] {
+			append result "# \t\t$subkey\t = $subval\n"
+		}
+
+	}
+
+	append result "# [join $variables \t]\n"
 	
-	if {$type == "MCA"} {
-		set xformat Row
-		set yformat MCA
-		$w(xent) configure -values {Row}
-		$w(yent) configure -values {MCA}
-		set plotdata $hdfdata
+	# compute maximum length for each data column - might be different due to BESSY_INF trimming
+	set maxlength 0
+	dict for {var entry} $table {
+		set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+	}
+	for {set i 0} {$i<$maxlength} {incr i} {
+		set line {}
+		foreach {var entry} $table {
+			lappend line [lindex [dict get $entry data] $i]
+		}
+		append result "[join $line \t]\n"
+	}
+
+	return $result
+}
+
+proc DumpToFile {hdf dat} {
+	set dump "# $hdf\n"
+	append dump [Dump [bessy_reshape $hdf]]
+
+	if {[catch {
+		set fd [open $dat w]
+		fconfigure $fd -encoding binary -translation binary
+		puts $fd $dump
+		close $fd
+	} err]} {
+		catch { close $fd }
+		return -code error $err
+	}
+}
+	
+proc DumpCmd {} {
+	# when pressing the export button
+	variable HDFFiles
+	set nfiles [llength $HDFFiles]
+
+	if {$nfiles==1} {
+		# when a single file is selected, prompt for file name
+		set datfn [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
+			-defaultextension .dat \
+			-title "Export HDF file to ASCII" ]
+		if {$datfn != {}} {
+			DumpToFile [lindex $HDFFiles 0] $datfn
+		}
 	} else {
-
-		# insert available axes into axis choosers
-		if {[catch {
-			set motors [dict keys [dict get $hdfdata Motor]]
-			set detectors [dict keys [dict get $hdfdata Detector]]
-			set axes $motors
-			lappend axes {*}$detectors
-
-			$w(xent) configure -values $motors 
-			$w(yent) configure -values $detectors
-
-			set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
-		}]} {
-			# could not get sensible plot axes - not BESSY hdf?
-			$w(xent) configure -values {}
-			$w(yent) configure -values {}
-			return 
+		if {$nfiles > 0} {
+			# multiple files selected - prompt for directory
+			set outputdir [tk_chooseDirectory -title "Select directory to export $nfiles HDF files to ASCII"]
+			if {$outputdir != {}} {
+				foreach hdf $HDFFiles {
+					set roottail [file rootname [file tail $hdf]]
+					DumpToFile $hdf [file join $outputdir $roottail.dat]
+				}
+			}
 		}
 	}
-	
-	# create Row column from first key of data
-	set firstkey [lindex [dict keys $plotdata] 0]
-	if {$firstkey != {}} {
-		set nrows [llength [dict get $plotdata $firstkey data]]
-		set rowdata {}
-		for {set i 0} {$i<$nrows} {incr i} {
-			lappend rowdata $i
-		}
-		dict set plotdata Row data $rowdata
-	}
-
-
-	RePlot
 }
 
 

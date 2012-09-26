@@ -81,6 +81,7 @@ namespace eval dirViewer {} {
 		option -columnoptions -default {}
 		option -classifycommand -default {}
 		option -selectcommand -default {}
+		option -selectmode -default {browse}
 
 		#------------------------------------------------------------------------------
 		# Constructor
@@ -110,7 +111,7 @@ namespace eval dirViewer {} {
 				-columns $columnspec \
 				-expandcommand [mymethod expandCmd] -collapsecommand [mymethod collapseCmd] \
 				-xscrollcommand [list $tf.hsb set] -yscrollcommand [list $tf.vsb set] \
-				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0
+				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0 -selectmode $options(-selectmode)
 
 			if {[$tbl cget -selectborderwidth] == 0} {
 				$tbl configure -spacing 1
@@ -320,7 +321,7 @@ namespace eval dirViewer {} {
 
 		method displayCmd {dir} {
 			$self display $dir
-			event generate $win <<DirviewerSelect>> -data $dir
+			event generate $win <<DirviewerChDir>> -data $dir
 		}
 
 		method goHome {} {
@@ -460,14 +461,17 @@ namespace eval dirViewer {} {
 		}
 
 		method notifySelect {} {
-			set row [$tbl curselection]
-			set type [lindex [$tbl get $row] 0 0]
-			if {$type == "file"} {
-				# only for ordinary files
-				set fullname [$tbl rowattrib $row pathName]
-				if {$options(-selectcommand) != {}} {
-					uplevel #0 $options(-selectcommand) [list $fullname]
+			set rows [$tbl curselection]
+			set fullnames {}
+			foreach row $rows {
+				set type [lindex [$tbl get $row] 0 0]
+				if {$type == "file"} {
+					# only for ordinary files
+					lappend fullnames [$tbl rowattrib $row pathName]
 				}
+			}
+			if {$options(-selectcommand) != {}} {
+				uplevel #0 $options(-selectcommand) [list $fullnames]
 			}		
 		}
 	}
