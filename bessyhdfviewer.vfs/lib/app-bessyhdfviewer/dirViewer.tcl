@@ -230,8 +230,15 @@ namespace eval dirViewer {} {
 			
 			foreach dirname $directories {
 				
-				set dirname [file normalize $dirname]
-				set dirtail [file tail $dirname]
+				if {$dir == "" } {
+					# in case of volume display, avoid [file tail]
+					# as it truncates C:/ to ""
+					set dirtail $dirname
+				} else {
+					set dirname [file normalize $dirname]
+					set dirtail [file tail $dirname]
+				}
+
 				set class [uplevel #0 $options(-classifycommand) [list directory $dirname]]
 				if {$class != {}} {
 					lappend itemList [list [list directory $dirtail] {*}$class $dirname]

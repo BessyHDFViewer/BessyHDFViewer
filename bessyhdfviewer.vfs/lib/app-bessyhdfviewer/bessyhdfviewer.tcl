@@ -37,6 +37,7 @@ proc Init {} {
 		set CopyHDF true
 	}
 
+	InitCache
 	InitGUI
 }
 
@@ -115,8 +116,70 @@ proc InitGUI {} {
 	
 }
 
+proc InitCache {} {
+	variable HDFCache {}
+	variable HDFCacheFile {}
+	variable HDFCacheDirty false
+	# find user profile directory
+	switch $::tcl_platform(platform) {
+		win* {
+			set profiledir $::env(AppData)/BessyHDFViewer
+		}
+		unix {
+			set profiledir $::env(HOME)/.BessyHDFViewer
+		}
+		default {
+			set profiledir [pwd]
+		}
+	}
+
+	if {[catch {file mkdir $profiledir}]} {
+		# give up - no persistent cache
+		puts "No persistent cache - could not access profile dir $profiledir"
+		return 
+	}
+	set HDFCacheFile [file join $profiledir HDFClassCache.dict]
+
+	ReadCache
+}
+
+proc SaveCache {} {
+	variable HDFCache
+	variable HDFCacheFile
+	variable HDFCacheDirty
+
+	if {!$HDFCacheDirty || ($HDFCacheFile == {})} { return }
+	
+	if {[catch {
+		set fd [open $HDFCacheFile w]
+		fconfigure $fd -translation binary -encoding binary
+		puts -nonewline $fd $HDFCache
+		close $fd
+	}]} {
+		# error - maybe cleanup fd
+		if {[info exists fd]} { catch {close $fd} }
+		set HDFCacheFile {}
+	}	
+}
+
+proc ReadCache {} {
+	variable HDFCache
+	variable HDFCacheFile
+	if {[catch {
+		set fd [open $HDFCacheFile r]
+		fconfigure $fd -translation binary -encoding binary
+		set HDFCache [read $fd]
+		close $fd
+	}]} {
+		# error - maybe cleanup fd
+		# cache file remains valid - maybe simply didn't exist
+		if {[info exists fd]} { catch {close $fd} }
+	}	
+}
+
 proc ClassifyHDF {type fn} {
 	variable w
+	variable HDFCache
 	
 	if {[catch {file mtime $fn} mtime]} {
 		# could not get mtime - something is wrong
@@ -127,33 +190,44 @@ proc ClassifyHDF {type fn} {
 		return [list "" "" $mtime ""]
 	}
 
-	if {[catch {bessy_class [bessy_reshape $fn]} class]} {
-		puts "Error reading hdf file $fn"
-		return [list "" "" $mtime [IconGet unknown]]
+	# check cache
+	if {[dict exists $HDFCache $fn]} {
+		if {$mtime==[dict get $HDFCache $fn mtime]} {
+			set class [dict get $HDFCache $fn class]
+		}
 	} else {
-		# puts "$fn $class"
-		lassign $class type motor detector
-		switch $type {
-			MCA {
-				return [list $motor $detector $mtime [IconGet mca]]
-			}
+		if {[catch {bessy_class [bessy_reshape $fn]} class]} {
+			puts "Error reading hdf file $fn"
+			set class [list UNKNOWN "" ""]
+		}
 
-			MULTIPLE_IMG {
-				return [list $motor $detector $mtime [IconGet image-multiple]]
-			}
+		variable HDFCacheDirty true
+		dict set HDFCache $fn mtime $mtime
+		dict set HDFCache $fn class $class
+	}
+	# puts "$fn $class"
+	
+	lassign $class type motor detector
+	switch $type {
+		MCA {
+			return $fn $mtime [list $motor $detector $mtime [IconGet mca]]
+		}
 
-			SINGLE_IMG {
-				return [list $motor $detector $mtime [IconGet image-x-generic]]
-			}
+		MULTIPLE_IMG {
+			return $fn $mtime [list $motor $detector $mtime [IconGet image-multiple]]
+		}
 
-			PLOT {
-				return [list $motor $detector $mtime [IconGet graph]]
-			}
+		SINGLE_IMG {
+			return $fn $mtime [list $motor $detector $mtime [IconGet image-x-generic]]
+		}
 
-			default -
-			UNKNOWN {
-				return [list $motor $detector $mtime [IconGet unknown]]
-			}
+		PLOT {
+			return $fn $mtime [list $motor $detector $mtime [IconGet graph]]
+		}
+
+		default -
+		UNKNOWN {
+			return $fn $mtime [list $motor $detector $mtime [IconGet unknown]]
 		}
 	}
 }
@@ -282,6 +356,8 @@ proc DirUpdate {} {
 
 proc OpenStart {max} {
 	variable w
+	variable ProgressClock [clock milliseconds]
+	variable ProgressDelay 200 ;# only after 200ms one feels a delay
 	$w(progbar) configure -maximum $max
 	tk busy hold .
 }
@@ -289,13 +365,22 @@ proc OpenStart {max} {
 proc OpenProgress {i} {
 	variable w
 	$w(progbar) configure -value $i
-	update idletask
+	set now [clock milliseconds]
+	variable ProgressClock
+	variable ProgressDelay
+	if {$now - $ProgressClock > $ProgressDelay} {
+		set ProgressClock $now
+		set ProgressDelay 20 
+		# update progress bar after each 20ms
+		update
+	}
 }
 
 proc OpenFinished {} {
 	variable w
 	$w(progbar) configure -value 0
 	tk busy forget .
+	SaveCache
 }
 
 proc formatDate {date} {
