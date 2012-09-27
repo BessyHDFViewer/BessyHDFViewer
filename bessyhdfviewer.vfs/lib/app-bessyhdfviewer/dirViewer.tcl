@@ -455,7 +455,7 @@ namespace eval dirViewer {} {
 				if {[string compare $pathName ""] != 0 &&
 				[info exists expandedFolders($pathName)]} {
 					$tbl expand $key -partly
-					$self restoreExpandedStates $tbl $key expandedFolders
+					$self restoreExpandedStates $key expandedFolders
 				}
 			}
 		}
