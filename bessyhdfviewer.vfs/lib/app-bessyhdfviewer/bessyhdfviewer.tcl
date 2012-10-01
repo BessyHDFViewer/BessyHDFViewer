@@ -1,7 +1,6 @@
 package provide app-bessyhdfviewer 1.0
 
 set basedir [file dirname [info script]]
-lappend auto_path [file join $basedir lib]
 
 package require hdfpp
 package require ukaz
@@ -13,6 +12,15 @@ if {[tk windowingsystem]=="x11"} {
 	interp alias {} tk_getOpenFile {} ttk::getOpenFile
 	interp alias {} tk_getSaveFile {} ttk::getSaveFile
 	interp alias {} tk_chooseDirectory {} ttk::getDirectory
+}
+
+if {[tk windowingsystem]=="aqua"} {
+	# on aqua, tk busy leads to a crash - disable
+	interp alias {} tk_busy {} nop
+	proc ::nop {args} {}
+
+} else {
+	interp alias {} tk_busy {} tk busy
 }
 
 set tversion [package require tkcon]
@@ -69,9 +77,7 @@ proc Init {} {
 			FormatString %.5g
 		}
 	}
-
-
-		
+	
 	ReadPreferences
 	InitCache
 	InitGUI
@@ -120,12 +126,15 @@ proc InitGUI {} {
 	bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
 	bind $w(filelist) <<ProgressFinished>> ${ns}::OpenFinished
 
-	ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
+	set w(coleditbut) [ttk::button $w(listfr).coleditbut -text "Configure columns" \
+		-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
 
+	ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
+	
 	set w(progbar) [ttk::progressbar $w(listfr).progbar]
-	grid $w(pathent) -sticky nsew 
-	grid $w(filelist) -sticky nsew
-	grid $w(progbar) -sticky nsew
+	grid $w(pathent) $w(coleditbut) -sticky ew 
+	grid $w(filelist)    -          -sticky nsew
+	grid $w(progbar)     -          -sticky nsew
 
 	grid rowconfigure $w(listfr) $w(filelist) -weight 1
 	grid columnconfigure $w(listfr) 0 -weight 1
@@ -151,6 +160,9 @@ proc InitGUI {} {
 
 
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(dumpButton) -sticky ew
+	grid columnconfigure $w(bbar) 1 -weight 1
+	grid columnconfigure $w(bbar) 3 -weight 1
+
 
 	set w(Graph) [ukaz::box %AUTO% $w(canv)]
 
@@ -159,8 +171,16 @@ proc InitGUI {} {
 
 proc ReadPreferences {} {
 	variable profiledir
+	variable basedir
 	variable PrefFileName
 	variable Preferences {}
+
+	# read hardcoded prefs from package - must not fail
+	set fd [open [file join $basedir Preferences_default.dict] r]
+	set Preferences [read $fd]
+	close $fd
+	
+	# read from profile dir
 	if {$profiledir == {}} {
 		set PrefFileName {}
 		puts "No preferences file"
@@ -169,7 +189,7 @@ proc ReadPreferences {} {
 			set PrefFileName [file join $profiledir Preferences.dict]
 			set fd [open $PrefFileName r]
 			fconfigure $fd -translation binary -encoding binary
-			set Preferences [read $fd]
+			set Preferences [dict merge $Preferences [read $fd]]
 			close $fd
 		}]} {
 			# error - maybe cleanup fd
@@ -282,6 +302,13 @@ proc ChooseColumns {columns} {
 
 }
 
+proc ColumnEdit {} {
+	variable ActiveColumns
+	set ColumnsAvailable [PreferenceGet ColumnsAvailable {Motor Detector Modified Energy}]
+	set columns [ListEditor getList -initiallist $ActiveColumns -values [lsort -dictionary $ColumnsAvailable]]
+	ChooseColumns $columns
+	PreferenceSet Columns $columns 
+}
 
 proc ClassifyHDF {type fn} {
 	variable w
@@ -621,7 +648,7 @@ proc RePlot {} {
 		$w(Graph) remove $plotid
 	}
 
-	if {[llength $data] > 4} {
+	if {[llength $data] >= 4} {
 		if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
 			$w(Graph) configure -xlabel "$xformat"
 		} else {
@@ -676,7 +703,7 @@ proc OpenStart {max} {
 	variable ProgressClock [clock milliseconds]
 	variable ProgressDelay 200 ;# only after 200ms one feels a delay
 	$w(progbar) configure -maximum $max
-	tk busy hold .
+	tk_busy hold .
 }
 
 proc OpenProgress {i} {
@@ -696,7 +723,7 @@ proc OpenProgress {i} {
 proc OpenFinished {} {
 	variable w
 	$w(progbar) configure -value 0
-	tk busy forget .
+	tk_busy forget .
 	SaveCache
 }
 

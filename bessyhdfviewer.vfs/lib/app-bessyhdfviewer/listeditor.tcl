@@ -18,11 +18,19 @@ snit::widget ListEditor {
 
 	option -initiallist
 	option -values
+	option -resultvar {}
 
+
+	# call this function to get the modal dialog
+	typevariable resultlist
 	typemethod getList {args} {
-		
+		set newobj [ListEditor .__leditwin -resultvar [mytypevar resultlist] {*}$args]
+		grab $newobj
+		vwait [mytypevar resultlist]
+		return $resultlist
 	}
 
+	
 	constructor {args} {
 		# first fill toplevel with themed frame
 		install mainframe using ttk::frame $win.mfr
@@ -59,7 +67,7 @@ snit::widget ListEditor {
 		install includetbl using tablelist::tablelist $curframe.tbl \
 			-listvariable [myvar includelist] -movablerows 1 \
 			-xscrollcommand [list $curframe.hsb set] -yscrollcommand [list $curframe.vsb set] \
-			-exportselection 0 -selectmode single -columns {0 "Option" left}
+			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all
 
 		set curvsb [ttk::scrollbar $curframe.vsb -orient vertical   -command [list $includetbl yview]]
 		set curhsb [ttk::scrollbar $curframe.hsb -orient horizontal -command [list $includetbl xview]]
@@ -74,10 +82,10 @@ snit::widget ListEditor {
 		install valuestbl using tablelist::tablelist $avlframe.tbl \
 			-listvariable [myvar valueslist] -movablerows 0 \
 			-xscrollcommand [list $avlframe.hsb set] -yscrollcommand [list $avlframe.vsb set] \
-			-exportselection 0 -selectmode single -columns {0 "Option" left}
+			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all
 
 		bind $valuestbl <<TablelistSelect>> [mymethod ValueSelect]
-		bind $valuestbl <Return> [mymethod Add]
+		bind [$valuestbl bodytag] <Return> [mymethod Add]
 
 		set avlvsb [ttk::scrollbar $avlframe.vsb -orient vertical   -command [list $valuestbl yview]]
 		set avlhsb [ttk::scrollbar $avlframe.hsb -orient horizontal -command [list $valuestbl xview]]
@@ -104,9 +112,6 @@ snit::widget ListEditor {
 		$self configurelist $args
 		set includelist $options(-initiallist)
 		set valueslist $options(-values)
-		puts "valueslist is now $valueslist"
-
-
 	}
 
 	method ValueSelect {} {
@@ -134,5 +139,20 @@ snit::widget ListEditor {
 		}
 	}
 
+	method OK {} {
+		if {$options(-resultvar) != {}} {
+			upvar #0 $options(-resultvar) var
+			set var $includelist
+		}
+		destroy $win
+	}
+
+	method Cancel {} {
+		if {$options(-resultvar) != {}} {
+			upvar #0 $options(-resultvar) var
+			set var $options(-initiallist)
+		}
+		destroy $win
+	}	
 
 }

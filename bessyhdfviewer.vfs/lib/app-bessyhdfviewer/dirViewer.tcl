@@ -105,7 +105,8 @@ namespace eval dirViewer {} {
 			install tbl using tablelist::tablelist $tf.tbl \
 				-expandcommand [mymethod expandCmd] -collapsecommand [mymethod collapseCmd] \
 				-xscrollcommand [list $tf.hsb set] -yscrollcommand [list $tf.vsb set] \
-				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0
+				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0 \
+				-stretch end
 
 			if {[$tbl cget -selectborderwidth] == 0} {
 				$tbl configure -spacing 1
