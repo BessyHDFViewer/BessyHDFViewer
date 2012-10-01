@@ -37,19 +37,35 @@ source [file join $basedir dictunsupported.tcl]
 
 proc Init {} {
 	variable temphdf
-	variable CopyHDF false
-	if {[string match win* $::tcl_platform(platform)] && false} {
-		# on Windows, we need to locally copy HDF files before opening
-		# because of performance problems in remote file systems :-(
-		close [file tempfile temphdf]
-		# this creates a temp file and removes it again - the same name will be used while browsing
-		set CopyHDF true
+	variable profiledir
+		
+	# find user profile directory
+	switch -glob $::tcl_platform(platform) {
+		win* {
+			set profiledir $::env(APPDATA)/BessyHDFViewer
+		}
+		unix {
+			set profiledir $::env(HOME)/.BessyHDFViewer
+		}
+		default {
+			set profiledir [pwd]
+		}
 	}
 
+	if {[catch {file mkdir $profiledir}]} {
+		# give up - no persistent cache
+		puts "No persistent cache - could not access profile dir $profiledir"
+		set profiledir {}
+	}
+
+	ReadPreferences
 	InitCache
 	InitGUI
 }
 
+proc ExitProc {} {
+	SavePreferences
+}
 
 proc InitGUI {} {
 	variable w
@@ -57,6 +73,10 @@ proc InitGUI {} {
 	# paned window, left file selection, right plot window
 	set w(mainfr) [ttk::panedwindow .mainfr -orient horizontal]
 	pack $w(mainfr) -expand yes -fill both
+	
+	# create exit proc
+	bind $w(mainfr) <Destroy> ${ns}::ExitProc
+
 
 	set w(listfr) [ttk::frame $w(mainfr).listfr]
 	set w(plotfr) [ttk::frame $w(mainfr).plotfr]
@@ -75,12 +95,7 @@ proc InitGUI {} {
 	bind $w(pathent) <Key-Return> ${ns}::DirUpdate
 
 	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
-		-columns \
-		{
-			0 "Motor" left
-			0 "Detector" left
-			0 "Modified" left
-		} \
+		-columns {"Motor" "Detector" "Modified"} \
 		-classifycommand ${ns}::ClassifyHDF \
 		-selectcommand ${ns}::PreviewFile \
 		-globpattern {*.hdf} \
@@ -125,34 +140,68 @@ proc InitGUI {} {
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(dumpButton) -sticky ew
 
 	set w(Graph) [ukaz::box %AUTO% $w(canv)]
+
 	
 }
+
+proc ReadPreferences {} {
+	variable profiledir
+	variable PrefFileName
+	variable Preferences {}
+	if {$profiledir == {}} {
+		set PrefFileName {}
+		puts "No preferences file"
+	} else {
+		if {[catch {
+			set PrefFileName [file join $profiledir Preferences.dict]
+			set fd [open $PrefFileName r]
+			fconfigure $fd -translation binary -encoding binary
+			set Preferences [read $fd]
+			close $fd
+		}]} {
+			# error - maybe cleanup fd
+			# cache file remains valid - maybe simply didn't exist
+			if {[info exists fd]} { catch {close $fd} }
+		}
+	}
+
+}
+
+proc PreferenceGet {key value default} {
+	variable Preferences
+	if {![dict exists $Preferences $key]} {
+		dict set Preferences $key $default
+		return $default
+	} else {
+		return [dict get $Preferences $key]
+	}
+}
+
+proc SavePreferences {} {
+	variable Preferences
+	variable PrefFileName
+	# hide errors when writing the pref file
+	catch { 
+		set fd [open $PrefFileName w]
+		puts -nonewline $fd $Preferences
+	}
+	catch { close $fd }
+}
+
 
 proc InitCache {} {
 	variable HDFCache {}
 	variable HDFCacheFile {}
 	variable HDFCacheDirty false
-	# find user profile directory
-	switch -glob $::tcl_platform(platform) {
-		win* {
-			set profiledir $::env(APPDATA)/BessyHDFViewer
-		}
-		unix {
-			set profiledir $::env(HOME)/.BessyHDFViewer
-		}
-		default {
-			set profiledir [pwd]
-		}
-	}
+	variable profiledir
 
-	if {[catch {file mkdir $profiledir}]} {
-		# give up - no persistent cache
-		puts "No persistent cache - could not access profile dir $profiledir"
-		return 
+	if {$profiledir == {} } {
+		set HDFCacheFile {}
+		puts "No persistent Cache"
+	} else {
+		set HDFCacheFile [file join $profiledir HDFClassCache.dict]
+		ReadCache
 	}
-	set HDFCacheFile [file join $profiledir HDFClassCache.dict]
-
-	ReadCache
 }
 
 proc SaveCache {} {
@@ -220,24 +269,24 @@ proc ClassifyHDF {type fn} {
 	lassign $class type motor detector
 	switch $type {
 		MCA {
-			return $fn $mtime [list $motor $detector $mtime [IconGet mca]]
+			return [list $motor $detector $mtime [IconGet mca]]
 		}
 
 		MULTIPLE_IMG {
-			return $fn $mtime [list $motor $detector $mtime [IconGet image-multiple]]
+			return [list $motor $detector $mtime [IconGet image-multiple]]
 		}
 
 		SINGLE_IMG {
-			return $fn $mtime [list $motor $detector $mtime [IconGet image-x-generic]]
+			return [list $motor $detector $mtime [IconGet image-x-generic]]
 		}
 
 		PLOT {
-			return $fn $mtime [list $motor $detector $mtime [IconGet graph]]
+			return [list $motor $detector $mtime [IconGet graph]]
 		}
 
 		default -
 		UNKNOWN {
-			return $fn $mtime [list $motor $detector $mtime [IconGet unknown]]
+			return [list $motor $detector $mtime [IconGet unknown]]
 		}
 	}
 }
@@ -542,15 +591,9 @@ proc formatDate {date} {
 }
 
 proc bessy_reshape {fn} {
-	variable CopyHDF
 	variable temphdf
 
-	if {$CopyHDF} {
-		file copy -force $fn $temphdf
-		autovar hdf HDFpp %AUTO% $temphdf
-	} else {
-		autovar hdf HDFpp %AUTO% $fn
-	}
+	autovar hdf HDFpp %AUTO% $fn
 	set hlist [$hdf dump]
 	
 	foreach dataset $hlist {

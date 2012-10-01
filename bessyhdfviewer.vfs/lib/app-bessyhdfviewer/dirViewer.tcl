@@ -11,6 +11,7 @@
 
 package require tablelist_tile 5.6
 package require snit
+package require SmallUtils
 
 #
 # Add some entries to the Tk option database
@@ -75,13 +76,14 @@ namespace eval dirViewer {} {
 		component bhome
 		component bcollapse
 		variable homedir
+		variable cwd
 
 		option -globpattern -default {*}
-		option -columns -default {}
-		option -columnoptions -default {}
+		option -columns -default {} -configuremethod ChangeColumns
+		option -columnoptions -default {} -configuremethod ChangeColumns
 		option -classifycommand -default {}
 		option -selectcommand -default {}
-		option -selectmode -default {browse}
+		delegate option -selectmode to tbl
 
 		#------------------------------------------------------------------------------
 		# Constructor
@@ -93,37 +95,20 @@ namespace eval dirViewer {} {
 			# Create a scrolled tablelist widget with 3 dynamic-
 			# width columns and interactive sort capability
 			#
-			$self configurelist $args
 			set homedir $dir
-
-			if {$options(-classifycommand) == ""} {
-				set options(-classifycommand) [myproc classifydefault]
-			}
-
-			if {[llength $options(-columns)] != [llength $options(-columnoptions)]*3 && [llength $options(-columnoptions)]!=0 } {
-				return -code error "Columnoptions must be given for all additional columns"
-			}
-	
-			set columnspec [concat {0 "Name" left} $options(-columns)]
+			set cwd $homedir
 
 			install tf using ttk::frame $win.tf -class ScrollArea
 			install tbl using tablelist::tablelist $tf.tbl \
-				-columns $columnspec \
 				-expandcommand [mymethod expandCmd] -collapsecommand [mymethod collapseCmd] \
 				-xscrollcommand [list $tf.hsb set] -yscrollcommand [list $tf.vsb set] \
-				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0 -selectmode $options(-selectmode)
+				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0
 
 			if {[$tbl cget -selectborderwidth] == 0} {
 				$tbl configure -spacing 1
 			}
 
-			$tbl columnconfigure 0 -formatcommand [myproc formatFile] -sortmode command -sortcommand [myproc compareFile]
-			set col 1
-			foreach opt $options(-columnoptions) {
-				$tbl columnconfigure $col {*}$opt
-				incr col
-			}
-
+			$self ChangeColumns -columns {}
 
 			install vsb using ttk::scrollbar $tf.vsb -orient vertical   -command [list $tbl yview]
 			install hsb using ttk::scrollbar $tf.hsb -orient horizontal -command [list $tbl xview]
@@ -152,6 +137,7 @@ namespace eval dirViewer {} {
 			} else {
 				grid $vsb -row 0 -rowspan 2 -column 1 -sticky ns
 			}
+
 			grid $hsb -row 2 -column 0 -sticky ew
 			grid rowconfigure    $tf 1 -weight 1
 			grid columnconfigure $tf 0 -weight 1
@@ -163,7 +149,33 @@ namespace eval dirViewer {} {
 			# Populate the tablelist with the contents of the given directory
 			#
 			$tbl sortbycolumn 0
-			$self putContents $dir root
+			
+			$self configurelist $args
+			SmallUtils::defer [mymethod refreshView]
+		}
+
+
+		method ChangeColumns {option value} {
+			set options($option) $value
+			# either columns or columnsoptions has changed. Rebuild
+
+			# set column headings to 
+			set columnspec {0 "Name" left}
+			foreach col $options(-columns) {
+				lappend columnspec 0 $col left
+			}
+
+			$tbl configure -columns $columnspec
+			$tbl columnconfigure 0 -formatcommand [myproc formatFile] -sortmode command -sortcommand [myproc compareFile]
+
+			set col 1
+			foreach opt $options(-columnoptions) {
+				if {$col > [llength $options(-columns)]} { break }
+				$tbl columnconfigure $col {*}$opt
+				incr col
+			}
+
+			SmallUtils::defer [mymethod refreshView]
 		}
 
 		#------------------------------------------------------------------------------
@@ -240,10 +252,13 @@ namespace eval dirViewer {} {
 					set dirtail [file tail $dirname]
 				}
 
-				set class [uplevel #0 $options(-classifycommand) [list directory $dirname]]
-				if {$class != {}} {
-					lappend itemList [list [list directory $dirtail] {*}$class $dirname]
+				if {$options(-classifycommand) != {}} {
+					set class [uplevel #0 $options(-classifycommand) [list directory $dirname]]
+				} else {
+					set class [$self classifydefault [list directory $dirname]]
 				}
+
+				lappend itemList [list [list directory $dirtail] {*}$class $dirname]
 				incr progress
 				event generate $win <<Progress>> -data $progress
 
@@ -252,6 +267,13 @@ namespace eval dirViewer {} {
 			foreach fn $files {
 				set fullname [file normalize $fn]
 				set tail [file tail $fn]
+				
+				if {$options(-classifycommand) != {}} {
+					set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
+				} else {
+					set class [$self classifydefault [list file $fullname]]
+				}
+
 				set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
 				lappend itemList [list [list file $tail] {*}$class $fullname]
 
@@ -295,7 +317,7 @@ namespace eval dirViewer {} {
 				#
 				# Configure the "Refresh" and "Parent" buttons
 				#
-				$brefresh configure -command [mymethod refreshView $dir]
+				$brefresh configure -command [mymethod refreshView]
 				set p [file dirname $dir]
 				if {$p == $dir} {
 					# we are on the top level of this volume
@@ -316,6 +338,7 @@ namespace eval dirViewer {} {
 		}
 
 		method display {dir} {
+			set cwd $dir
 			$self putContents $dir root
 		}
 
@@ -420,7 +443,7 @@ namespace eval dirViewer {} {
 		# Redisplays the contents of the directory dir in the tablelist widget tbl and
 		# restores the expanded states of the folders as well as the vertical view.
 		#------------------------------------------------------------------------------
-		method refreshView {dir} {
+		method refreshView {} {
 			#
 			# Save the vertical view and get the path names
 			# of the folders displayed in the expanded rows
@@ -435,7 +458,7 @@ namespace eval dirViewer {} {
 			# Redisplay the directory's (possibly changed) contents and restore
 			# the expanded states of the folders, along with the vertical view
 			#
-			$self putContents $dir root
+			$self putContents $cwd root
 			$self restoreExpandedStates root expandedFolders
 			$tbl yview moveto [lindex $yView 0]
 		}
