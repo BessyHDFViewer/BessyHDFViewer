@@ -36,9 +36,9 @@ source [file join $basedir dirViewer.tcl]
 source [file join $basedir dictunsupported.tcl]
 
 proc Init {} {
-	variable temphdf
+	variable ns
 	variable profiledir
-		
+	
 	# find user profile directory
 	switch -glob $::tcl_platform(platform) {
 		win* {
@@ -58,6 +58,18 @@ proc Init {} {
 		set profiledir {}
 	}
 
+	variable ColumnTraits {
+		Modified {
+			Display { -sortmode integer -formatcommand formatDate }
+		}
+
+		Energy {
+			FormatString %.5g
+		}
+	}
+
+
+		
 	ReadPreferences
 	InitCache
 	InitGUI
@@ -95,11 +107,9 @@ proc InitGUI {} {
 	bind $w(pathent) <Key-Return> ${ns}::DirUpdate
 
 	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
-		-columns {"Motor" "Detector" "Modified"} \
 		-classifycommand ${ns}::ClassifyHDF \
 		-selectcommand ${ns}::PreviewFile \
 		-globpattern {*.hdf} \
-		-columnoptions [list {} {} [list -sortmode integer -formatcommand ${ns}::formatDate ]] \
 		-selectmode extended]
 
 	bind $w(filelist) <<DirviewerChDir>> [list ${ns}::DirChanged %d]
@@ -108,6 +118,7 @@ proc InitGUI {} {
 	bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
 	bind $w(filelist) <<ProgressFinished>> ${ns}::OpenFinished
 
+	ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
 
 	set w(progbar) [ttk::progressbar $w(listfr).progbar]
 	grid $w(pathent) -sticky nsew 
@@ -167,7 +178,7 @@ proc ReadPreferences {} {
 
 }
 
-proc PreferenceGet {key value default} {
+proc PreferenceGet {key default} {
 	variable Preferences
 	if {![dict exists $Preferences $key]} {
 		dict set Preferences $key $default
@@ -175,6 +186,11 @@ proc PreferenceGet {key value default} {
 	} else {
 		return [dict get $Preferences $key]
 	}
+}
+
+proc PreferenceSet {key value} {
+	variable Preferences
+	dict set Preferences $key $value
 }
 
 proc SavePreferences {} {
@@ -238,9 +254,37 @@ proc ReadCache {} {
 	}	
 }
 
+proc ChooseColumns {columns} {
+	variable w
+	variable ns
+	variable ColumnTraits
+	variable ActiveColumns $columns
+
+	set columnopts {}
+
+	foreach col $columns {
+		if {[dict exists $ColumnTraits $col Display]} {
+			lappend columnopts [dict get $ColumnTraits $col Display]
+		} else {
+			if {[dict exists $ColumnTraits $col FormatString]} {
+				set formatString [dict get $ColumnTraits $col FormatString]
+			} else {
+				set formatString %.4g
+			}
+
+			lappend columnopts [list -sortmode dictionary -formatcommand [list ${ns}::ListFormat $formatString]]
+		}
+	}
+
+	$w(filelist) configure -columns $columns -columnoptions $columnopts
+
+}
+
+
 proc ClassifyHDF {type fn} {
 	variable w
 	variable HDFCache
+	variable ActiveColumns
 	
 	if {[catch {file mtime $fn} mtime]} {
 		# could not get mtime - something is wrong
@@ -248,47 +292,115 @@ proc ClassifyHDF {type fn} {
 	}
 
 	if {$type == "directory"} {
-		return [list "" "" $mtime ""]
+		# for directories, only check the mtime if requested
+		foreach col $ActiveColumns {
+			if {$col == "Modified"} {	
+				lappend result $mtime
+			} else {
+				lappend result ""
+			}
+		}
+		lappend result "" ;# icon handled by dirViewer
+		return $result
 	}
 
+
+	set cachemiss false
 	# check cache
-	if {[dict exists $HDFCache $fn] && ($mtime==[dict get $HDFCache $fn mtime])} {
-		set class [dict get $HDFCache $fn class]
+	if {[dict exists $HDFCache $fn]} {
+		set cached [dict get $HDFCache $fn]
+		set class [dict get $cached class]
 	} else {
-		if {[catch {bessy_class [bessy_reshape $fn]} class]} {
-			puts "Error reading hdf file $fn"
-			set class [list UNKNOWN "" ""]
+		set cached {}
+	}
+
+	# loop over requested columns. 
+	set result {}
+	foreach col $ActiveColumns {
+		# 1. check cache
+		if {[dict exists $cached $col] && !$cachemiss} {
+			lappend result [dict get $cached $col]
+			continue
 		}
 
+		# 2. if we get here, either the value could not be found in the cache 
+		# or cachemiss == true, i.e. we have already read the file
+		if {!$cachemiss} {
+			# first time we have a cache miss -- try to read the file
+			if {[catch {bessy_reshape $fn} temphdfdata]} {
+				puts "Error reading hdf file $fn"
+				set temphdfdata {}
+
+			}
+			
+			lassign [bessy_class $temphdfdata] class motor detector
+			
+			# don't check cache for this file any longer
+			set cachemiss true
+		}
+
+		# 3. try to get the value from temphdfdata and feed back to cache
+
+		switch $col {
+			Motor {
+				set value $motor
+			}
+
+			Detector {
+				set value $detector
+			}
+
+			Modified {
+				set value $mtime
+			}
+
+			default {
+				set value [bessy_get_field $temphdfdata $col]
+			}
+		}
+
+		lappend result $value
+
+		# mark cache dirty and write back value
 		variable HDFCacheDirty true
-		dict set HDFCache $fn mtime $mtime
+		dict set HDFCache $fn $col $value
+	}
+
+	if {$cachemiss} {
+		# write back class to cacha
 		dict set HDFCache $fn class $class
 	}
-	# puts "$fn $class"
 	
-	lassign $class type motor detector
-	switch $type {
+
+	# last column is always the icon for the class
+	switch $class {
 		MCA {
-			return [list $motor $detector $mtime [IconGet mca]]
+			lappend result [IconGet mca]
 		}
 
 		MULTIPLE_IMG {
-			return [list $motor $detector $mtime [IconGet image-multiple]]
+			lappend result [IconGet image-multiple]
 		}
 
 		SINGLE_IMG {
-			return [list $motor $detector $mtime [IconGet image-x-generic]]
+			lappend result [IconGet image-x-generic]
 		}
 
 		PLOT {
-			return [list $motor $detector $mtime [IconGet graph]]
+			lappend result [IconGet graph]
 		}
 
-		default -
 		UNKNOWN {
-			return [list $motor $detector $mtime [IconGet unknown]]
+			lappend result [IconGet unknown]
+		}
+		
+		default {
+			variable HDFCacheFile
+			error "Unknown file class '$class'. Should not happen - maybe delete your cache file \n $HDFCacheFile\n and restart."
 		}
 	}
+
+	return $result
 }
 
 proc PreviewFile {files} {
@@ -587,11 +699,38 @@ proc OpenFinished {} {
 }
 
 proc formatDate {date} {
-	clock format $date -format {%Y-%m-%d %H:%S}
+	if {$date == {}} {
+		return "Not known"
+	} {
+		clock format $date -format {%Y-%m-%d %H:%S}
+	}
 }
 
+proc ListFormat {formatString what} {
+	# try to do sensible formatting
+	# what might be a two-element list for min/max
+	if {[string is list $what]} {
+		# two-element list for min/max
+		if {[llength $what] ==2} {
+			lassign $what min max
+			return "[ListFormat $formatString $min] - [ListFormat $formatString $max]"
+		}
+
+		# single double value
+		if {[string is double -strict $what]} {
+			return [format $formatString $what]
+		}
+
+		# string
+		return $what
+	} else {
+		return $what
+	}
+}
+
+
+
 proc bessy_reshape {fn} {
-	variable temphdf
 
 	autovar hdf HDFpp %AUTO% $fn
 	set hlist [$hdf dump]
@@ -679,6 +818,36 @@ proc bessy_class {data} {
 	# could not identify 
 	return [list UNKNOWN $motor $detector]
 }
+
+proc bessy_get_field {hdfdata field} {
+	# try to read a single value from dictionaries
+	
+	set values {}
+
+	foreach datakey {Detector Motor} {
+		# keys that are tried to find data
+		if {[dict exists $hdfdata $datakey $field data]} {
+			lappend values {*}[dict get $hdfdata $datakey $field data]
+		}
+	}
+
+	foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot} {
+		# keys that might store the field as a single value in the attrs
+		if {[dict exists $hdfdata $attrkey $field]} {
+			lappend values [dict get $hdfdata $attrkey $field]
+		}
+	}
+	
+	if {[llength $values] <= 1} {
+		# found nothing or single value - just return that
+		return [lindex $values 0]
+	}
+
+	# if more than one value is found, compute range 
+	set values [lsort -dictionary $values]
+	return [list [lindex $values 0] [lindex $values end]]
+}
+
 
 proc autovar {var args} {
 	upvar 1 $var v

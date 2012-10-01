@@ -78,6 +78,9 @@ namespace eval dirViewer {} {
 		variable homedir
 		variable cwd
 
+		variable RebuildPending false
+		variable PendingState [dict create]
+
 		option -globpattern -default {*}
 		option -columns -default {} -configuremethod ChangeColumns
 		option -columnoptions -default {} -configuremethod ChangeColumns
@@ -157,22 +160,40 @@ namespace eval dirViewer {} {
 
 		method ChangeColumns {option value} {
 			set options($option) $value
-			# either columns or columnsoptions has changed. Rebuild
-
-			# set column headings to 
-			set columnspec {0 "Name" left}
-			foreach col $options(-columns) {
-				lappend columnspec 0 $col left
+			# either columns or columnoptions have changed. Rebuild. 
+		
+			if {!$RebuildPending} {
+				set PendingState [$self saveView]
+				set RebuildPending true
+				$tbl delete 0 end
 			}
 
-			$tbl configure -columns $columnspec
-			$tbl columnconfigure 0 -formatcommand [myproc formatFile] -sortmode command -sortcommand [myproc compareFile]
+			switch $option {
+				-columns {
+					# set column headings 
+					set columnspec {0 "Name" left}
+					foreach col $options(-columns) {
+						lappend columnspec 0 $col left
+					}
 
-			set col 1
-			foreach opt $options(-columnoptions) {
-				if {$col > [llength $options(-columns)]} { break }
-				$tbl columnconfigure $col {*}$opt
-				incr col
+					$tbl configure -columns $columnspec
+					
+					if {[$tbl sortcolumn] >= [llength $options(-columns)] + 1 } {
+						# index of sorted column is out of range
+						$tbl sortbycolumn 0
+					}
+				}
+
+				-columnoptions {
+					$tbl columnconfigure 0 -formatcommand [myproc formatFile] -sortmode command -sortcommand [myproc compareFile]
+
+					set col 1
+					foreach opt $options(-columnoptions) {
+						if {$col > [llength $options(-columns)]} { break }
+						$tbl columnconfigure $col {*}$opt
+						incr col
+					}
+				}
 			}
 
 			SmallUtils::defer [mymethod refreshView]
@@ -448,39 +469,55 @@ namespace eval dirViewer {} {
 			# Save the vertical view and get the path names
 			# of the folders displayed in the expanded rows
 			#
-			set yView [$tbl yview]
-			foreach key [$tbl expandedkeys] {
-				set pathName [$tbl rowattrib $key pathName]
-				set expandedFolders($pathName) 1
+			if {$RebuildPending} {
+				set view $PendingState
+				set RebuildPending false
+			} else {
+				set view [$self saveView]
 			}
-
 			#
 			# Redisplay the directory's (possibly changed) contents and restore
 			# the expanded states of the folders, along with the vertical view
 			#
-			$self putContents $cwd root
-			$self restoreExpandedStates root expandedFolders
-			$tbl yview moveto [lindex $yView 0]
+			$self display $cwd
+			$self restoreView $view
 		}
 
 		#------------------------------------------------------------------------------
-		# restoreExpandedStates
+		# restoreView
 		#
 		# Expands those children of the parent identified by nodeIdx that display
-		# folders whose path names are the names of the elements of the array specified
+		# folders whose path names are the names of the elements of the dict specified
 		# by the last argument.
 		#------------------------------------------------------------------------------
-		method restoreExpandedStates {nodeIdx expandedFoldersName} {
-			upvar $expandedFoldersName expandedFolders
+		method restoreView {state} {
+			$self restoreExpandedStates_rec root [dict get $state expandedFolders]
+			$tbl yview moveto [lindex [dict get $state yview] 0]
+		}
 
+		method restoreExpandedStates_rec {nodeIdx expandedFolders} {
 			foreach key [$tbl childkeys $nodeIdx] {
 				set pathName [$tbl rowattrib $key pathName]
 				if {[string compare $pathName ""] != 0 &&
-				[info exists expandedFolders($pathName)]} {
+				[dict exists $expandedFolders $pathName]} {
 					$tbl expand $key -partly
-					$self restoreExpandedStates $key expandedFolders
+					$self restoreExpandedStates_rec $key $expandedFolders
 				}
 			}
+		}
+
+
+		method saveView {} {
+			# return a dictionary with the information 
+			# about the view - current position and expanded directories
+			set state [dict create expandedFolders {}]
+			dict set state yview [$tbl yview]
+			foreach key [$tbl expandedkeys] {
+				set pathName [$tbl rowattrib $key pathName]
+				dict set state expandedFolders $pathName 1
+			}
+
+			return $state
 		}
 
 		method notifySelect {} {
