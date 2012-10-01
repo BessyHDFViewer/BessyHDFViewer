@@ -5,7 +5,7 @@ lappend auto_path [file join $basedir lib]
 
 package require hdfpp
 package require ukaz
-package require tablelist_tile
+package require Tk
 
 if {[tk windowingsystem]=="x11"} {
 	ttk::setTheme default
@@ -32,8 +32,10 @@ tkcon title "BessyHDFViewer Console (tkcon $tversion)"
 
 variable ns [namespace current]
 
-source [file join $basedir dirViewer.tcl]
-source [file join $basedir dictunsupported.tcl]
+# load support modules
+foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl} {
+	source [file join $basedir $module]
+}
 
 proc Init {} {
 	variable ns
@@ -885,5 +887,6 @@ proc IconGet {name} {
 		}
 	}
 }
+
 
 Init
