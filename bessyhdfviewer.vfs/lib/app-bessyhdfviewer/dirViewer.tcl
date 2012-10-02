@@ -66,15 +66,9 @@ namespace eval dirViewer {} {
 	snit::widget dirViewer {
 
 		hulltype ttk::frame
-		component tf
 		component tbl
 		component vsb
 		component hsb
-		component bf
-		component brefresh
-		component bupwards
-		component bhome
-		component bcollapse
 		variable homedir
 		variable cwd
 
@@ -86,6 +80,7 @@ namespace eval dirViewer {} {
 		option -columnoptions -default {} -configuremethod ChangeColumns
 		option -classifycommand -default {}
 		option -selectcommand -default {}
+		option -hasparent -default 1 -readonly 1
 		delegate option -selectmode to tbl
 
 		#------------------------------------------------------------------------------
@@ -101,10 +96,9 @@ namespace eval dirViewer {} {
 			set homedir $dir
 			set cwd $homedir
 
-			install tf using ttk::frame $win.tf -class ScrollArea
-			install tbl using tablelist::tablelist $tf.tbl \
+			install tbl using tablelist::tablelist $win.tbl \
 				-expandcommand [mymethod expandCmd] -collapsecommand [mymethod collapseCmd] \
-				-xscrollcommand [list $tf.hsb set] -yscrollcommand [list $tf.vsb set] \
+				-xscrollcommand [list $win.hsb set] -yscrollcommand [list $win.vsb set] \
 				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0 \
 				-stretch end
 
@@ -114,22 +108,12 @@ namespace eval dirViewer {} {
 
 			$self ChangeColumns -columns {}
 
-			install vsb using ttk::scrollbar $tf.vsb -orient vertical   -command [list $tbl yview]
-			install hsb using ttk::scrollbar $tf.hsb -orient horizontal -command [list $tbl xview]
+			install vsb using ttk::scrollbar $win.vsb -orient vertical   -command [list $tbl yview]
+			install hsb using ttk::scrollbar $win.hsb -orient horizontal -command [list $tbl xview]
 			
 			set bodyTag [$tbl bodytag]
 			bind $bodyTag <Double-1>   [mymethod putContentsOfSelFolder]
-
 			bind $tbl <<TablelistSelect>> [mymethod notifySelect]
-
-			#
-			# Create three buttons within a frame child of the main widget
-			#
-			install bf using ttk::frame $win.bf
-			install brefresh using ttk::button $bf.brefresh -text "Refresh" -image [IconGet view-refresh] -compound left
-			install bupwards using ttk::button $bf.bupwards -text "Parent" -image [IconGet go-up] -compound left
-			install bhome using ttk::button $bf.bhome -text "Home" -image [IconGet go-home] -compound left -command [mymethod goHome]
-			install bcollapse using ttk::button $bf.coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [mymethod collapseCurrent]
 
 			#
 			# Manage the widgets
@@ -143,18 +127,16 @@ namespace eval dirViewer {} {
 			}
 
 			grid $hsb -row 2 -column 0 -sticky ew
-			grid rowconfigure    $tf 1 -weight 1
-			grid columnconfigure $tf 0 -weight 1
-			pack $bhome $bupwards $bcollapse $brefresh -side left -expand no -pady 2
-			pack $bf -side bottom -fill x
-			pack $tf -side top -expand yes -fill both
+			grid rowconfigure    $win 1 -weight 1
+			grid columnconfigure $win 0 -weight 1
+
+			# read in the options
+			$self configurelist $args
 
 			#
-			# Populate the tablelist with the contents of the given directory
+			# Request un update of the contents of this viewer
 			#
 			$tbl sortbycolumn 0
-			
-			$self configurelist $args
 			SmallUtils::defer [mymethod refreshView]
 		}
 
@@ -335,26 +317,6 @@ namespace eval dirViewer {} {
 				incr row
 			}
 
-			if {[string compare $nodeIdx "root"] == 0} {
-				#
-				# Configure the "Refresh" and "Parent" buttons
-				#
-				$brefresh configure -command [mymethod refreshView]
-				set p [file dirname $dir]
-				if {$p == $dir} {
-					# we are on the top level of this volume
-					# set parent to "" to signal displaying of volumes
-					set p ""
-				}
-
-				if {$dir == ""} {
-					# top level, can't go further up
-					$bupwards state disabled
-				} else {
-					$bupwards state !disabled
-					$bupwards configure -command [mymethod displayCmd $p]
-				}
-			}
 
 			event generate $win <<ProgressFinished>>
 		}
@@ -362,6 +324,11 @@ namespace eval dirViewer {} {
 		method display {dir} {
 			set cwd $dir
 			$self putContents $dir root
+			set options(-hasparent) [expr {$cwd != {}}]
+		}
+
+		method getcwd {} {
+			return $cwd
 		}
 
 		method displayCmd {dir} {
@@ -371,6 +338,19 @@ namespace eval dirViewer {} {
 
 		method goHome {} {
 			$self displayCmd $homedir
+		}
+
+		method goUp {} {
+			set parent [file dirname $cwd]
+			if {$parent == $cwd} {
+				# we are on the top level of this volume
+				# set parent to "" to signal displaying of volumes
+				set parent ""
+			}
+
+			if {$cwd != ""} {
+				$self displayCmd $parent
+			}
 		}
 
 		method collapseCurrent {} {
@@ -449,7 +429,6 @@ namespace eval dirViewer {} {
 		method putContentsOfSelFolder {} {
 			set row [$tbl curselection]
 			set isdir [expr {[lindex [$tbl get $row] 0 0]=="directory"}]
-			puts "Double click, isdir == $isdir, [lindex [$tbl get $row] 0]"
 			if {$isdir} {		;# directory item
 				set dir [$tbl rowattrib $row pathName]
 				$self displayCmd $dir

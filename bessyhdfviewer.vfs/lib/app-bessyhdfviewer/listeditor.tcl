@@ -68,6 +68,9 @@ snit::widget ListEditor {
 			-listvariable [myvar includelist] -movablerows 1 \
 			-xscrollcommand [list $curframe.hsb set] -yscrollcommand [list $curframe.vsb set] \
 			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all
+		
+		bind [$includetbl bodytag] <BackSpace> [mymethod Remove]
+		bind [$includetbl bodytag] <Delete> [mymethod Remove]
 
 		set curvsb [ttk::scrollbar $curframe.vsb -orient vertical   -command [list $includetbl yview]]
 		set curhsb [ttk::scrollbar $curframe.hsb -orient horizontal -command [list $includetbl xview]]

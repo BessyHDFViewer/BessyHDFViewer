@@ -90,20 +90,27 @@ proc ExitProc {} {
 proc InitGUI {} {
 	variable w
 	variable ns
-	# paned window, left file selection, right plot window
-	set w(mainfr) [ttk::panedwindow .mainfr -orient horizontal]
-	pack $w(mainfr) -expand yes -fill both
+
 	
+	set w(mainfr) [ttk::panedwindow .mainfr -orient horizontal]
+	pack $w(mainfr) -expand yes -fill both	
 	# create exit proc
 	bind $w(mainfr) <Destroy> ${ns}::ExitProc
 
 
+	# paned window, left file selection, right data display
 	set w(listfr) [ttk::frame $w(mainfr).listfr]
-	set w(plotfr) [ttk::frame $w(mainfr).plotfr]
+	set w(displayfr) [ttk::notebook $w(mainfr).displaynb]
 
 	$w(mainfr) add $w(listfr)
-	$w(mainfr) add $w(plotfr)
+	$w(mainfr) add $w(displayfr)
 
+	# Main directory browser
+	# 
+	#  Dir entry
+	#  Table
+	#  Navigation buttons
+	#  Progress bar 
 	set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
 	
 	variable browsepath /messung/kmc/daten 
@@ -130,43 +137,107 @@ proc InitGUI {} {
 		-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
 
 	ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
+
 	
+	# Create navigation buttons
+	#
+	set w(bbar) [ttk::frame $w(listfr).bbar]
+	set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) refreshView]]
+	set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
+	set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
+	set w(bcollapse) [ttk::button $w(bbar).coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [list $w(filelist) collapseCurrent]]
+	set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::DumpCmd -text "Export" -image [IconGet document-export] -compound left]
+
+	pack $w(bhome) $w(bupwards) $w(bcollapse) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
+
+	
+	set w(foldbut) [ttk::button $w(listfr).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
+	variable PlotFolded false
+
 	set w(progbar) [ttk::progressbar $w(listfr).progbar]
 	grid $w(pathent) $w(coleditbut) -sticky ew 
 	grid $w(filelist)    -          -sticky nsew
+	grid $w(bbar)		 $w(foldbut) -sticky nsew
 	grid $w(progbar)     -          -sticky nsew
 
 	grid rowconfigure $w(listfr) $w(filelist) -weight 1
 	grid columnconfigure $w(listfr) 0 -weight 1
+	
+	
+	#############################################
+	#
+	# Data display window
 
+	# Plot tab 
+	#
+	# Toolbar
+
+	set w(plotfr) [ttk::frame $w(mainfr).plotfr]
+	set w(axebar) [ttk::frame $w(plotfr).axebar]
 	set w(canv) [canvas $w(plotfr).c -background white]
-	set w(bbar) [ttk::frame $w(plotfr).bbar]
-	grid $w(bbar) -sticky nsew
+
+	grid $w(axebar) -sticky nsew
 	grid $w(canv) -sticky nsew
 	grid columnconfigure $w(plotfr) 0 -weight 1
 	grid rowconfigure $w(plotfr) 1 -weight 1
-
-	# Toolbar
-	set w(xlbl) [ttk::label $w(bbar).xlbl -text "X axis:"]
-	set w(xent) [ttk::combobox $w(bbar).xent -textvariable ${ns}::xformat -exportselection 0]
-	set w(ylbl) [ttk::label $w(bbar).ylbl -text "Y axis:"]
-	set w(yent) [ttk::combobox $w(bbar).yent -textvariable ${ns}::yformat -exportselection 0]
+	
+	set w(xlbl) [ttk::label $w(axebar).xlbl -text "X axis:"]
+	set w(xent) [ttk::combobox $w(axebar).xent -textvariable ${ns}::xformat -exportselection 0]
+	set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
+	set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
 	
 	bind $w(xent) <<ComboboxSelected>> ${ns}::RePlot
 	bind $w(yent) <<ComboboxSelected>> ${ns}::RePlot
 	bind $w(xlbl) <1> { tkcon show }
 
-	set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::DumpCmd -text "Dump" -image [IconGet document-export] -style Toolbutton]
+	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky ew
+	grid columnconfigure $w(axebar) 1 -weight 1
+	grid columnconfigure $w(axebar) 3 -weight 1
 
-
-	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(dumpButton) -sticky ew
-	grid columnconfigure $w(bbar) 1 -weight 1
-	grid columnconfigure $w(bbar) 3 -weight 1
-
-
+	# Graph
 	set w(Graph) [ukaz::box %AUTO% $w(canv)]
 
+	$w(displayfr) add $w(plotfr) -text "Plot"
+
+
+	# Text display tab
+	# 
+	set w(tdumpfr) [ttk::frame $w(displayfr).textfr]
+	set w(textdump) [text $w(tdumpfr).text]
+	set w(textvsb) [ttk::scrollbar $w(tdumpfr).vsb -orient vertical -command [list $w(textdump) yview]]
+	set w(texthsb) [ttk::scrollbar $w(tdumpfr).hsb -orient horizontal -command [list $w(textdump) xview]]
+	$w(textdump) configure -xscrollcommand [list $w(texthsb) set] -yscrollcommand [list $w(textvsb) set]
+
+	grid $w(textdump) $w(textvsb) -sticky nsew
+	grid $w(texthsb)  x           -sticky nsew
+
+	grid columnconfigure $w(tdumpfr) 0 -weight 1
+	grid rowconfigure $w(tdumpfr) 0 -weight 1
+
+	$w(displayfr) add $w(tdumpfr) -text "Text"
 	
+	update
+	# bug in tablelist? Creation blocks if update is left out
+
+	# Table display tab
+	#
+	set w(ttblfr) [ttk::frame $w(displayfr).tblfr]
+	set w(tbltbl) [tablelist::tablelist $w(ttblfr).tbl \
+		-movablecolumns yes -setgrid no -showseparators yes \
+		-exportselection 0 -selectmode single -stretch all]
+
+	set w(tblvsb) [ttk::scrollbar $w(ttblfr).vsb -orient vertical -command [list $w(tbltbl) yview]]
+	set w(tblhsb) [ttk::scrollbar $w(ttblfr).hsb -orient horizontal -command [list $w(tbltbl) xview]]
+	$w(tbltbl) configure -xscrollcommand [list $w(tblhsb) set] -yscrollcommand [list $w(tblvsb) set]
+
+	grid $w(tbltbl) $w(tblvsb) -sticky nsew
+	grid $w(tblhsb)  x           -sticky nsew
+
+	grid columnconfigure $w(ttblfr) 0 -weight 1
+	grid rowconfigure $w(ttblfr) 0 -weight 1
+
+	$w(displayfr) add $w(ttblfr) -text "Table"
+
 }
 
 proc ReadPreferences {} {
@@ -306,8 +377,10 @@ proc ColumnEdit {} {
 	variable ActiveColumns
 	set ColumnsAvailable [PreferenceGet ColumnsAvailable {Motor Detector Modified Energy}]
 	set columns [ListEditor getList -initiallist $ActiveColumns -values [lsort -dictionary $ColumnsAvailable]]
-	ChooseColumns $columns
-	PreferenceSet Columns $columns 
+	if {$columns != $ActiveColumns} {
+		ChooseColumns $columns
+		PreferenceSet Columns $columns 
+	}
 }
 
 proc ClassifyHDF {type fn} {
@@ -487,19 +560,27 @@ proc PreviewFile {files} {
 					return 
 				}
 			}
-			
-			# create Row column from first key of data
-			set firstkey [lindex [dict keys $plotdata] 0]
-			if {$firstkey != {}} {
-				set nrows [llength [dict get $plotdata $firstkey data]]
-				set rowdata {}
-				for {set i 0} {$i<$nrows} {incr i} {
-					lappend rowdata $i
-				}
-				dict set plotdata Row data $rowdata
+				
+			# compute maximum data length
+			variable plotdatalength 0
+				dict for {var entry} $plotdata {
+				set plotdatalength [tcl::mathfunc::max $plotdatalength [llength [dict get $entry data]]]
 			}
 
+			# create Row column from first key of data
+			set rowdata {}
+			for {set i 0} {$i<$plotdatalength} {incr i} {
+				lappend rowdata $i
+			}
 
+			dict set rowdict Row data $rowdata
+			set plotdata [dict merge $rowdict $plotdata]
+			
+			# reshape plotdata into table form
+			MakeTable
+
+			DisplayTextDump
+			DisplayTable
 			RePlot
 		}
 
@@ -510,6 +591,25 @@ proc PreviewFile {files} {
 		}
 	}
 }
+
+proc MakeTable {} {
+	# reformat plotdata into table
+	# compute maximum length for each data column - might be different due to BESSY_INF trimming
+	variable plotdatalength
+	variable plotdata
+	variable tbldata
+	variable tblheader [dict keys $plotdata]
+
+	set tbldata {}
+	for {set i 0} {$i<$plotdatalength} {incr i} {
+		set line {}
+		foreach {var entry} $plotdata {
+			lappend line [lindex [dict get $entry data] $i]
+		}
+		lappend tbldata $line
+	}
+}
+
 
 proc DumpAttrib {data {indent ""}} {
 	set result ""
@@ -668,6 +768,30 @@ proc RePlot {} {
 
 }
 
+proc DisplayTextDump {} {
+	# put the contents of the file into the text display
+	variable hdfdata
+	variable w
+	$w(textdump) delete 1.0 end
+	$w(textdump) insert end [Dump $hdfdata]
+}
+
+proc DisplayTable {} {
+	variable w
+	variable plotdata
+	variable plotdatalength
+	variable tbldata
+	variable tblheader
+	
+	foreach var $tblheader {
+		lappend columns 0 $var left
+	}
+	$w(tbltbl) configure -columns $columns
+
+	$w(tbltbl) delete 0 end
+	$w(tbltbl) insertlist 0 $tbldata
+}
+
 proc DirChanged {dir} {
 	# dir was changed by double clicking in dirviewer
 	variable browsepath
@@ -757,7 +881,19 @@ proc ListFormat {formatString what} {
 	}
 }
 
-
+proc FoldPlotCmd {} {
+	variable w
+	variable PlotFolded
+	if {$PlotFolded} {
+		$w(mainfr) add $w(displayfr)
+		$w(foldbut) configure -image [IconGet fold-open]
+		set PlotFolded false
+	} else {
+		$w(mainfr) forget $w(displayfr)
+		$w(foldbut) configure -image [IconGet fold-close]
+		set PlotFolded true
+	}
+}
 
 proc bessy_reshape {fn} {
 
