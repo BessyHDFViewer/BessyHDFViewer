@@ -375,8 +375,8 @@ proc ChooseColumns {columns} {
 
 proc ColumnEdit {} {
 	variable ActiveColumns
-	set ColumnsAvailable [PreferenceGet ColumnsAvailable {Motor Detector Modified Energy}]
-	set columns [ListEditor getList -initiallist $ActiveColumns -values [lsort -dictionary $ColumnsAvailable]]
+	set ColumnsAvailableTree [PreferenceGet ColumnsAvailableTree {{GROUP General {{LIST {Motor Detector Modified}}}} {GROUP Motors {{LIST {Energy}}}}}]
+	set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns"]
 	if {$columns != $ActiveColumns} {
 		ChooseColumns $columns
 		PreferenceSet Columns $columns 
@@ -640,7 +640,7 @@ proc Dump {hdfdata} {
 
 	if {[dict exists $hdfdata Motor]} {
 		# usual scan
-		foreach key {MotorPositions DetectorValues OptionalValues Plot} {
+		foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
 			if {[dict exists $hdfdata $key]} {
 				append result "# $key:\n"
 				append result [DumpAttrib [dict get $hdfdata $key] \t]
@@ -866,7 +866,7 @@ proc ListFormat {formatString what} {
 		# two-element list for min/max
 		if {[llength $what] ==2} {
 			lassign $what min max
-			return "[ListFormat $formatString $min] - [ListFormat $formatString $max]"
+			return "[ListFormat $formatString $min] \u2014 [ListFormat $formatString $max]"
 		}
 
 		# single double value

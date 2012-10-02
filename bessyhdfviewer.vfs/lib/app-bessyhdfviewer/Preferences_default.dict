@@ -4,142 +4,244 @@ Columns {
 	Modified
 }
 
-ColumnsAvailable {
-	2Theta
-	BalgSystem
-	Beam_current
-	Beam_Lifetime
-	Beam_Pos
-	Beam_pos_hor
-	Beam_pos_vert
-	BeamStop_X
-	BeamStop_Y
-	Bessy_Lebensdauer
-	Bessy_Ringstrom
-	Bieger
-	COATING_2nd_MIR
-	Cr_1_Cu_Bloc
-	Cr_2_Si_Temp
-	Cr_3_Si_Temp
-	Cr_4_InSb_Temp
-	Crystal_1_phi
-	Crystal_2_phi
-	Crystal_2_theta
-	Crystal_3_phi
-	Crystal_3_theta
-	Crystal_4_phi
-	CRYSTAL_COOLING
-	Det.-X
-	Det_SAXS
-	Detector
-	Diode
-	DIODE_BEHIND_MONO
-	Diode_behind_mono
-	DIODE_IN_MONO
-	Diode_in_mono
-	Energy
-	FCM_Diff
-	FILTER_1
-	Filter_1
-	FILTER_2
-	Filter_2
-	Filter_CCD_pinholes
-	FILTER_PINHOLES
-	HubAchse1
-	HubAchse2
-	K7001
-	Keithley1
-	Keithley2
-	Keithley3
-	Keithley4
-	Lebensdauer_1
-	Lebensdauer_2
-	Lift_table
-	MarPosition
-	Mirror_1_hor
-	Mirror_1_psi
-	Mirror_1_theta
-	Mirror_1_vert
-	Mirror_2_hor
-	Mirror_2_theta
-	Mirror_2_vert
-	Modified
-	Mon_Gear_Temp
-	Mono_1st_wheel
-	Mono_2nd_wheel
-	Mono_cr_change
-	Mono_Cu_Temp
-	Motor
-	nomTemperature
-	Offset_1st_wheel
-	Offset_2nd_wheel
-	Offset_2Theta
-	Offset_Theta
-	PilatusAcqTime
-	PilatusThreshold
-	Pinhole_X
-	Pinhole_Y
-	Pot_Mi_1_hor
-	Pot_Mi_1_psi
-	Pot_Mi_1_theta
-	Pot_Mi_1_vert
-	Pot_Mi_2_hor
-	Pot_Mi_2_theta
-	Pot_Mi_2_vert
-	PTB_U49
-	REF_DIODES
-	Ref_Diodes
-	Ring_1
-	Ring_2
-	Sample-X
-	Sample-Y
-	Sample-Z
-	SAXS_angle
-	SAXS_X1
-	SAXS_X2
-	Screen
-	SHUTTER
-	Slit_1_down
-	Slit_1_hor_pos
-	Slit_1_hor_size
-	Slit_1_left
-	Slit_1_right
-	Slit_1_up
-	Slit_1_vert_pos
-	Slit_1_vert_size
-	Slit_2_down
-	Slit_2_up
-	Slit_2_vert_pos
-	Slit_2_vert_size
-	Slit_3_down
-	Slit_3_hor_pos
-	Slit_3_hor_size
-	Slit_3_left
-	Slit_3_right
-	Slit_3_up
-	Slit_3_vert_pos
-	Slit_3_vert_size
-	Slit_4_down
-	Slit_4_hor_pos
-	Slit_4_hor_size
-	Slit_4_left
-	Slit_4_right
-	Slit_4_up
-	Slit_4_vert_pos
-	Slit_4_vert_size
-	SPOT_CCD_SCREEN
-	Therm_ext
-	Therm_int
-	Thermostat
-	Theta
-	Tilt-Y
-	Tilt-Z
-	Tilt_Mi_1_phi
-	Tilt_Mi_1_theta
-	Tilt_Mi_2_phi
-	Tilt_Mi_2_theta
-	Tilt_Mono_psi
-	Tilt_Mono_theta
-	Time
-	VacSampleX
+ColumnsAvailableTree {
+	{GROUP  General { {LIST {
+		Motor Detector Modified class
+		}}
+	}}
+
+	{GROUP Motors { 
+	
+		{GROUP FCM {{LIST {	
+			Bieger
+			Crystal_1_phi
+			Crystal_2_phi
+			Crystal_2_theta
+			Crystal_3_phi
+			Crystal_3_theta
+			Crystal_4_phi
+			Mono_1st_wheel
+			Mono_2nd_wheel
+			Mono_cr_change
+
+		}}}
+		}
+
+		{GROUP NewRef {{LIST {	
+			Det.-X
+			Lift_table
+			Pinhole_X
+			Pinhole_Y
+			Sample-X
+			Sample-Y
+			Sample-Z
+			2Theta
+			Theta
+			Tilt-Y
+			Tilt-Z
+
+		}}}
+		}
+
+		{GROUP SAXS {{LIST {
+			BeamStop_X
+			BeamStop_Y
+			Det_SAXS
+			HubAchse1
+			HubAchse2
+			SAXS_angle
+			SAXS_X1
+			SAXS_X2
+		}}}
+		}
+		
+		{GROUP Slits {
+		
+			{GROUP {Slit 1} {{LIST {		
+				Slit_1_hor_size
+				Slit_1_vert_size
+				Slit_1_hor_pos
+				Slit_1_vert_pos
+				Slit_1_left
+				Slit_1_right
+				Slit_1_up
+				Slit_1_down
+			}}}
+			}
+
+			{GROUP {Slit 2} {{LIST {		
+				Slit_2_vert_size
+				Slit_2_vert_pos
+				Slit_2_up
+				Slit_2_down
+			}}}
+			}
+
+			{GROUP {Slit 3} {{LIST {		
+				Slit_3_hor_size
+				Slit_3_vert_size
+				Slit_3_hor_pos
+				Slit_3_vert_pos
+				Slit_3_left
+				Slit_3_right
+				Slit_3_up
+				Slit_3_down
+			}}}
+			}
+
+
+			{GROUP {Slit 4} {{LIST {		
+				Slit_4_hor_size
+				Slit_4_vert_size
+				Slit_4_hor_pos
+				Slit_4_vert_pos
+				Slit_4_left
+				Slit_4_right
+				Slit_4_up
+				Slit_4_down
+			}}}
+			}
+		}}
+
+
+		{LIST {
+			BalgSystem
+			Beam_pos_hor
+			Beam_pos_vert
+			Diode
+			Diode_behind_mono
+			Diode_in_mono
+			Energy
+			Filter_1
+			Filter_2
+			Filter_CCD_pinholes
+			Mirror_1_hor
+			Mirror_1_psi
+			Mirror_1_theta
+			Mirror_1_vert
+			Mirror_2_hor
+			Mirror_2_theta
+			Mirror_2_vert
+			nomTemperature
+			PilatusAcqTime
+			PilatusThreshold
+			Ref_Diodes
+			Screen
+			Time
+			VacSampleX
+			}
+		}
+		
+
+	}}
+
+	{GROUP Detectors { 
+	
+		{GROUP BESSY {{LIST {
+			Beam_current
+			Beam_Lifetime
+			Beam_Pos
+			Bessy_Lebensdauer
+			Bessy_Ringstrom
+			Lebensdauer_1
+			Lebensdauer_2
+			Ring_1
+			Ring_2
+		}}}
+		}
+
+		{GROUP FCM {{LIST {	
+			Cr_1_Cu_Bloc
+			Cr_2_Si_Temp
+			Cr_3_Si_Temp
+			Cr_4_InSb_Temp
+			FCM_Diff
+			Mon_Gear_Temp
+			Mono_Cu_Temp
+			Offset_1st_wheel
+			Offset_2nd_wheel
+			Tilt_Mono_psi
+			Tilt_Mono_theta
+
+		}}}
+		}
+		
+		{GROUP NewRef {{LIST {
+			Pot_Mi_1_hor
+			Pot_Mi_1_psi
+			Pot_Mi_1_theta
+			Pot_Mi_1_vert
+			Pot_Mi_2_hor
+			Pot_Mi_2_theta
+			Pot_Mi_2_vert
+			Tilt_Mi_1_phi
+			Tilt_Mi_1_theta
+			Tilt_Mi_2_phi
+			Tilt_Mi_2_theta
+			Offset_2Theta
+			Offset_Theta
+
+		}}}
+		}
+
+		{GROUP Keithley {{LIST {
+			K7001
+			Keithley1
+			Keithley2
+			Keithley3
+			Keithley4
+			
+		}}}
+		}
+		
+		{GROUP Pilatus {{LIST {		
+			Pilatus_Max
+			Pilatus_Min
+			Pilatus_Tiff
+			Pilatus_Total
+			Pilatus_Xpos
+			Pilatus_Ypos
+
+		}}}
+		}
+
+		{LIST {
+			MarPosition
+			PTB_U49
+			Therm_ext
+			Therm_int
+			Time
+			}
+		}
+	
+	}}
+
+	{GROUP OptionalPositions { {LIST {
+		COATING_2nd_MIR 
+		CRYSTAL_COOLING 
+		DIODE_BEHIND_MONO 
+		DIODE_IN_MONO 
+		FILTER_1 
+		FILTER_2 
+		FILTER_PINHOLES 
+		REF_DIODES SHUTTER 
+		SPOT_CCD_SCREEN 
+		Thermostat
+		}}}
+	}
+
+	{GROUP Plot { {LIST {
+		PeakPos
+		PeakValue
+		CenterPos
+		CenterPercentage
+		PeakWidth
+		Mean
+		RelPercentStandardDeviation
+		StartPos
+		EndPos
+		NormOnReferenceScan
+		}}}
+	}
+
 }

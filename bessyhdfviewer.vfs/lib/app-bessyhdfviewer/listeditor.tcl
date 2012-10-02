@@ -12,14 +12,14 @@ snit::widget ListEditor {
 
 	# current lists
 	variable includelist
-	variable valueslist
 	variable newitem
 	
 
 	option -initiallist
-	option -values
+	option -values -default {} -configuremethod SetValues
+	option -valuetree -default {} -configuremethod  SetValueTree
 	option -resultvar {}
-
+	option -title -default {Select options} -configuremethod SetTitle
 
 	# call this function to get the modal dialog
 	typevariable resultlist
@@ -67,7 +67,8 @@ snit::widget ListEditor {
 		install includetbl using tablelist::tablelist $curframe.tbl \
 			-listvariable [myvar includelist] -movablerows 1 \
 			-xscrollcommand [list $curframe.hsb set] -yscrollcommand [list $curframe.vsb set] \
-			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all
+			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all \
+			-height 25 -width 30
 		
 		bind [$includetbl bodytag] <BackSpace> [mymethod Remove]
 		bind [$includetbl bodytag] <Delete> [mymethod Remove]
@@ -83,18 +84,20 @@ snit::widget ListEditor {
 
 
 		install valuestbl using tablelist::tablelist $avlframe.tbl \
-			-listvariable [myvar valueslist] -movablerows 0 \
+			-movablerows 0 \
 			-xscrollcommand [list $avlframe.hsb set] -yscrollcommand [list $avlframe.vsb set] \
-			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all
+			-exportselection 0 -selectmode single -columns {0 "Option" left} -stretch all \
+			-height 25 -width 30
 
 		bind $valuestbl <<TablelistSelect>> [mymethod ValueSelect]
 		bind [$valuestbl bodytag] <Return> [mymethod Add]
+		bind [$valuestbl bodytag] <Double-1> [mymethod Add]
 
 		set avlvsb [ttk::scrollbar $avlframe.vsb -orient vertical   -command [list $valuestbl yview]]
 		set avlhsb [ttk::scrollbar $avlframe.hsb -orient horizontal -command [list $valuestbl xview]]
 
 		grid $valuestbl $avlvsb -sticky nsew
-		grid $avlhsb     ^       -sticky nsew
+		grid $avlhsb     ^      -sticky nsew
 
 		grid rowconfigure $avlframe 0 -weight 1
 		grid columnconfigure $avlframe 0 -weight 1
@@ -114,9 +117,57 @@ snit::widget ListEditor {
 
 		$self configurelist $args
 		set includelist $options(-initiallist)
-		set valueslist $options(-values)
 	}
 
+	method SetValues {option values} {
+		set options($option) $values
+		$valuestbl delete 0 end
+		$valuestbl insertlist end $values
+	}
+
+
+	method SetValueTree {option tree} {
+		set options($option) $tree
+		$valuestbl delete 0 end
+		foreach line $tree {
+			$self InsertChild_rec root $line
+		}
+	}
+
+	method SetTitle {option title} {
+		set options($option) $title
+		wm title $win $title
+	}
+
+	method InsertChild_rec {node tree} {
+		set tree [lassign $tree type]
+		switch -nocase $type {
+			GROUP {
+				# a group of items with a list of trees in values
+				lassign $tree name values
+				puts "$name inserted"
+				set childnode [$valuestbl insertchild $node end [list $name]]
+				if {$node != "root"} {
+					$valuestbl collapse $childnode
+				}
+				$valuestbl rowconfigure $childnode -selectable 0
+				foreach value $values {
+					$self InsertChild_rec $childnode $value
+				}
+			}
+
+			LIST {
+				# a list of items
+				lassign $tree values
+				$valuestbl insertchildlist $node end $values
+			}
+
+			default {
+				error "Unknown element in tree: $type. Should be GROUP or LIST"
+			}
+		}
+	}
+	
 	method ValueSelect {} {
 		set cur [$valuestbl curselection]
 		if {[llength $cur] > 0} {
