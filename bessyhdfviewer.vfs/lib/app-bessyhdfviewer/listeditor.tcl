@@ -57,7 +57,7 @@ snit::widget ListEditor {
 
 		grid $curlabel $avllabel -sticky nsew
 		grid $curframe $avlframe -sticky nsew
-		grid $pmbar $newent -sticky nsew
+		grid $pmbar $newent -sticky ew
 
 		grid rowconfigure $editframe 1 -weight 1
 		grid columnconfigure $editframe 0 -weight 1
@@ -145,7 +145,6 @@ snit::widget ListEditor {
 			GROUP {
 				# a group of items with a list of trees in values
 				lassign $tree name values
-				puts "$name inserted"
 				set childnode [$valuestbl insertchild $node end [list $name]]
 				if {$node != "root"} {
 					$valuestbl collapse $childnode
