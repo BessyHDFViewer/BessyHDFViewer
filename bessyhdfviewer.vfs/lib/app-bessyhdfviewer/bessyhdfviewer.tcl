@@ -139,7 +139,7 @@ proc InitGUI {} {
 	grid rowconfigure $w(listfr) $w(filelist) -weight 1
 	grid columnconfigure $w(listfr) 0 -weight 1
 
-	set w(canv) [canvas $w(plotfr).c]
+	set w(canv) [canvas $w(plotfr).c -background white]
 	set w(bbar) [ttk::frame $w(plotfr).bbar]
 	grid $w(bbar) -sticky nsew
 	grid $w(canv) -sticky nsew
