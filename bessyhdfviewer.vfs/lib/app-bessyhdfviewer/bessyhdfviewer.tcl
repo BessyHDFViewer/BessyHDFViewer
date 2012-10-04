@@ -423,7 +423,9 @@ proc ClassifyHDF {type fn} {
 	
 	if {[catch {file mtime $fn} mtime]} {
 		# could not get mtime - something is wrong
-		return {}
+		set result [lrepeat [llength $ActiveColumns] {}]
+		lappend result [IconGet unknown]
+		return $result
 	}
 
 	if {$type == "directory"} {
