@@ -237,6 +237,27 @@ proc InitGUI {} {
 	grid rowconfigure $w(ttblfr) 0 -weight 1
 
 	$w(displayfr) add $w(ttblfr) -text "Table"
+	
+	# Tree display tab
+	#
+	set w(ttreefr) [ttk::frame $w(displayfr).treefr]
+	set w(treetbl) [tablelist::tablelist $w(ttreefr).tree \
+		-movablecolumns yes -setgrid no -showseparators yes \
+		-exportselection 0 -selectmode single -stretch all \
+		-columns {0 Variable left 0 Value left}]
+
+	set w(treevsb) [ttk::scrollbar $w(ttreefr).vsb -orient vertical -command [list $w(treetbl) yview]]
+	set w(treehsb) [ttk::scrollbar $w(ttreefr).hsb -orient horizontal -command [list $w(treetbl) xview]]
+	$w(treetbl) configure -xscrollcommand [list $w(treehsb) set] -yscrollcommand [list $w(treevsb) set]
+
+	grid $w(treetbl) $w(treevsb) -sticky nsew
+	grid $w(treehsb)  x           -sticky nsew
+
+	grid columnconfigure $w(ttreefr) 0 -weight 1
+	grid rowconfigure $w(ttreefr) 0 -weight 1
+
+	$w(displayfr) add $w(ttreefr) -text "Tree"
+
 
 }
 
@@ -581,6 +602,7 @@ proc PreviewFile {files} {
 
 			DisplayTextDump
 			DisplayTable
+			DisplayTree
 			RePlot
 		}
 
@@ -791,6 +813,44 @@ proc DisplayTable {} {
 	$w(tbltbl) delete 0 end
 	$w(tbltbl) insertlist 0 $tbldata
 }
+
+proc DisplayTree {} {
+	variable w
+	variable hdfdata
+	variable HDFFiles
+	
+	# create dictionary for values of standard motors etc.
+	set values {}
+	
+	foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
+		if {[dict exists $hdfdata $key]} {
+			set values [dict merge $values [dict get $hdfdata $key]]
+		}
+	}
+
+	lassign [bessy_class $hdfdata] class motor detector
+	set mtime [file mtime [lindex $HDFFiles 0]]
+
+	dict set values class $class
+	dict set values Motor $motor
+	dict set values Detector $detector
+	dict set values Modified [list [formatDate $mtime]]
+
+	# save expansion state 
+	set expandedkeys [$w(treetbl) expandedkeys]
+	set yview [$w(treetbl) yview]
+	set sel [$w(treetbl) curselection]
+	$w(treetbl) delete 0 end
+	SmallUtils::TablelistMakeTree $w(treetbl) [PreferenceGet ColumnsAvailableTree {}] $values
+
+	# restore expansion state
+	foreach key $expandedkeys {
+		$w(treetbl) expand $key -partly
+	}
+	$w(treetbl) yview moveto [lindex $yview 0]
+	$w(treetbl) selection set $sel
+}
+
 
 proc DirChanged {dir} {
 	# dir was changed by double clicking in dirviewer
@@ -1009,8 +1069,18 @@ proc bessy_get_field {hdfdata field} {
 	}
 
 	# if more than one value is found, compute range 
-	set values [lsort -dictionary $values]
-	return [list [lindex $values 0] [lindex $values end]]
+	# first try sorting as numbers, then try dictionary (works always)
+	if {[catch {lsort -real $values} sortedvalues]} {
+		set sortedvalues [lsort -dictionary $values]
+	}
+
+	set minval [lindex $sortedvalues 0]
+	set maxval [lindex $sortedvalues end]
+	if {$minval == $maxval} {
+		return [list $minval]
+	} else {
+		return [list $minval $maxval]
+	}
 }
 
 

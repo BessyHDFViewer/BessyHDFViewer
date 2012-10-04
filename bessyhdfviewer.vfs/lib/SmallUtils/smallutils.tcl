@@ -27,5 +27,56 @@ namespace eval SmallUtils {
 			uplevel #0 $cmd
 		}
 	}
+
+	proc TablelistMakeTree {tbl tree {valuedict {}}} {
+		foreach line $tree {
+			TablelistMakeTree_rec root $line
+		}
+	}
+	
+	proc TablelistMakeTree_rec {node tree} {
+		upvar 1 valuedict valuedict
+		upvar 1 tbl tbl
+		set tree [lassign $tree type]
+		switch -nocase $type {
+			GROUP {
+				# a group of items with a list of trees in values
+				lassign $tree name values
+				set childnode [$tbl insertchild $node end [list $name]]
+				if {$node != "root"} {
+					$tbl collapse $childnode
+				}
+				$tbl rowconfigure $childnode -selectable 0
+				foreach value $values {
+					TablelistMakeTree_rec $childnode $value
+				}
+			}
+
+			LIST {
+				# a list of items
+				lassign $tree values
+				if {[dict size $valuedict]==0} {
+					$tbl insertchildlist $node end $values
+				} else {
+					# zip up contents of valuedict with these items
+					set childlist {}
+					foreach name $values {
+						if {[dict exists $valuedict $name]} {
+							lappend childlist [list $name {*}[dict get $valuedict $name]]
+						} else {
+							lappend childlist [list $name]
+						}
+					}
+					$tbl insertchildlist $node end $childlist
+				}
+			}
+
+			default {
+				error "Unknown element in tree: $type. Should be GROUP or LIST"
+			}
+		}
+
+	}
+
 }
 
