@@ -100,7 +100,7 @@ namespace eval dirViewer {} {
 				-expandcommand [mymethod expandCmd] -collapsecommand [mymethod collapseCmd] \
 				-xscrollcommand [list $win.hsb set] -yscrollcommand [list $win.vsb set] \
 				-movablecolumns no -setgrid no -showseparators yes -height 18 -width 80 -exportselection 0 \
-				-stretch end
+				-stretch end -titlecolumns 1 -protecttitlecolumns 1 -movablecolumns 1 -movecolumncursor hand1
 
 			if {[$tbl cget -selectborderwidth] == 0} {
 				$tbl configure -spacing 1
@@ -114,6 +114,7 @@ namespace eval dirViewer {} {
 			set bodyTag [$tbl bodytag]
 			bind $bodyTag <Double-1>   [mymethod putContentsOfSelFolder]
 			bind $tbl <<TablelistSelect>> [mymethod notifySelect]
+			bind $tbl <<TablelistColumnMoved>> [mymethod notifyColumnMoved]
 
 			#
 			# Manage the widgets
@@ -513,6 +514,24 @@ namespace eval dirViewer {} {
 			if {$options(-selectcommand) != {}} {
 				uplevel #0 $options(-selectcommand) [list $fullnames]
 			}		
+		}
+
+		method notifyColumnMoved {} {
+			# rebuild extra columns and options from current state of tablelist
+			set newcolumns [lrange [$tbl cget -columntitles] 1 end]
+			set optmapping {}
+			foreach opt $options(-columnoptions) old $options(-columns) {
+				dict set optmapping $old $opt
+			}
+			
+			set options(-columnoptions) {}
+			foreach new $newcolumns {
+				set opt [dict get $optmapping $new]
+				lappend options(-columnoptions) $opt
+			}
+			set options(-columns) $newcolumns
+
+			event generate $win <<DirviewerColumnMoved>> -data $options(-columns)
 		}
 	}
 }

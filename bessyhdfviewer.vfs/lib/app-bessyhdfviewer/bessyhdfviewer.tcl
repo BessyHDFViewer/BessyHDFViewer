@@ -91,6 +91,8 @@ proc InitGUI {} {
 	variable w
 	variable ns
 
+	wm title . "BessyHDFViewer"
+	wm iconphoto . [IconGet BessyHDFViewer]
 	
 	set w(mainfr) [ttk::panedwindow .mainfr -orient horizontal]
 	pack $w(mainfr) -expand yes -fill both	
@@ -101,6 +103,8 @@ proc InitGUI {} {
 	# paned window, left file selection, right data display
 	set w(listfr) [ttk::frame $w(mainfr).listfr]
 	set w(displayfr) [ttk::notebook $w(mainfr).displaynb]
+	bind $w(displayfr) <<NotebookTabChanged>> ${ns}::ReDisplay
+	ValidateDisplay all
 
 	$w(mainfr) add $w(listfr)
 	$w(mainfr) add $w(displayfr)
@@ -128,6 +132,7 @@ proc InitGUI {} {
 		-selectmode extended]
 
 	bind $w(filelist) <<DirviewerChDir>> [list ${ns}::DirChanged %d]
+	bind $w(filelist) <<DirviewerColumnMoved>> [list ${ns}::DirColumnMoved %d]
 
 	bind $w(filelist) <<ProgressStart>> [list ${ns}::OpenStart %d]
 	bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
@@ -186,8 +191,8 @@ proc InitGUI {} {
 	set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
 	set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
 	
-	bind $w(xent) <<ComboboxSelected>> ${ns}::RePlot
-	bind $w(yent) <<ComboboxSelected>> ${ns}::RePlot
+	bind $w(xent) <<ComboboxSelected>> ${ns}::DisplayPlot
+	bind $w(yent) <<ComboboxSelected>> ${ns}::DisplayPlot
 	bind $w(xlbl) <1> { tkcon show }
 
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky ew
@@ -243,7 +248,7 @@ proc InitGUI {} {
 	set w(ttreefr) [ttk::frame $w(displayfr).treefr]
 	set w(treetbl) [tablelist::tablelist $w(ttreefr).tree \
 		-movablecolumns yes -setgrid no -showseparators yes \
-		-exportselection 0 -selectmode single -stretch all \
+		-exportselection 0 -selectmode single -stretch end \
 		-columns {0 Variable left 0 Value left}]
 
 	set w(treevsb) [ttk::scrollbar $w(ttreefr).vsb -orient vertical -command [list $w(treetbl) yview]]
@@ -257,7 +262,7 @@ proc InitGUI {} {
 	grid rowconfigure $w(ttreefr) 0 -weight 1
 
 	$w(displayfr) add $w(ttreefr) -text "Tree"
-
+	
 
 }
 
@@ -393,6 +398,13 @@ proc ChooseColumns {columns} {
 	$w(filelist) configure -columns $columns -columnoptions $columnopts
 
 }
+
+proc DirColumnMoved {columns} {
+	# Columns were interactively changed 
+	# just accept new setting
+	variable ActiveColumns $columns
+}
+
 
 proc ColumnEdit {} {
 	variable ActiveColumns
@@ -599,11 +611,11 @@ proc PreviewFile {files} {
 			
 			# reshape plotdata into table form
 			MakeTable
+			
+			wm title . "BessyHDFViewer - [lindex $files 0]"
 
-			DisplayTextDump
-			DisplayTable
-			DisplayTree
-			RePlot
+			InvalidateDisplay
+			ReDisplay
 		}
 
 		default {
@@ -753,7 +765,7 @@ proc DumpCmd {} {
 }
 
 
-proc RePlot {} {
+proc DisplayPlot {} {
 	variable w
 	variable plotdata
 	variable xformat
@@ -788,6 +800,7 @@ proc RePlot {} {
 		$w(Graph) autoresize
 	}
 
+	ValidateDisplay Plot
 }
 
 proc DisplayTextDump {} {
@@ -796,6 +809,7 @@ proc DisplayTextDump {} {
 	variable w
 	$w(textdump) delete 1.0 end
 	$w(textdump) insert end [Dump $hdfdata]
+	ValidateDisplay Text 
 }
 
 proc DisplayTable {} {
@@ -812,6 +826,7 @@ proc DisplayTable {} {
 
 	$w(tbltbl) delete 0 end
 	$w(tbltbl) insertlist 0 $tbldata
+	ValidateDisplay Table
 }
 
 proc DisplayTree {} {
@@ -849,8 +864,63 @@ proc DisplayTree {} {
 	}
 	$w(treetbl) yview moveto [lindex $yview 0]
 	$w(treetbl) selection set $sel
+	ValidateDisplay Tree
 }
 
+proc InvalidateDisplay {} {
+	variable displayvalid
+	dict set displayvalid Plot 0
+	dict set displayvalid Text 0
+	dict set displayvalid Table 0
+	dict set displayvalid Tree 0
+}
+
+proc ValidateDisplay {what} {
+	variable displayvalid
+	if {$what=="all"} {
+		foreach display {Plot Text Table Tree} {
+			ValidateDisplay $display
+		}
+	} else {
+		dict set displayvalid $what 1
+	}
+}
+
+proc ReDisplay {} {
+	variable w
+	variable displayvalid
+	set index [$w(displayfr) index [$w(displayfr) select]]
+	# ttk::notebook returns the widget name, convert to title
+	set display [$w(displayfr) tab $index -text]
+
+	# this mixes user-visible strings with commands
+	# don'T want to condense (i.e. Display$display)
+	switch $display {
+		Plot {
+			if {![dict get $displayvalid Plot]} {
+				DisplayPlot
+			}
+		}
+		Text {
+			if {![dict get $displayvalid Text]} {
+				DisplayTextDump
+			}
+		}
+		Table {
+			if {![dict get $displayvalid Table]} {
+				DisplayTable
+			}
+		}
+		Tree {
+			if {![dict get $displayvalid Tree]} {
+				DisplayTree
+			}
+		}
+		default {
+			error "Unknown data display method $display"
+		}
+	}
+}
 
 proc DirChanged {dir} {
 	# dir was changed by double clicking in dirviewer
