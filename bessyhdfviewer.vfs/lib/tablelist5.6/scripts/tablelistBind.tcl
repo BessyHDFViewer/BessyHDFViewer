@@ -2799,7 +2799,7 @@ proc tablelist::labelB1Up {w X} {
 	    $data(hdrTxtFrCanv)$col configure -cursor $data(-cursor)
 	    if {[info exists data(targetCol)]} {
 		moveCol $win $col $data(targetCol)
-		event generate $win <<TablelistColumnMoved>>
+		event generate $win <<TablelistColumnMoved>> -data [list $col $data(targetCol)]
 	    }
 	    catch {unset data(targetCol)}
 	}
