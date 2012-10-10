@@ -746,16 +746,22 @@ proc DumpCmd {} {
 
 	if {$nfiles==1} {
 		# when a single file is selected, prompt for file name
+		set initialfile "[file rootname [file tail [lindex $HDFFiles 0]]].dat"
+		set initialdir [file dirname [lindex $HDFFiles 0]]
 		set datfn [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
 			-defaultextension .dat \
-			-title "Export HDF file to ASCII" ]
+			-title "Export HDF file to ASCII" \
+			-initialfile $initialfile \
+			-initialdir $initialdir]
 		if {$datfn != {}} {
 			DumpToFile [lindex $HDFFiles 0] $datfn
 		}
 	} else {
 		if {$nfiles > 0} {
 			# multiple files selected - prompt for directory
-			set outputdir [tk_chooseDirectory -title "Select directory to export $nfiles HDF files to ASCII"]
+			set initialdir [file dirname [lindex $HDFFiles 0]]
+			set outputdir [tk_chooseDirectory -title "Select directory to export $nfiles HDF files to ASCII" \
+				-initialdir $initialdir -filetypes { {{HDF files} {.hdf}} {{ASCII data files} {.dat}} {{All files} {*}}} ]
 			if {$outputdir != {}} {
 				foreach hdf $HDFFiles {
 					set roottail [file rootname [file tail $hdf]]
