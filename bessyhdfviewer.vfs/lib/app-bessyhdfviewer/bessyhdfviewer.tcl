@@ -1099,6 +1099,7 @@ proc bessy_reshape {fn} {
 		} else {	
 			# filter all data entries to the last occurence >= BESSY_INF
 			set BESSY_INF 9.9e36
+			set BESSY_NAN -7.7e36
 			set data [dict get $dataset data]
 			set index -1
 			set lastindex end

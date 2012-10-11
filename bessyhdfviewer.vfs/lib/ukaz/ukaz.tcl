@@ -715,6 +715,7 @@ namespace eval ukaz {
 			set xmax $xmin
 			set ymax $ymin
 			foreach {x y} $data {
+				if {![isfinite $x] || ![isfinite $y]} { continue }
 				if {$x<$xmin} { set xmin $x}
 				if {$x>$xmax} { set xmax $x}
 				if {$y<$ymin} { set ymin $y}
@@ -757,21 +758,31 @@ namespace eval ukaz {
 			}
 			set ltag "$prefix$selfns"
 			
-			set lines {}
-			set piece {}
-			set pieces {}
-			foreach {x y} $coordlist {
-				set x [$self xToPix $x]
-				set y [$self yToPix $y]
-				lappend piece $x $y
-			}
-
 			set dxmin [$self xToPix $xmin]
 			set dxmax [$self xToPix $xmax]
 			set dymin [$self yToPix $ymin]
 			set dymax [$self yToPix $ymax]
 
+			set piece {}
+			set pieces {}
+			foreach {x y} $coordlist {
+				if {![isfinite $x] || ![isfinite $y]} { 
+					# NaN value, start a new piece
+					if {[llength $piece]>0} { 
+						lappend pieces $piece
+					}
+					set piece {}
+					continue
+				}
+
+				set x [$self xToPix $x]
+				set y [$self yToPix $y]
+				lappend piece $x $y
+			}
+
+
 			lappend pieces $piece
+
 			foreach piece $pieces {
 				if {[llength $piece]>=4} {
 					set clipped [geometry::polylineclip $piece $dxmin $dxmax $dymin $dymax]
@@ -823,7 +834,7 @@ namespace eval ukaz {
 			set itemnr 0
 			foreach {x y} $coordlist {
 
-				if {($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax)} {
+				if {[isfinite $x] && ($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax)} {
 					set deskx [$self xToPix $x]
 					set desky [$self yToPix $y]
 					# simple clipping, sufficient
@@ -1039,6 +1050,15 @@ namespace eval ukaz {
 				$self autoresize
 		}
 
+		proc isfinite {x} {
+			# determine, whether x,y is a valid point
+			expr {[string is double -strict $x] && $x < Inf && $x > -Inf}
+		}
+
+		proc isnan {x} {
+			# determine, whether x is NaN
+			expr {$x != $x}
+		}
 	}
 
 	snit::type dragline {
