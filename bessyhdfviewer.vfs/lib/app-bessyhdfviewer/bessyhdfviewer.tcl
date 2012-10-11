@@ -993,7 +993,7 @@ proc formatDate {date} {
 	if {$date == {}} {
 		return "Not known"
 	} {
-		clock format $date -format {%Y-%m-%d %H:%S}
+		clock format $date -format {%Y-%m-%d %H:%M}
 	}
 }
 
@@ -1031,6 +1031,49 @@ proc FoldPlotCmd {} {
 		$w(foldbut) configure -image [IconGet fold-close]
 		set PlotFolded true
 	}
+}
+
+proc SELECT {fmtlist fnlist} {
+	set result {}
+	foreach fn $fnlist {
+		# read HDF file 
+		set data [bessy_reshape $fn]
+
+		# set common values 
+		namespace eval ::SELECT [list set HDF $fn]
+
+		foreach key {MotorPositions DetectorValues OptionalPositions} {
+			if {[dict exists $data $key]} {
+				dict for {key value} [dict get $data $key] {
+					namespace eval ::SELECT [list set $key $value]
+				}
+			}
+		}
+
+		set table [dict merge [dict get $data Motor] [dict get $data Detector]]
+		
+		# compute maximum length for each data column - might be different due to BESSY_INF trimming
+		set maxlength 0
+		dict for {var entry} $table {
+			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+		}
+
+		for {set i 0} {$i<$maxlength} {incr i} {
+			foreach {var entry} $table {
+				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
+			#	puts "Setting $var to [lindex [dict get $entry data] $i]"
+			}
+
+			set line {}
+			foreach fmt $fmtlist {
+				catch {namespace eval ::SELECT [list expr $fmt]} lresult
+				lappend line $lresult
+			}
+			lappend result $line
+		}
+	}
+
+	return $result
 }
 
 proc bessy_reshape {fn} {
