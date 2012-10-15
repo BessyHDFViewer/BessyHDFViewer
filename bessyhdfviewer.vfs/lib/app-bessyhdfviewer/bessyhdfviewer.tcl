@@ -1081,6 +1081,11 @@ proc bessy_reshape {fn} {
 	autovar hdf HDFpp %AUTO% $fn
 	set hlist [$hdf dump]
 	
+	set BESSY_INF 9.9e36
+	set BESSY_NAN -7.7e36
+
+	set datakeys {}
+	set maxindex -1
 	foreach dataset $hlist {
 		set dname [dict get $dataset name]
 		dict unset dataset name
@@ -1098,23 +1103,33 @@ proc bessy_reshape {fn} {
 			set dataset [dict get $dataset attrs]
 		} else {	
 			# filter all data entries to the last occurence >= BESSY_INF
-			set BESSY_INF 9.9e36
-			set BESSY_NAN -7.7e36
+			lappend datakeys $key
 			set data [dict get $dataset data]
-			set index -1
-			set lastindex end
+			set index 0
 			foreach v $data {
-				if {abs($v) >= $BESSY_INF} {
-					set lastindex $index
-					break
+				if {abs($v) >= $BESSY_INF || $v == $BESSY_NAN} {
+					# invalid data point, replace by NaN
+					lset data $index NaN
+				} else {
+					if {$index > $maxindex} {
+						set maxindex $index
+					}
 				}
 				incr index
 			}
-			dict set dataset data [lrange $data 0 $lastindex]
+
+			dict set dataset data $data
 		}
 
 		dict set hdict {*}$key $dataset
 	}
+
+	# shorten all data sets to max length
+	foreach key $datakeys {
+		set data [dict get $hdict {*}$key data]
+		dict set hdict {*}$key data [lrange $data 0 $maxindex]
+	}
+
 	return $hdict
 }
 
@@ -1192,7 +1207,7 @@ proc bessy_get_field {hdfdata field} {
 
 	# if more than one value is found, compute range 
 	# first try sorting as numbers, then try dictionary (works always)
-	if {[catch {lsort -real $values} sortedvalues]} {
+	if {[catch {lsort -real [filternan $values]} sortedvalues]} {
 		set sortedvalues [lsort -dictionary $values]
 	}
 
@@ -1205,6 +1220,20 @@ proc bessy_get_field {hdfdata field} {
 	}
 }
 
+proc ::tcl::mathfunc::isnan {x} {
+	expr {$x != $x}
+}
+
+proc filternan {l} {
+	# return list where all NaN values are removed
+	set result {}
+	foreach v $l {
+		if {!isnan($v)} {
+			lappend result $v
+		}
+	}
+	return $result
+}
 
 proc autovar {var args} {
 	upvar 1 $var v
