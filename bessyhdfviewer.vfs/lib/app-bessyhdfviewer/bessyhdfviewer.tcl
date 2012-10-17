@@ -41,7 +41,7 @@ tkcon title "BessyHDFViewer Console (tkcon $tversion)"
 variable ns [namespace current]
 
 # load support modules
-foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl} {
+foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl exportdialog.tcl} {
 	source [file join $basedir $module]
 }
 
@@ -1066,7 +1066,10 @@ proc SELECT {fmtlist fnlist} {
 
 			set line {}
 			foreach fmt $fmtlist {
-				catch {namespace eval ::SELECT [list expr $fmt]} lresult
+				if {[catch {namespace eval ::SELECT [list expr $fmt]} lresult]} {
+					# expr handles NaN in many different ways by throwing errors:(
+					if {[regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
+				}
 				lappend line $lresult
 			}
 			lappend result $line
