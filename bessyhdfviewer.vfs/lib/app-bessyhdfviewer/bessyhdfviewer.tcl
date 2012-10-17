@@ -11,7 +11,14 @@ if {[tk windowingsystem]=="x11"} {
 	package require fsdialog
 	interp alias {} tk_getOpenFile {} ttk::getOpenFile
 	interp alias {} tk_getSaveFile {} ttk::getSaveFile
-	interp alias {} tk_chooseDirectory {} ttk::getDirectory
+	interp alias {} tk_getDirectory {} ttk::getDirectory
+} else {
+	# on aqua and win, tk_chooseDirectory does not allow -filetypes
+	# just remove it from the args
+	proc tk_getDirectory {args} {
+		dict unset args -filetypes
+		tk_chooseDirectory {*}$args
+	}
 }
 
 if {[tk windowingsystem]=="aqua"} {
@@ -760,7 +767,7 @@ proc DumpCmd {} {
 		if {$nfiles > 0} {
 			# multiple files selected - prompt for directory
 			set initialdir [file dirname [lindex $HDFFiles 0]]
-			set outputdir [tk_chooseDirectory -title "Select directory to export $nfiles HDF files to ASCII" \
+			set outputdir [tk_getDirectory -title "Select directory to export $nfiles HDF files to ASCII" \
 				-initialdir $initialdir -filetypes { {{HDF files} {.hdf}} {{ASCII data files} {.dat}} {{All files} {*}}} ]
 			if {$outputdir != {}} {
 				foreach hdf $HDFFiles {
