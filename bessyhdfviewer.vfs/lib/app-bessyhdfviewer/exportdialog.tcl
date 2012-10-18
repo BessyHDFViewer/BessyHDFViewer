@@ -7,17 +7,22 @@ snit::widget ExportDialog {
 	component mainframe
 	component pathentry
 	component fmtfield
+	component mbutton
+	component pbutton
+	component colfmtframe
+	component previewtable
 
 	# 
-	variable includelist
-	variable newitem
 	variable curpath
 	variable singlefile
 	variable stdformat
 	variable firstfile
+	variable fmtlist
+	variable colformat
+	variable activecolumn
 
 	option -files -default {}
-	option -defaultformat
+	option -format -default {{$Energy}}
 	option -title -default {Select export options} -configuremethod SetTitle
 
 	# call this function to get the modal dialog
@@ -65,13 +70,34 @@ snit::widget ExportDialog {
 		set custbtn [ttk::radiobutton $fmtframe.custbtn -text "Custom Format" \
 			-variable [myvar stdformat] -value 0 -command [mymethod SwitchStdFormat]]
 		set stdformat 1
+		install colfmtframe using ttk::frame $fmtframe.colfmtfr
+		install previewtable using tablelist::tablelist $fmtframe.tbl \
+			-labelcommand [mymethod EditColumn] \
+			-movablerows 0 -movablecolumns 1 \
+			-movecolumncursor hand1 -exportselection 0 -selectmode single
+		set prevhsb [ttk::scrollbar $fmtframe.hsb -orient horizontal -command [list $previewtable xview]]
+		$previewtable configure -xscrollcommand [list $prevhsb set]
+		
+		bind $previewtable <<TablelistColumnMoved>> [mymethod ColumnMoved]
 
-		install fmtfield using text $fmtframe.fent
-
+		
 		grid $stdbtn $custbtn -sticky w
-		grid $fmtfield - -sticky nsew
-		grid rowconfigure $fmtframe 1 -weight 1
+		grid $colfmtframe - -sticky nsew
+		grid $previewtable - -sticky nsew
+		grid $prevhsb     -  -sticky nsew
+		grid rowconfigure $fmtframe 2 -weight 1
 		grid columnconfigure $fmtframe 1 -weight 1
+
+
+		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
+		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
+		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
+
+		grid $fmtfield $pbutton $mbutton -sticky ew
+		grid columnconfigure $colfmtframe 0 -weight 1
+
+		bind $fmtfield <Return> [mymethod AcceptEditColumn]
+		set activecolumn {}
 
 		set okbut [ttk::button $butframe.ok -text OK -image [IconGet dialog-ok] -command [mymethod OK] -compound left]
 		set cancelbut [ttk::button $butframe.cancel -text Cancel -image [IconGet dialog-cancel] -command [mymethod Cancel] -compound left] 
@@ -100,6 +126,7 @@ snit::widget ExportDialog {
 
 		$self SwitchSingleFile
 		$self SwitchStdFormat
+		$self PreviewFormat
 		set resultdict {}
 	}
 
@@ -113,7 +140,7 @@ snit::widget ExportDialog {
 			singlefile $singlefile \
 			stdformat $stdformat \
 			path $curpath \
-			format [$fmtfield get 1.0 end]]
+			format $options(-format)]
 
 		destroy $win
 	}
@@ -135,10 +162,17 @@ snit::widget ExportDialog {
 
 	method SwitchStdFormat {} {
 		if {$stdformat} {
+			$previewtable configure -state disabled
 			$fmtfield configure -state disabled
+			$pbutton state disabled
+			$mbutton state disabled
 		} else {
+			$previewtable configure -state normal
 			$fmtfield configure -state normal
+			$pbutton state !disabled
+			$mbutton state !disabled
 		}
+		$self PreviewFormat
 	}
 
 	method SelectPath {} {
@@ -163,6 +197,66 @@ snit::widget ExportDialog {
 			}
 		}
 
+	}
+
+	method EditColumn {w col} {
+		# click on the table header 
+		# copy that format into the field
+		set activecolumn $col
+		set colformat [lindex $options(-format) $col]
+	}
+
+	method AcceptEditColumn {} {
+		if {$activecolumn != {} && $colformat != {}} {
+			lset options(-format) $activecolumn $colformat
+			$self PreviewFormat
+		}
+	}
+
+	method Add {} {
+		# insert current format at the active column
+		if {$colformat eq {}} { return }
+
+		if {$activecolumn == {}} { 
+			set activecolumn end
+		}
+		set options(-format) [linsert $options(-format) $activecolumn $colformat]
+		$self PreviewFormat
+	}
+
+	method Remove {} {
+		if {$activecolumn != {}} {
+			set options(-format) [lreplace $options(-format) $activecolumn $activecolumn]
+			set activecolumn {}
+			$self PreviewFormat
+		}
+	}
+
+	method ColumnMoved {} {
+		# user has changed the order of the columns interactively
+		set options(-format) [$previewtable cget -columntitles]
+		set activecolumn {}
+		# Preview not necessary
+	}
+
+	method PreviewFormat {} {
+		# create columnlist from formats
+		if {$stdformat} {
+			$previewtable delete 0 end
+			# maybe insert TextDump, but not necessary
+		} else {
+			set cols {}
+			foreach fmt $options(-format) {
+				lappend cols 0 $fmt left
+			}
+			$previewtable delete 0 end
+			if {$cols != {}} {
+				$previewtable configure -columns $cols
+				# get data
+				set data [SELECT $options(-format) $options(-files) LIMIT 20]
+				$previewtable insertlist end $data
+			}
+		}
 	}
 
 }

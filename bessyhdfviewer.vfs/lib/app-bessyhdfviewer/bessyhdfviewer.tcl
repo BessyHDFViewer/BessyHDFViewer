@@ -1040,7 +1040,16 @@ proc FoldPlotCmd {} {
 	}
 }
 
-proc SELECT {fmtlist fnlist} {
+proc SELECT {fmtlist fnlist args} {
+	set limit Inf
+	if {[llength $args] != 0} {
+		if {[llength $args] != 2 || [lindex $args 0] != "LIMIT"} {
+			return -code error "SELECT formats files {LIMIT max}"
+		} else {
+			set limit [lindex $args 1]
+		}
+	}
+	
 	set result {}
 	foreach fn $fnlist {
 		# read HDF file 
@@ -1065,7 +1074,7 @@ proc SELECT {fmtlist fnlist} {
 			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
 		}
 
-		for {set i 0} {$i<$maxlength} {incr i} {
+		for {set i 0} {$i<$maxlength && [llength $result]<$limit} {incr i} {
 			foreach {var entry} $table {
 				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
 			#	puts "Setting $var to [lindex [dict get $entry data] $i]"
@@ -1081,6 +1090,7 @@ proc SELECT {fmtlist fnlist} {
 			}
 			lappend result $line
 		}
+		if {[llength $result]>=$limit} { break }
 	}
 
 	return $result
