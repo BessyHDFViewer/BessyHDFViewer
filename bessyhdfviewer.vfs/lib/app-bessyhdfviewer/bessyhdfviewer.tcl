@@ -416,7 +416,7 @@ proc DirColumnMoved {columns} {
 proc ColumnEdit {} {
 	variable ActiveColumns
 	set ColumnsAvailableTree [PreferenceGet ColumnsAvailableTree {{GROUP General {{LIST {Motor Detector Modified}}}} {GROUP Motors {{LIST {Energy}}}}}]
-	set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns"]
+	set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns" -parent .]
 	if {$columns != $ActiveColumns} {
 		ChooseColumns $columns
 		PreferenceSet Columns $columns 
@@ -755,7 +755,7 @@ proc ExportCmd {} {
 		-aclist [PreferenceGet AutoCompleteList {HDF Energy Keithley1}] \
 		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
 		-stdformat [PreferenceGet StdExportFormat true] \
-		-title "Export $nfiles files to ASCII"]
+		-title "Export $nfiles files to ASCII" -parent .]
 	
 	if {$choice == {}} {
 		# dialog was cancelled
@@ -799,7 +799,7 @@ proc ExportCmd {} {
 			}
 			puts $fd "# [join $format \t]"
 
-			puts $fd [join [SELECT $format $HDFFiles -allnan true] \n]
+			puts $fd [deepjoin [SELECT $format $HDFFiles -allnan true] \t \n]
 		} else {
 			# individual files
 			foreach hdf $HDFFiles {
@@ -807,7 +807,7 @@ proc ExportCmd {} {
 				autofd fd [file join [dict get $choice path] $roottail.dat] wb
 				puts $fd "# $hdf"
 				puts $fd "# [join $format \t]"
-				puts $fd [join [SELECT $format $hdf -allnan true] \n]
+				puts $fd [deepjoin [SELECT $format $hdf -allnan true] \t \n]
 			}
 		}
 	}
@@ -1329,6 +1329,15 @@ proc zip {l1 l2} {
 	return $result
 }
 
+proc deepjoin {list args} { 
+	if {[llength $args]==0} { return $list }
+	set i 0
+	foreach v $list {
+		lset list $i [deepjoin $v {*}[lrange $args 0 end-1]] 
+		incr i
+	}
+	join $list [lindex $args end]
+}
 
 variable iconcache {}
 proc IconGet {name} {

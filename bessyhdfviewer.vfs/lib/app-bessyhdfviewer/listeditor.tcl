@@ -20,6 +20,7 @@ snit::widget ListEditor {
 	option -valuetree -default {} -configuremethod  SetValueTree
 	option -resultvar {}
 	option -title -default {Select options} -configuremethod SetTitle
+	option -parent -default {}
 
 	# call this function to get the modal dialog
 	typevariable resultlist
@@ -115,7 +116,11 @@ snit::widget ListEditor {
 
 		pack $okbut $cancelbut -side left -padx 5
 
-		$self configurelist $args
+		$self configurelist $args	
+		if {$options(-parent) != {}} {
+			wm transient $win $options(-parent)
+		}
+
 		set includelist $options(-initiallist)
 	}
 

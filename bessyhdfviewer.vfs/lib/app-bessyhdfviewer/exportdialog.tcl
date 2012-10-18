@@ -27,6 +27,7 @@ snit::widget ExportDialog {
 	option -title -default {Select export options} -configuremethod SetTitle
 	option -aclist -default {Energy Keithley4 Keithley1 Sample-X}
 	option -stdformat -default true
+	option -parent -default {}
 
 	# call this function to get the modal dialog
 	typevariable resultdict
@@ -111,6 +112,10 @@ snit::widget ExportDialog {
 		pack $okbut $cancelbut -side left -padx 5
 
 		$self configurelist $args
+
+		if {$options(-parent) != {}} {
+			wm transient $win $options(-parent)
+		}
 
 		set title "Export\n"
 		set firstfile [lindex $options(-files) 0]
