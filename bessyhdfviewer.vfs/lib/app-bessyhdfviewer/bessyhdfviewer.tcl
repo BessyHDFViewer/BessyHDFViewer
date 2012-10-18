@@ -158,7 +158,7 @@ proc InitGUI {} {
 	set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
 	set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
 	set w(bcollapse) [ttk::button $w(bbar).coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [list $w(filelist) collapseCurrent]]
-	set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::DumpCmd -text "Export" -image [IconGet document-export] -compound left]
+	set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 
 	pack $w(bhome) $w(bupwards) $w(bcollapse) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
 
@@ -746,34 +746,68 @@ proc DumpToFile {hdf dat} {
 	}
 }
 	
-proc DumpCmd {} {
+proc ExportCmd {} {
 	# when pressing the export button
 	variable HDFFiles
-	set nfiles [llength $HDFFiles]
 
-	if {$nfiles==1} {
-		# when a single file is selected, prompt for file name
-		set initialfile "[file rootname [file tail [lindex $HDFFiles 0]]].dat"
-		set initialdir [file dirname [lindex $HDFFiles 0]]
-		set datfn [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
-			-defaultextension .dat \
-			-title "Export HDF file to ASCII" \
-			-initialfile $initialfile \
-			-initialdir $initialdir]
-		if {$datfn != {}} {
-			DumpToFile [lindex $HDFFiles 0] $datfn
+	set nfiles [llength $HDFFiles]
+	set choice [ExportDialog show -files $HDFFiles \
+		-aclist [PreferenceGet AutoCompleteList {HDF Energy Keithley1}] \
+		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
+		-stdformat [PreferenceGet StdExportFormat true] \
+		-title "Export $nfiles files to ASCII"]
+	
+	if {$choice == {}} {
+		# dialog was cancelled
+		return
+	}
+
+	# write back settings to prefs
+	PreferenceSet ExportFormat [dict get $choice format]
+	PreferenceSet StdExportFormat [dict get $choice stdformat]
+	
+	set singlefile [dict get $choice singlefile]
+	set stdformat [dict get $choice stdformat]
+	
+
+	if {$stdformat} {
+		# Text dump
+		if {$singlefile} {
+			autofd fd [dict get $choice path] wb
 		}
-	} else {
-		if {$nfiles > 0} {
-			# multiple files selected - prompt for directory
-			set initialdir [file dirname [lindex $HDFFiles 0]]
-			set outputdir [tk_getDirectory -title "Select directory to export $nfiles HDF files to ASCII" \
-				-initialdir $initialdir -filetypes { {{HDF files} {.hdf}} {{ASCII data files} {.dat}} {{All files} {*}}} ]
-			if {$outputdir != {}} {
-				foreach hdf $HDFFiles {
-					set roottail [file rootname [file tail $hdf]]
-					DumpToFile $hdf [file join $outputdir $roottail.dat]
-				}
+
+		foreach hdf $HDFFiles {
+			if {!$singlefile} {
+				# in case of multiple files, open separately for each 
+				# HDF input file. Path is the dirname then
+				set roottail [file rootname [file tail $hdf]]
+				autofd fd [file join [dict get $choice path] $roottail.dat] wb
+			}
+
+			# read HDF
+			set hdfdata [bessy_reshape $hdf]
+			puts $fd "# $hdf"
+			puts $fd [Dump $hdfdata]
+		}
+	}  else {
+		# formatted output
+		set format [dict get $choice format]
+		if {$singlefile} {
+			autofd fd [dict get $choice path] wb
+			foreach hdf $HDFFiles {
+				puts $fd "# $hdf"
+			}
+			puts $fd "# [join $format \t]"
+
+			puts $fd [join [SELECT $format $HDFFiles -allnan true] \n]
+		} else {
+			# individual files
+			foreach hdf $HDFFiles {
+				set roottail [file rootname [file tail $hdf]]
+				autofd fd [file join [dict get $choice path] $roottail.dat] wb
+				puts $fd "# $hdf"
+				puts $fd "# [join $format \t]"
+				puts $fd [join [SELECT $format $hdf -allnan true] \n]
 			}
 		}
 	}
@@ -1041,14 +1075,22 @@ proc FoldPlotCmd {} {
 }
 
 proc SELECT {fmtlist fnlist args} {
-	set limit Inf
-	if {[llength $args] != 0} {
-		if {[llength $args] != 2 || [lindex $args 0] != "LIMIT"} {
-			return -code error "SELECT formats files {LIMIT max}"
-		} else {
-			set limit [lindex $args 1]
-		}
+	# "analog" to SQL SELECT
+	# open all HDF file in fnlist, join all datasets
+	# and compute a table from the expressions in fmtlist
+	# optional arguments:
+	#   LIMIT n     return at maximum n results
+	#  -allnan bool if true, put NaN for every error from expression evaluation
+	#               if false, put NaN only from genuine NaNs (0/0, NaN in data...)
+
+	set defaults [dict create LIMIT Inf -allnan false]
+	set opts [dict merge $defaults $args]
+	if {[dict size $opts] != [dict size $defaults]} {
+		return -code error "SELECT formats files ?LIMIT max? ?-allnan boolean?"
 	}
+
+	set limit [dict get $opts LIMIT]
+	set allnan [dict get $opts -allnan]
 	
 	set result {}
 	foreach fn $fnlist {
@@ -1056,6 +1098,7 @@ proc SELECT {fmtlist fnlist args} {
 		set data [bessy_reshape $fn]
 
 		# set common values 
+		catch {namespace delete ::SELECT}
 		namespace eval ::SELECT [list set HDF $fn]
 
 		foreach key {MotorPositions DetectorValues OptionalPositions} {
@@ -1084,7 +1127,7 @@ proc SELECT {fmtlist fnlist args} {
 			foreach fmt $fmtlist {
 				if {[catch {namespace eval ::SELECT [list expr $fmt]} lresult]} {
 					# expr handles NaN in many different ways by throwing errors:(
-					if {[regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
+					if {$allnan || [regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
 				}
 				lappend line $lresult
 			}
@@ -1266,6 +1309,17 @@ proc autodestroy {cmd args} {
 	rename $cmd ""
 }
 
+proc autofd {var args} {
+	upvar 1 $var fd
+	catch {unset fd}
+	set fd [uplevel 1 [list open {*}$args]]
+	trace add variable fd unset [list autoclose $fd]
+}
+
+proc autoclose {fd args} {
+	# puts "RAII destructing $cmd"
+	catch {close $fd}
+}
 proc zip {l1 l2} {
 	# create intermixed list
 	set result {}

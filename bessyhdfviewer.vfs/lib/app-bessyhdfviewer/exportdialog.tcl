@@ -26,6 +26,7 @@ snit::widget ExportDialog {
 	option -format -default {{$Energy}}
 	option -title -default {Select export options} -configuremethod SetTitle
 	option -aclist -default {Energy Keithley4 Keithley1 Sample-X}
+	option -stdformat -default true
 
 	# call this function to get the modal dialog
 	typevariable resultdict
@@ -71,7 +72,7 @@ snit::widget ExportDialog {
 			-variable [myvar stdformat] -value 1 -command [mymethod SwitchStdFormat]]
 		set custbtn [ttk::radiobutton $fmtframe.custbtn -text "Custom Format" \
 			-variable [myvar stdformat] -value 0 -command [mymethod SwitchStdFormat]]
-		set stdformat 1
+		
 		install colfmtframe using ttk::frame $fmtframe.colfmtfr
 		install previewtable using tablelist::tablelist $fmtframe.tbl \
 			-labelcommand [mymethod EditColumn] \
@@ -128,6 +129,12 @@ snit::widget ExportDialog {
 			}
 		}
 		append title "to ASCII"
+
+		if {$options(-stdformat)} {
+			set stdformat 1
+		} else {
+			set stdformat 0
+		}
 
 		$self SwitchSingleFile
 		$self SwitchStdFormat
