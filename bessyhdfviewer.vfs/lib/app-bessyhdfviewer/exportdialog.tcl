@@ -20,12 +20,11 @@ snit::widget ExportDialog {
 	variable fmtlist
 	variable colformat
 	variable activecolumn
-	variable ACInfo
 
 	option -files -default {}
 	option -format -default {{$Energy}}
 	option -title -default {Select export options} -configuremethod SetTitle
-	option -aclist -default {Energy Keithley4 Keithley1 Sample-X}
+	delegate option -aclist to fmtfield
 	option -stdformat -default true
 	option -parent -default {}
 
@@ -100,10 +99,8 @@ snit::widget ExportDialog {
 		grid $fmtfield $pbutton $mbutton -sticky ew
 		grid columnconfigure $colfmtframe 0 -weight 1
 
-		bind $fmtfield <Key> [mymethod InvalidateAutoComplete]
-		# unspecific key binding
 		bind $fmtfield <Return> [mymethod AcceptEditColumn]
-		bind $fmtfield <Tab> [mymethod AutoComplete]
+		AutoComplete $fmtfield
 		set activecolumn {}
 
 		set okbut [ttk::button $butframe.ok -text OK -image [IconGet dialog-ok] -command [mymethod OK] -compound left]
@@ -145,7 +142,6 @@ snit::widget ExportDialog {
 		$self SwitchStdFormat
 		$self PreviewFormat
 		set resultdict {}
-		$self InvalidateAutoComplete
 	}
 
 	method SetTitle {option title} {
@@ -275,79 +271,6 @@ snit::widget ExportDialog {
 				$previewtable insertlist end $data
 			}
 		}
-	}
-
-	method AutoComplete {} {
-		variable ACInfo
-
-		set ACavailable false
-		if {$ACInfo == {}} {
-			puts "Autocomplete $colformat"
-			set insertpos [$fmtfield index insert]
-			set head [string range $colformat 0 $insertpos-1]
-			set tail [string range $colformat $insertpos end]
-
-			puts "Cursor: $head|$tail"
-
-			# look backwards for \$ or \{ 
-			
-			if {[regexp {^(.*)(\$)(\{?)(.*)$} $head -> front dollar brace varhead]} {
-				# look for possible matches of varhead in autocomplete list
-				set matches {}
-				foreach varname $options(-aclist) {
-					if {[string match -nocase "$varhead*" $varname]} {
-						lappend matches $varname
-					}
-				}
-				set matches [lsort -nocase $matches]
-				lappend matches $varhead
-
-				puts "Possible matches [join $matches ,]"
-
-				set suggind 0
-				set ACavailable true
-			}
-
-		} else {
-			# retrieve information from ACInfo
-			foreach var {suggind matches front tail} {
-				set $var [dict get $ACInfo $var]
-			}
-			set ACavailable true
-
-		}
-		
-		if {$ACavailable} {
-			set suggestion [lindex $matches $suggind]
-			# replace by suggestion
-			if {[regexp {^[[:alpha:]][[:alnum:]]*$} $suggestion]} {
-				# only alphanumeric - don't use braces
-				set colformat "$front\$$suggestion"
-				set insertpos [string length $colformat]
-				append colformat $tail
-			} else {
-				# insert braces for safety
-				set colformat "$front\$\{$suggestion\}"
-				set insertpos [string length $colformat]
-				append colformat $tail
-			}
-			# move cursor to end of inserted text
-			$fmtfield icursor $insertpos
-			
-			# cycle through suggestions & write back to ACInfo
-			incr suggind
-			if {$suggind >= [llength $matches]} { set suggind 0 }
-			foreach var {suggind matches front tail} {
-				puts [list dict set ACInfo $var [set $var]]
-				dict set ACInfo $var [set $var]
-			}
-		}
-		return -code break
-	}
-
-	method InvalidateAutoComplete {} {
-		set ACInfo {}
-		puts "AC invalidated"
 	}
 
 }

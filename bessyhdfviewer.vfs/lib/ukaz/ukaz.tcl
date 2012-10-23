@@ -706,12 +706,19 @@ namespace eval ukaz {
 			list [$self PixTox $x] [$self PixToy $y]
 		}
 
-		method calcminmax {data}  {
+		proc calcminmax {data}  {
 			if {[llength $data]<2} {
 				error "Invalid data, <2 items"
 			}
-			set xmin [lindex $data 0]
-			set ymin [lindex $data 1]
+			
+			set xmin ""
+			set ymin ""
+
+			while {![isfinite $xmin] || ![isfinite $ymin]} {
+				set data [lassign $data xmin ymin]
+				if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
+			}
+
 			set xmax $xmin
 			set ymax $ymin
 			foreach {x y} $data {
@@ -742,12 +749,12 @@ namespace eval ukaz {
 		}
 
 		method showpoints_autodim {coordlist color shape} {
-			$self autodim {*}[$self calcminmax $coordlist]
+			$self autodim {*}[calcminmax $coordlist]
 			$self showpoints $coordlist $color $shape
 		}
 
 		method connectpoints_autodim {coordlist color args} {
-			$self autodim {*}[$self calcminmax $coordlist]
+			$self autodim {*}[calcminmax $coordlist]
 			$self connectpoints $coordlist $color {*}$args
 		}
 
@@ -1027,7 +1034,7 @@ namespace eval ukaz {
 				if {$prevpos == {}} {
 					# never happens
 					# zoom completely out
-					set totalpos [$self calcminmax $data]
+					set totalpos [calcminmax $data]
 					#puts "Zoom completely out: $totalpos"
 					# $self MouseZoomOut {*}$totalpos
 				} else {

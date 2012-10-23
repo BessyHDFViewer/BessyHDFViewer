@@ -48,7 +48,7 @@ tkcon title "BessyHDFViewer Console (tkcon $tversion)"
 variable ns [namespace current]
 
 # load support modules
-foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl exportdialog.tcl} {
+foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl exportdialog.tcl autocomplete.tcl} {
 	source [file join $basedir $module]
 }
 
@@ -200,6 +200,8 @@ proc InitGUI {} {
 	
 	bind $w(xent) <<ComboboxSelected>> ${ns}::DisplayPlot
 	bind $w(yent) <<ComboboxSelected>> ${ns}::DisplayPlot
+	#AutoComplete $w(xent) -aclist [PreferenceGet AutoCompleteList {Energy}]
+	#AutoComplete $w(yent) -aclist [PreferenceGet AutoCompleteList {Energy}]
 	bind $w(xlbl) <1> { tkcon show }
 
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky ew
