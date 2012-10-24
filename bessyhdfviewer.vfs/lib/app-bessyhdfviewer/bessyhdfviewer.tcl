@@ -555,23 +555,28 @@ proc PreviewFile {files} {
 	# get selected file from list
 	variable w
 	variable HDFFiles $files
+	variable AxesInfo
 
 	switch [llength $files]  {
 
 		0 {
 			# nothing selected
+			set AxesInfo {axes {} motors {} detectors {} stdmotor {} stddetector {}}
 			return
 		}
 
 		1 {
-			# focus on one single file - plot this
+			# focus on one single file - display this
 			variable hdfdata [bessy_reshape [lindex $files 0]]
 			variable plotdata {}
 
 			# select the motor/det 
-			variable xformat
-			variable yformat
-			lassign [bessy_class $hdfdata] type xformat yformat
+			lassign [bessy_class $hdfdata] type stdmotor stddetector
+			dict set AxesInfo stdmotor $stdmotor
+			dict set AxesInfo stddetector $stddetector
+
+			variable xformat $stdmotor
+			variable yformat $stddetector
 			
 			if {$type == "MCA"} {
 				set xformat Row
@@ -585,19 +590,24 @@ proc PreviewFile {files} {
 
 				# insert available axes into axis choosers
 				if {[catch {
-					set motors [dict keys [dict get $hdfdata Motor]]
-					set detectors [dict keys [dict get $hdfdata Detector]]
-					set axes $motors
-					lappend axes {*}$detectors
+					dict set AxesInfo motors [dict keys [dict get $hdfdata Motor]]
+					dict set AxesInfo detectors [dict keys [dict get $hdfdata Detector]]
+					dict set AxesInfo axes [dict get $AxesInfo motors]
+					dict lappend AxesInfo axes {*}[dict get $AxesInfo detectors]
 
-					$w(xent) configure -values $motors 
-					$w(yent) configure -values $detectors
+					$w(xent) configure -values [dict get $AxesInfo motors]
+					$w(yent) configure -values [dict get $AxesInfo detectors]
 					$w(xent) state !disabled
 					$w(yent) state !disabled
 
 					set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
-				}]} {
+				} err]} {
 					# could not get sensible plot axes - not BESSY hdf?
+					puts $err
+					dict set AxesInfo axes {}
+					dict set AxesInfo motors {}
+					dict set AxesInfo detectors {}
+
 					$w(xent) configure -values {}
 					$w(yent) configure -values {}
 					$w(xent) state disabled
@@ -635,6 +645,7 @@ proc PreviewFile {files} {
 			# multiple files selected - prepare for batch work
 			$w(xent) state disabled
 			$w(yent) state disabled
+			set AxesInfo {axes {} motors {} detectors {} stdmotor {} stddetector {}}
 		}
 	}
 }
@@ -869,7 +880,6 @@ proc DisplayTextDump {} {
 proc DisplayTable {} {
 	variable w
 	variable plotdata
-	variable plotdatalength
 	variable tbldata
 	variable tblheader
 	
