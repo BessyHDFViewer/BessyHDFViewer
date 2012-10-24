@@ -501,11 +501,39 @@ namespace eval ukaz {
 			# automagically calculate good values
 			# for the tics increment
 
-			if {$x2==$x1} { error "Zero x-range" }
-			if {$y2==$y1} { error "Zero y-range" }
-
 			if {$logx && ($x1<=0 || $x2<=0)} { error "x-range must be positive for logscale"}
 			if {$logy && ($y1<=0 || $y2<=0)} { error "y-range must be positive for logscale"}
+			
+			if {0} {
+				if {$x2==$x1} { error "Zero x-range" }
+				if {$y2==$y1} { error "Zero y-range" }
+			} else {
+				# instead of erroring out, widen zero ranges
+				if {$x2==$x1} {
+					if {$logx} {
+						set xm $x1
+						set x1 [expr {$xm*0.999}]
+						set x2 [expr {$xm*1.001}]
+					} else {
+						set xm $x1
+						set x1 [expr {$xm-0.001}]
+						set x2 [expr {$xm+0.001}]
+					}
+				}
+
+				if {$y2==$y1} {
+					if {$logy} {
+						set ym $y1
+						set y1 [expr {$ym*0.999}]
+						set y2 [expr {$ym*1.001}]
+					} else {
+						set ym $y1
+						set y1 [expr {$ym-0.001}]
+						set y2 [expr {$ym+0.001}]
+					}
+				}
+						
+			}
 
 			set xd [expr {log($x2 - $x1)/log(10)}]
 			set yd [expr {log($y2 - $y1)/log(10)}]
@@ -810,24 +838,48 @@ namespace eval ukaz {
 		}
 
 		method showpoints_nosave {coordlist color shape {prefix {}}} {
-			if {$prefix == {} } {
-				incr pttagnr
-				set prefix [format "o%d_" $pttagnr]
-			}
-
 			switch $shape {
-				circle { set shapeproc circle}
+				circle { 
+					set shapeproc circle
+					set filled false
+				}
 
-				square { set shapeproc square }
+				filled-circle {
+					set shapeproc filled-circle
+					set filled true
+				}
 
-				hex     { set shapeproc hexagon }
-				hexagon { set shapeproc hexagon }
+				square {
+					set shapeproc square
+					set filled false
+				}
+
+				filled-square {
+					set shapeproc filled-square
+					set filled true
+				}
+
+				hex     -
+				hexagon {
+					set shapeproc hexagon
+					set filled false
+				}
+
+				filled-hexagon {
+					set shapeproc filled-hexagon
+					set filled true
+				}
 
 				default {
 
 					error "Shape must be either square, circle or hex(agon), got  '$shape'"
 					return
 				}
+			}
+
+			if {$prefix == {} } {
+				incr pttagnr
+				set prefix [format "o%d_" $pttagnr]
 			}
 
 			# on Mac OS X, right&middle buttons are swapped
@@ -874,6 +926,24 @@ namespace eval ukaz {
 				lappend coord [expr {$yc*$size+$y}]
 			}
 			$can create polygon $coord -outline $color -fill "" -tag $tag
+		}
+		
+		method filled-circle {x y color tag} {
+			$can create oval [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline "" -fill $color -tag $tag
+		}
+
+		method filled-square {x y color tag} {
+			$can create rectangle  [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline "" -fill $color -tag $tag
+		}
+
+		method filled-hexagon {x y color tag} {
+			set size 5
+			set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
+			foreach {xc yc} $clist {
+				lappend coord [expr {$xc*$size+$x}]
+				lappend coord [expr {$yc*$size+$y}]
+			}
+			$can create polygon $coord -outline "" -fill $color -tag $tag
 		}
 
 		method remove {itemlist} {

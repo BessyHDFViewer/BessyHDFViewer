@@ -30,6 +30,7 @@ if {[tk windowingsystem]=="aqua"} {
 	interp alias {} tk_busy {} tk busy
 }
 
+
 set tversion [package require tkcon]
 # setup tkcon, as in http://wiki.tcl.tk/17616
 #------------------------------------------------------
@@ -40,11 +41,8 @@ set tversion [package require tkcon]
 #------------------------------------------------------
 set tkcon::PRIV(showOnStartup) 0
 set tkcon::PRIV(root) .console
-#set tkcon::PRIV(protocol) {tkcon hide}
+set tkcon::PRIV(protocol) {tkcon hide}
 set tkcon::OPT(exec) ""
-tkcon::Init
-tkcon title "BessyHDFViewer Console (tkcon $tversion)"
-
 variable ns [namespace current]
 
 # load support modules
@@ -197,14 +195,17 @@ proc InitGUI {} {
 	set w(xent) [ttk::combobox $w(axebar).xent -textvariable ${ns}::xformat -exportselection 0]
 	set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
 	set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
+	set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
 	
 	bind $w(xent) <<ComboboxSelected>> ${ns}::DisplayPlot
 	bind $w(yent) <<ComboboxSelected>> ${ns}::DisplayPlot
-	#AutoComplete $w(xent) -aclist [PreferenceGet AutoCompleteList {Energy}]
-	#AutoComplete $w(yent) -aclist [PreferenceGet AutoCompleteList {Energy}]
-	bind $w(xlbl) <1> { tkcon show }
+	AutoComplete $w(xent) -aclist [PreferenceGet AutoCompleteList {Energy}]
+	AutoComplete $w(yent) -aclist [PreferenceGet AutoCompleteList {Energy}]
+	bind $w(xent) <Return> ${ns}::DisplayPlot
+	bind $w(yent) <Return> ${ns}::DisplayPlot
+	bind $w(xlbl) <1> ${ns}::ConsoleShow
 
-	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) -sticky ew
+	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(keepformat) -sticky ew
 	grid columnconfigure $w(axebar) 1 -weight 1
 	grid columnconfigure $w(axebar) 3 -weight 1
 
@@ -230,8 +231,9 @@ proc InitGUI {} {
 
 	$w(displayfr) add $w(tdumpfr) -text "Text"
 	
-	update
+	#update
 	# bug in tablelist? Creation blocks if update is left out
+	# no, bug in tkcon :(
 
 	# Table display tab
 	#
@@ -819,14 +821,15 @@ proc ExportCmd {} {
 proc DisplayPlot {} {
 	variable w
 	variable plotdata
+	variable hdfdata
 	variable xformat
 	variable yformat
+	set fmtlist [list $xformat $yformat]
 
-	# plot the data 
-	set xdata [dict get $plotdata $xformat data]
-	set ydata [dict get $plotdata $yformat data]
-
-	set data [zip $xdata $ydata]
+	# plot the data
+	set data [SELECTdata [list $xformat $yformat] $hdfdata -allnan true]
+	# reduce to flat list
+	set data [concat {*}$data]
 
 	variable plotid
 	if {[info exists plotid]} {
@@ -945,7 +948,7 @@ proc ReDisplay {} {
 	set display [$w(displayfr) tab $index -text]
 
 	# this mixes user-visible strings with commands
-	# don'T want to condense (i.e. Display$display)
+	# don't want to condense (i.e. Display$display)
 	switch $display {
 		Plot {
 			if {![dict get $displayvalid Plot]} {
@@ -1139,6 +1142,87 @@ proc SELECT {fmtlist fnlist args} {
 	}
 
 	return $result
+}
+
+
+proc SELECTdata {fmtlist hdfdata args} {	
+	# "analog" to SQL SELECT
+	#  compute a table from the expressions in fmtlist
+	# optional arguments:
+	#   LIMIT n     return at maximum n results
+	#  -allnan bool if true, put NaN for every error from expression evaluation
+	#               if false, put NaN only from genuine NaNs (0/0, NaN in data...)
+
+	set defaults [dict create LIMIT Inf -allnan false -extravars {} -firstrow 0]
+	set opts [dict merge $defaults $args]
+	if {[dict size $opts] != [dict size $defaults]} {
+		return -code error "SELECTdata formats data ?LIMIT max? ?-allnan boolean? ?-extravars dictvalue? ?-firstrow n?"
+	}
+
+	set limit [dict get $opts LIMIT]
+	set allnan [dict get $opts -allnan]
+	
+	set result {}
+	set Row [dict get $opts -firstrow]
+	# set common values 
+	catch {namespace delete ::SELECT}
+	namespace eval ::SELECT {} 
+	dict for {var val} [dict get $opts -extravars] {
+		namespace eval ::SELECT [list set $var $val]
+	}
+
+	foreach key {MotorPositions DetectorValues OptionalPositions} {
+		if {[dict exists $hdfdata $key]} {
+			dict for {key value} [dict get $hdfdata $key] {
+				namespace eval ::SELECT [list set $key $value]
+			}
+		}
+	}
+
+	set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+
+	set i 0
+	foreach fmt $fmtlist {
+		if {[string first {$} $fmt]<0} {
+			# no $ found - interpret the whole thing as one variable name
+			lset fmtlist $i "\${$fmt}"
+		}
+		incr i
+	}
+	
+	# compute maximum length for each data column - might be different due to BESSY_INF trimming
+	set maxlength 0
+	dict for {var entry} $table {
+		set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+	}
+
+	for {set i 0} {$i<$maxlength && $Row<$limit} {incr i; incr Row} {
+		namespace eval ::SELECT [list set Row $Row] 
+		
+		foreach {var entry} $table {
+			namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
+		}
+
+		set line {}
+		foreach fmt $fmtlist {
+			if {[catch {namespace eval ::SELECT [list expr $fmt]} lresult]} {
+				# expr handles NaN in many different ways by throwing errors:(
+				if {$allnan || [regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
+			}
+			lappend line $lresult
+		}
+		lappend result $line
+	}
+
+
+	return $result
+
+}
+
+
+proc ConsoleShow {} {
+	tkcon show
+	tkcon title "BessyHDFViewer Console"
 }
 
 proc bessy_reshape {fn} {
