@@ -1088,57 +1088,25 @@ proc SELECT {fmtlist fnlist args} {
 	#  -allnan bool if true, put NaN for every error from expression evaluation
 	#               if false, put NaN only from genuine NaNs (0/0, NaN in data...)
 
-	set defaults [dict create LIMIT Inf -allnan false]
+	set defaults [dict create LIMIT Inf -allnan false -extravars {}]
 	set opts [dict merge $defaults $args]
 	if {[dict size $opts] != [dict size $defaults]} {
-		return -code error "SELECT formats files ?LIMIT max? ?-allnan boolean?"
+		return -code error "SELECT formats files ?LIMIT max? ?-allnan boolean? ?-extravars dict?"
 	}
 
-	set limit [dict get $opts LIMIT]
-	set allnan [dict get $opts -allnan]
-	
 	set result {}
+	set firstrow 0
+	set limit [dict get $opts LIMIT]
 	foreach fn $fnlist {
 		# read HDF file 
 		set data [bessy_reshape $fn]
-
-		# set common values 
-		catch {namespace delete ::SELECT}
-		namespace eval ::SELECT [list set HDF $fn]
-
-		foreach key {MotorPositions DetectorValues OptionalPositions} {
-			if {[dict exists $data $key]} {
-				dict for {key value} [dict get $data $key] {
-					namespace eval ::SELECT [list set $key $value]
-				}
-			}
-		}
-
-		set table [dict merge [dict get $data Motor] [dict get $data Detector]]
 		
-		# compute maximum length for each data column - might be different due to BESSY_INF trimming
-		set maxlength 0
-		dict for {var entry} $table {
-			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
-		}
-
-		for {set i 0} {$i<$maxlength && [llength $result]<$limit} {incr i} {
-			foreach {var entry} $table {
-				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
-			#	puts "Setting $var to [lindex [dict get $entry data] $i]"
-			}
-
-			set line {}
-			foreach fmt $fmtlist {
-				if {[catch {namespace eval ::SELECT [list expr $fmt]} lresult]} {
-					# expr handles NaN in many different ways by throwing errors:(
-					if {$allnan || [regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
-				}
-				lappend line $lresult
-			}
-			lappend result $line
-		}
-		if {[llength $result]>=$limit} { break }
+		dict set opts -extravars HDF $fn
+		
+		set fresult [SELECTdata $fmtlist $data {*}$opts -firstrow $firstrow]
+		lappend result {*}$fresult
+		incr firstrow [llength $fresult]
+		if {$firstrow>=$limit} { break }
 	}
 
 	return $result
