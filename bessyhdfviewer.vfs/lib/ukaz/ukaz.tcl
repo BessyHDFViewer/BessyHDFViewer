@@ -859,6 +859,26 @@ namespace eval ukaz {
 					set filled true
 				}
 
+				triangle {
+					set shapeproc triangle
+					set filled false
+				}
+
+				filled-triangle {
+					set shapeproc filled-triangle
+					set filled true
+				}
+
+				uptriangle {
+					set shapeproc uptriangle
+					set filled false
+				}
+
+				filled-uptriangle {
+					set shapeproc filled-uptriangle
+					set filled true
+				}
+
 				hex     -
 				hexagon {
 					set shapeproc hexagon
@@ -872,7 +892,7 @@ namespace eval ukaz {
 
 				default {
 
-					error "Shape must be either square, circle or hex(agon), got  '$shape'"
+					error "Shape must be either square, circle, hex(agon), triangle, uptriangle, got  '$shape'"
 					return
 				}
 			}
@@ -944,6 +964,46 @@ namespace eval ukaz {
 				lappend coord [expr {$yc*$size+$y}]
 			}
 			$can create polygon $coord -outline "" -fill $color -tag $tag
+		}
+		
+		method filled-uptriangle {x y color tag} {
+			set size 8
+			set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
+			foreach {xc yc} $clist {
+				lappend coord [expr {$xc*$size+$x}]
+				lappend coord [expr {$yc*$size+$y}]
+			}
+			$can create polygon $coord -outline "" -fill $color -tag $tag
+		}
+		
+		method uptriangle {x y color tag} {
+			set size 8
+			set clist {0.0 1.0 0.5 -0.5 -0.5 -0.5}
+			foreach {xc yc} $clist {
+				lappend coord [expr {$xc*$size+$x}]
+				lappend coord [expr {$yc*$size+$y}]
+			}
+			$can create polygon $coord -outline $color -fill "" -tag $tag
+		}
+
+		method filled-triangle {x y color tag} {
+			set size 8
+			set clist {0.0 1.0 0.5 -0.5 -0.5 -0.5}
+			foreach {xc yc} $clist {
+				lappend coord [expr {$xc*$size+$x}]
+				lappend coord [expr {$yc*$size+$y}]
+			}
+			$can create polygon $coord -outline "" -fill $color -tag $tag
+		}
+		
+		method triangle {x y color tag} {
+			set size 8
+			set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
+			foreach {xc yc} $clist {
+				lappend coord [expr {$xc*$size+$x}]
+				lappend coord [expr {$yc*$size+$y}]
+			}
+			$can create polygon $coord -outline $color -fill "" -tag $tag
 		}
 
 		method remove {itemlist} {
