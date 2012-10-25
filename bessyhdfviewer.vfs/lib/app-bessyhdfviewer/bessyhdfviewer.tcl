@@ -196,6 +196,7 @@ proc InitGUI {} {
 	set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
 	set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
 	set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
+	variable keepformat false
 	
 	bind $w(xent) <<ComboboxSelected>> ${ns}::DisplayPlot
 	bind $w(yent) <<ComboboxSelected>> ${ns}::DisplayPlot
@@ -481,7 +482,7 @@ proc ClassifyHDF {type fn} {
 
 			}
 			
-			lassign [bessy_class $temphdfdata] class motor detector
+			dict_assign [bessy_class $temphdfdata] class motor detector
 			
 			# don't check cache for this file any longer
 			set cachemiss true
@@ -555,13 +556,13 @@ proc PreviewFile {files} {
 	# get selected file from list
 	variable w
 	variable HDFFiles $files
-	variable AxesInfo
+	variable BessyClass
 
 	switch [llength $files]  {
 
 		0 {
 			# nothing selected
-			set AxesInfo {axes {} motors {} detectors {} stdmotor {} stddetector {}}
+			set BessyClass {axes {} motors {} detectors {} motor {} detector {}}
 			return
 		}
 
@@ -570,17 +571,14 @@ proc PreviewFile {files} {
 			variable hdfdata [bessy_reshape [lindex $files 0]]
 			variable plotdata {}
 
-			# select the motor/det 
-			lassign [bessy_class $hdfdata] type stdmotor stddetector
-			dict set AxesInfo stdmotor $stdmotor
-			dict set AxesInfo stddetector $stddetector
+			# select the motor/det
+			set BessyClass [bessy_class $hdfdata]
+			dict_assign $BessyClass class motor detector motors detectors
 
-			variable xformat $stdmotor
-			variable yformat $stddetector
+			variable xformat $motor
+			variable yformat $detector
 			
-			if {$type == "MCA"} {
-				set xformat Row
-				set yformat MCA
+			if {$class == "MCA"} {
 				$w(xent) configure -values {Row}
 				$w(yent) configure -values {MCA}
 				$w(xent) state !disabled
@@ -590,13 +588,9 @@ proc PreviewFile {files} {
 
 				# insert available axes into axis choosers
 				if {[catch {
-					dict set AxesInfo motors [dict keys [dict get $hdfdata Motor]]
-					dict set AxesInfo detectors [dict keys [dict get $hdfdata Detector]]
-					dict set AxesInfo axes [dict get $AxesInfo motors]
-					dict lappend AxesInfo axes {*}[dict get $AxesInfo detectors]
-
-					$w(xent) configure -values [dict get $AxesInfo motors]
-					$w(yent) configure -values [dict get $AxesInfo detectors]
+					
+					$w(xent) configure -values $motors
+					$w(yent) configure -values $detectors
 					$w(xent) state !disabled
 					$w(yent) state !disabled
 
@@ -604,9 +598,6 @@ proc PreviewFile {files} {
 				} err]} {
 					# could not get sensible plot axes - not BESSY hdf?
 					puts $err
-					dict set AxesInfo axes {}
-					dict set AxesInfo motors {}
-					dict set AxesInfo detectors {}
 
 					$w(xent) configure -values {}
 					$w(yent) configure -values {}
@@ -616,21 +607,6 @@ proc PreviewFile {files} {
 					return 
 				}
 			}
-				
-			# compute maximum data length
-			variable plotdatalength 0
-				dict for {var entry} $plotdata {
-				set plotdatalength [tcl::mathfunc::max $plotdatalength [llength [dict get $entry data]]]
-			}
-
-			# create Row column from first key of data
-			set rowdata {}
-			for {set i 0} {$i<$plotdatalength} {incr i} {
-				lappend rowdata $i
-			}
-
-			dict set rowdict Row data $rowdata
-			set plotdata [dict merge $rowdict $plotdata]
 			
 			# reshape plotdata into table form
 			MakeTable
@@ -645,7 +621,7 @@ proc PreviewFile {files} {
 			# multiple files selected - prepare for batch work
 			$w(xent) state disabled
 			$w(yent) state disabled
-			set AxesInfo {axes {} motors {} detectors {} stdmotor {} stddetector {}}
+			set BessyClass {axes {} motors {} detectors {} motor {} detector {}}
 		}
 	}
 }
@@ -653,14 +629,16 @@ proc PreviewFile {files} {
 proc MakeTable {} {
 	# reformat plotdata into table
 	# compute maximum length for each data column - might be different due to BESSY_INF trimming
-	variable plotdatalength
+	variable BessyClass
 	variable plotdata
 	variable tbldata
-	variable tblheader [dict keys $plotdata]
-
+	variable tblheader 
+	
+	set tblheader Row
+	lappend tblheader {*}[dict keys $plotdata]
 	set tbldata {}
-	for {set i 0} {$i<$plotdatalength} {incr i} {
-		set line {}
+	for {set i 0} {$i<[dict get $BessyClass nrows]} {incr i} {
+		set line $i
 		foreach {var entry} $plotdata {
 			lappend line [lindex [dict get $entry data] $i]
 		}
@@ -847,7 +825,7 @@ proc DisplayPlot {} {
 		$w(Graph) remove $plotid
 	}
 
-	if {[llength $data] >= 4} {
+	if {[llength $data] >= 2} {
 		if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
 			$w(Graph) configure -xlabel "$xformat"
 		} else {
@@ -883,12 +861,13 @@ proc DisplayTable {} {
 	variable tbldata
 	variable tblheader
 	
+	$w(tbltbl) delete 0 end
+	
 	foreach var $tblheader {
 		lappend columns 0 $var left
 	}
 	$w(tbltbl) configure -columns $columns
 
-	$w(tbltbl) delete 0 end
 	$w(tbltbl) insertlist 0 $tbldata
 	ValidateDisplay Table
 }
@@ -907,7 +886,7 @@ proc DisplayTree {} {
 		}
 	}
 
-	lassign [bessy_class $hdfdata] class motor detector
+	dict_assign [bessy_class $hdfdata] class motor detector
 	set mtime [file mtime [lindex $HDFFiles 0]]
 
 	dict set values class $class
@@ -1149,7 +1128,7 @@ proc SELECTdata {fmtlist hdfdata args} {
 		namespace eval ::SELECT [list set $var $val]
 	}
 
-	foreach key {MotorPositions DetectorValues OptionalPositions} {
+	foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
 		if {[dict exists $hdfdata $key]} {
 			dict for {key value} [dict get $hdfdata $key] {
 				namespace eval ::SELECT [list set $key $value]
@@ -1157,7 +1136,19 @@ proc SELECTdata {fmtlist hdfdata args} {
 		}
 	}
 
-	set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+	set table [dict create]
+	
+	if {[dict exists $hdfdata MCA]} {
+		dict set table MCA [dict get $hdfdata MCA]
+	}
+
+	if {[dict exists $hdfdata Motor]} {
+		set table [dict merge $table [dict get $hdfdata Motor]]
+	}
+	
+	if {[dict exists $hdfdata Detector]} {
+		set table [dict merge $table [dict get $hdfdata Detector]]
+	}
 
 	set i 0
 	foreach fmt $fmtlist {
@@ -1264,48 +1255,68 @@ proc bessy_class {data} {
 	# classify dataset into Images, Plot and return plot axes
 	set images [dict exists $data Detector Pilatus_Tiff data]
 	set mca [dict exists $data MCA]
+	
+	# determine available axes = motors and detectors
+	if {[catch {dict keys [dict get $data Motor]} motors]} {
+		set motors {}
+	}
+	
+	if {[catch {dict keys [dict get $data Detector]} detectors]} {
+		set detectors {}
+	}
+	
+	set axes [list {*}$motors {*}$detectors]
 
 	set Plot true
 	if {[catch {dict get $data Plot Motor} motor]} {
 		# if Plot is unavailable take the first motor
 		# if that fails, give up
 		set Plot false
-		if {[catch {lindex [dict keys [dict get $data Motor]] 0} motor]} {
-			set motor {}
-		}
+		set motor [lindex $motors 0]
 	}
 		
 	if {[catch {dict get $data Plot Detector} detector]} {
 		set Plot false
-		if {[catch {lindex [dict keys [dict get $data Detector]] 0} detector]} {
-			set detector {}
-		}
+		set detector [lindex $detectors 0]
 	}
 
 	# now check for different classes. MCA has only this dataset, no motors etc.
-	if {$mca} {
-		return [list MCA "" ""]
-	}
+	set class UNKNOWN
 
-	if {$images} {
+	if {$mca} {
+		set motors {Row}
+		set detectors {MCA}
+		set length [llength [dict get $data MCA data]]
+		set class MCA
+	} elseif {$images} {
 		# file contains Pilatus images. Check for one or more
-		set nimages [llength [dict get $data Detector Pilatus_Tiff data]]
-		if {$nimages == 1} {
-			return [list SINGLE_IMG $motor $detector]
+		set length [llength [dict get $data Detector Pilatus_Tiff data]]
+		if {$length == 1} {
+			set class SINGLE_IMG
 		}
 
-		if {$nimages > 1} {
-			return [list MULTIPLE_IMG $motor $detector]
+		if {$length > 1} {
+			set class MULTIPLE_IMG
 		}
 		# otherwise no images are found
-	}
+	} else {
+		if {$Plot} {
+			# there is a valid Plot
+			set class Plot
+		} else {
+			# could not identify
+			set class UNKNOWN
+		}
 
-	if {$Plot} {
-		# there is a valid Plot
-		return [list PLOT $motor $detector]
+		# determine length from motor
+		if {[catch {llength [dict get $data Motor $motor data]} length]} {
+			if {[catch {llength [dict get $data Detector $detector data]} length]} {
+				set length 0
+			}
+		}
 	}
-	# could not identify 
-	return [list UNKNOWN $motor $detector]
+	return [dict create class $class motor $motor detector $detector \
+				nrows $length motors $motors detectors $detectors axes $axes]
 }
 
 proc bessy_get_field {hdfdata field} {
@@ -1401,6 +1412,17 @@ proc deepjoin {list args} {
 		incr i
 	}
 	join $list [lindex $args end]
+}
+
+proc dict_assign {dictvalue args} {
+	# extract variables from dict
+	# unset -> unset
+	foreach var $args {
+		upvar $var v 
+		if {[catch {dict get $dictvalue $var} v]} {
+			unset v
+		}
+	}
 }
 
 variable iconcache {}
