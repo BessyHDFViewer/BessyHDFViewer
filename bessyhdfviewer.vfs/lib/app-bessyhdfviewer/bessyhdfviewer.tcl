@@ -815,6 +815,7 @@ proc ExportCmd {} {
 }
 
 
+variable plotstylecache {}
 proc DisplayPlot {args} {
 	variable w
 	variable plotdata
@@ -825,7 +826,6 @@ proc DisplayPlot {args} {
 	variable keepformat
 
 	variable plotstylecache
-	variable plotstylepool
 	
 	# parse arg
 	set defaults [dict create -explicit false -focus {}]
@@ -907,9 +907,41 @@ proc DisplayPlot {args} {
 
 	set fmtlist [list $xformat $yformat]
 
-	# plot the data
+	# determine plot styles for the data sets
 
+	# transform available styles into dictionary
+	foreach style [PreferenceGet PlotStyles { {line { black } point { red circle }} }] {
+		dict set plotstylesfree $style 1
+	}
+
+	set styles {}
 	foreach fn $HDFFiles {
+		if {[dict exists $plotstylecache $fn]} {
+			# first reserve all styles with the same style that has been used before
+			set style [dict get $plotstylecache $fn]
+			dict set styles $fn $style
+			dict set plotstylesfree $style 0
+		}
+	}
+	
+	# transform free styles into list
+	set plotstylesfree [dict keys [dict filter $plotstylesfree value 1]]
+
+	# 2nd pass: alloc styles for remaining files
+	foreach fn $HDFFiles {
+		if {[llength $plotstylesfree]==0} { break }
+
+		if {![dict exists $styles $fn]} {
+			set plotstylesfree [lassign $plotstylesfree style]
+			dict set styles $fn $style
+		}
+
+	}
+
+
+	
+	# plot the data
+	dict for {fn style} $styles {
 		if {$nfiles == 1} {
 			# for one file, operate on the cached data
 			set data [SELECTdata $fmtlist $hdfdata -allnan true]
@@ -921,10 +953,12 @@ proc DisplayPlot {args} {
 		set data [concat {*}$data]
 
 		if {[llength $data] >= 2} {
-			lappend plotid [$w(Graph) connectpoints_autodim $data black]
-			lappend plotid [$w(Graph) showpoints_autodim $data red circle]
+			lappend plotid [$w(Graph) connectpoints_autodim $data {*}[dict get $style line]]
+			lappend plotid [$w(Graph) showpoints_autodim $data {*}[dict get $style point]]
 		}
 	}
+
+	set plotstylecache $styles
 
 	if {$plotid != {}} {
 		$w(Graph) autoresize

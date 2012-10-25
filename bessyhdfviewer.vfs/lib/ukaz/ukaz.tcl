@@ -748,8 +748,8 @@ namespace eval ukaz {
 				set ymin ""
 
 				while {![isfinite $xmin] || ![isfinite $ymin]} {
-					set data [lassign $data xmin ymin]
 					if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
+					set data [lassign $data xmin ymin]
 				}
 
 				set xmax $xmin
