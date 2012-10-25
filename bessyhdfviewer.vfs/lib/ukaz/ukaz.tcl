@@ -496,7 +496,7 @@ namespace eval ukaz {
 			set zoomstack [list $args]
 			$self autodim_internal {*}$args
 		}
-
+		
 		method autodim_internal {x1 x2 y1 y2} {
 			# automagically calculate good values
 			# for the tics increment
@@ -734,21 +734,31 @@ namespace eval ukaz {
 			list [$self PixTox $x] [$self PixToy $y]
 		}
 
-		proc calcminmax {data}  {
-			if {[llength $data]<2} {
-				error "Invalid data, <2 items"
-			}
-			
-			set xmin ""
-			set ymin ""
+		proc calcminmax {data args}  {
+			if {[llength $args]==2 && [lindex $args 0]=="-initial"} {
+				set initial [lindex $args 1]
+				if {[llength $initial]!=4} { return -code error "Initial list must have 4 entries" }
+				lassign $initial xmin xmax ymin ymax
+			} elseif {[llength $args]==0} {
+				if {[llength $data]<2} {
+					error "Invalid data, <2 items"
+				}
+				
+				set xmin ""
+				set ymin ""
 
-			while {![isfinite $xmin] || ![isfinite $ymin]} {
-				set data [lassign $data xmin ymin]
-				if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
+				while {![isfinite $xmin] || ![isfinite $ymin]} {
+					set data [lassign $data xmin ymin]
+					if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
+				}
+
+				set xmax $xmin
+				set ymax $ymin
+			} else {
+				return -code error "calcminmax data ?-initial {xmin xmax ymin ymax}"
 			}
 
-			set xmax $xmin
-			set ymax $ymin
+
 			foreach {x y} $data {
 				if {![isfinite $x] || ![isfinite $y]} { continue }
 				if {$x<$xmin} { set xmin $x}
@@ -777,13 +787,27 @@ namespace eval ukaz {
 		}
 
 		method showpoints_autodim {coordlist color shape} {
-			$self autodim {*}[calcminmax $coordlist]
+			if {$dimensioned} {
+				set range [calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
+			} else { 
+				set range [calcminmax $coordlist]
+			}
+			$self autodim {*}$range
 			$self showpoints $coordlist $color $shape
 		}
 
 		method connectpoints_autodim {coordlist color args} {
-			$self autodim {*}[calcminmax $coordlist]
+			if {$dimensioned} {
+				set range [calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
+			} else {
+				set range [calcminmax $coordlist]
+			}
+			$self autodim {*}$range
 			$self connectpoints $coordlist $color {*}$args
+		}
+
+		method reset_dimensioning {} {
+			set dimensioned 0
 		}
 
 		method connectpoints_nosave {coordlist color extraargs {prefix {}} } {

@@ -819,9 +819,13 @@ proc DisplayPlot {args} {
 	variable w
 	variable plotdata
 	variable hdfdata
+	variable HDFFiles
 	variable xformat
 	variable yformat
 	variable keepformat
+
+	variable plotstylecache
+	variable plotstylepool
 	
 	# parse arg
 	set defaults [dict create -explicit false -focus {}]
@@ -830,75 +834,99 @@ proc DisplayPlot {args} {
 		return -code error "DisplayPlot ?-explicit bool? ?-focus x|y?"
 	}
 
-	variable BessyClass
-	dict_assign $BessyClass class motor detector motors detectors axes
-
-	if {$class == "MCA"} {
-		$w(xent) configure -values {Row}
-		$w(yent) configure -values {MCA}
-		$w(xent) state !disabled
-		$w(yent) state !disabled
-		set stdx Row
-		set stdy MCA
-	} elseif {$axes!= {}} {
-		# insert available axes into axis choosers
-		$w(xent) configure -values $motors
-		$w(yent) configure -values $detectors
-		$w(xent) state !disabled
-		$w(yent) state !disabled
-		set stdx $motor
-		set stdy $detector
-	} else {
-		$w(xent) state disabled
-		$w(yent) state disabled
+	variable plotid
+	if {[info exists plotid]} {
 		$w(Graph) clear
-		return
+		$w(Graph) reset_dimensioning
+		set plotid {}
 	}
 
-	set explicit [dict get $opts -explicit]
-	set focus [dict get $opts -focus]
+	set nfiles [llength $HDFFiles]
+	if {$nfiles==0} { return }
+	# nothing to plot
 
-	if {!$explicit && !$keepformat} {
-		set xformat $stdx
-		set yformat $stdy
+	if {$nfiles == 1} {
+		# check the data already read for plot axis 
+		# and enable/disable the axis format choosers appropriately
+		variable BessyClass
+		dict_assign $BessyClass class motor detector motors detectors axes
+
+		if {$class == "MCA"} {
+			$w(xent) configure -values {Row}
+			$w(yent) configure -values {MCA}
+			$w(xent) state !disabled
+			$w(yent) state !disabled
+			set stdx Row
+			set stdy MCA
+		} elseif {$axes!= {}} {
+			# insert available axes into axis choosers
+			$w(xent) configure -values $motors
+			$w(yent) configure -values $detectors
+			$w(xent) state !disabled
+			$w(yent) state !disabled
+			set stdx $motor
+			set stdy $detector
+		} else {
+			$w(xent) state disabled
+			$w(yent) state disabled
+			$w(Graph) clear
+			return
+		}
+
+		set explicit [dict get $opts -explicit]
+		set focus [dict get $opts -focus]
+
+		if {!$explicit && !$keepformat} {
+			set xformat $stdx
+			set yformat $stdy
+		}
+
+		if {$explicit && $focus=="x"} {
+			focus $w(yent)
+		}
+		
+		if {$explicit && $focus=="y"} {
+			focus $w(xent)
+		}
 	}
 
-	if {$explicit && $focus=="x"} {
-		focus $w(yent)
+
+	# get units / axis labels for the current plot
+	if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
+		$w(Graph) configure -xlabel "$xformat"
+	} else {
+		$w(Graph) configure -xlabel "$xformat ($xunit)"
 	}
 	
-	if {$explicit && $focus=="y"} {
-		focus $w(xent)
+	if {[catch {dict get $plotdata $yformat attrs Unit} yunit]} {
+		$w(Graph) configure -ylabel "$yformat"
+	} else {
+		$w(Graph) configure -ylabel "$yformat ($yunit)"
 	}
 
 
 	set fmtlist [list $xformat $yformat]
 
 	# plot the data
-	set data [SELECTdata [list $xformat $yformat] $hdfdata -allnan true]
-	# reduce to flat list
-	set data [concat {*}$data]
 
-	variable plotid
-	if {[info exists plotid]} {
-		$w(Graph) remove $plotid
+	foreach fn $HDFFiles {
+		if {$nfiles == 1} {
+			# for one file, operate on the cached data
+			set data [SELECTdata $fmtlist $hdfdata -allnan true]
+		} else {
+			# for multiple files, read the file
+			set data [SELECT $fmtlist $fn -allnan true]
+		}
+		# reduce to flat list
+		set data [concat {*}$data]
+
+		if {[llength $data] >= 2} {
+			lappend plotid [$w(Graph) connectpoints_autodim $data black]
+			lappend plotid [$w(Graph) showpoints_autodim $data red circle]
+		}
 	}
 
-	if {[llength $data] >= 2} {
-		if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
-			$w(Graph) configure -xlabel "$xformat"
-		} else {
-			$w(Graph) configure -xlabel "$xformat ($xunit)"
-		}
-		
-		if {[catch {dict get $plotdata $yformat attrs Unit} yunit]} {
-			$w(Graph) configure -ylabel "$yformat"
-		} else {
-			$w(Graph) configure -ylabel "$yformat ($yunit)"
-		}
-
-		set plotid [$w(Graph) connectpoints_autodim $data black]
-		lappend plotid [$w(Graph) showpoints $data red circle]
+	if {$plotid != {}} {
 		$w(Graph) autoresize
 	}
 
@@ -1366,7 +1394,7 @@ proc bessy_class {data} {
 	} else {
 		if {$Plot} {
 			# there is a valid Plot
-			set class Plot
+			set class PLOT
 		} else {
 			# could not identify
 			set class UNKNOWN

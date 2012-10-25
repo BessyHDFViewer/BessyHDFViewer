@@ -480,3 +480,16 @@ AutoCompleteList {
 	NormOnReferenceScan
 
 }
+
+PlotStyles {
+
+	{line { black } point { black circle }}
+	{line { blue } point { blue triangle }}
+	{line { red } point { red square }}
+	{line { green } point { green uptriangle }}
+	{line { black -dash -} point { black filled-circle }}
+	{line { blue -dash -} point { blue filled-triangle }}
+	{line { red -dash -} point { red filled-square }}
+	{line { green -dash -} point { green filled-uptriangle }}
+
+}
