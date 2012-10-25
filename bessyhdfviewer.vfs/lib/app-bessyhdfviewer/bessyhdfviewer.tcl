@@ -198,12 +198,12 @@ proc InitGUI {} {
 	set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
 	variable keepformat false
 	
-	bind $w(xent) <<ComboboxSelected>> ${ns}::DisplayPlot
-	bind $w(yent) <<ComboboxSelected>> ${ns}::DisplayPlot
+	bind $w(xent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
+	bind $w(yent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 	AutoComplete $w(xent) -aclist [PreferenceGet AutoCompleteList {Energy}]
 	AutoComplete $w(yent) -aclist [PreferenceGet AutoCompleteList {Energy}]
-	bind $w(xent) <Return> ${ns}::DisplayPlot
-	bind $w(yent) <Return> ${ns}::DisplayPlot
+	bind $w(xent) <Return> [list ${ns}::DisplayPlot -explicit true -focus x]
+	bind $w(yent) <Return> [list ${ns}::DisplayPlot -explicit true -focus y]
 	bind $w(xlbl) <1> ${ns}::ConsoleShow
 
 	grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(keepformat) -sticky ew
@@ -562,28 +562,23 @@ proc PreviewFile {files} {
 
 		0 {
 			# nothing selected
-			set BessyClass {axes {} motors {} detectors {} motor {} detector {}}
-			return
+			set BessyClass {class {} axes {} motors {} detectors {} motor {} detector {}}
+			wm title . "BessyHDFViewer"
 		}
 
 		1 {
 			# focus on one single file - display this
 			variable hdfdata [bessy_reshape [lindex $files 0]]
-			variable plotdata {}
 
 			# select the motor/det
 			set BessyClass [bessy_class $hdfdata]
 			dict_assign $BessyClass class motor detector motors detectors
 
-			variable xformat $motor
-			variable yformat $detector
-			
 			if {$class == "MCA"} {
 				$w(xent) configure -values {Row}
 				$w(yent) configure -values {MCA}
 				$w(xent) state !disabled
 				$w(yent) state !disabled
-				set plotdata $hdfdata
 			} else {
 
 				# insert available axes into axis choosers
@@ -594,7 +589,6 @@ proc PreviewFile {files} {
 					$w(xent) state !disabled
 					$w(yent) state !disabled
 
-					set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
 				} err]} {
 					# could not get sensible plot axes - not BESSY hdf?
 					puts $err
@@ -613,27 +607,41 @@ proc PreviewFile {files} {
 			
 			wm title . "BessyHDFViewer - [lindex $files 0]"
 
-			InvalidateDisplay
-			ReDisplay
 		}
 
 		default {
 			# multiple files selected - prepare for batch work
-			$w(xent) state disabled
-			$w(yent) state disabled
-			set BessyClass {axes {} motors {} detectors {} motor {} detector {}}
+			set BessyClass {class {} axes {} motors {} detectors {} motor {} detector {}}
+			wm title . "BessyHDFViewer"
 		}
 	}
+	InvalidateDisplay
+	ReDisplay
 }
 
 proc MakeTable {} {
 	# reformat plotdata into table
 	# compute maximum length for each data column - might be different due to BESSY_INF trimming
 	variable BessyClass
+	variable hdfdata 
+
 	variable plotdata
 	variable tbldata
 	variable tblheader 
 	
+	if {[dict get $BessyClass class] == "MCA"} {
+		set plotdata $hdfdata
+	} else {
+		# insert available axes into plotdata
+		if {[catch {
+			set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+		} err]} {
+			# could not get sensible plot axes - not BESSY hdf?
+			puts $err
+			return 
+		}
+	}
+
 	set tblheader Row
 	lappend tblheader {*}[dict keys $plotdata]
 	set tbldata {}
@@ -807,12 +815,63 @@ proc ExportCmd {} {
 }
 
 
-proc DisplayPlot {} {
+proc DisplayPlot {args} {
 	variable w
 	variable plotdata
 	variable hdfdata
 	variable xformat
 	variable yformat
+	variable keepformat
+	
+	# parse arg
+	set defaults [dict create -explicit false -focus {}]
+	set opts [dict merge $defaults $args]
+	if {[dict size $opts] != [dict size $defaults]} {
+		return -code error "DisplayPlot ?-explicit bool? ?-focus x|y?"
+	}
+
+	variable BessyClass
+	dict_assign $BessyClass class motor detector motors detectors axes
+
+	if {$class == "MCA"} {
+		$w(xent) configure -values {Row}
+		$w(yent) configure -values {MCA}
+		$w(xent) state !disabled
+		$w(yent) state !disabled
+		set stdx Row
+		set stdy MCA
+	} elseif {$axes!= {}} {
+		# insert available axes into axis choosers
+		$w(xent) configure -values $motors
+		$w(yent) configure -values $detectors
+		$w(xent) state !disabled
+		$w(yent) state !disabled
+		set stdx $motor
+		set stdy $detector
+	} else {
+		$w(xent) state disabled
+		$w(yent) state disabled
+		$w(Graph) clear
+		return
+	}
+
+	set explicit [dict get $opts -explicit]
+	set focus [dict get $opts -focus]
+
+	if {!$explicit && !$keepformat} {
+		set xformat $stdx
+		set yformat $stdy
+	}
+
+	if {$explicit && $focus=="x"} {
+		focus $w(yent)
+	}
+	
+	if {$explicit && $focus=="y"} {
+		focus $w(xent)
+	}
+
+
 	set fmtlist [list $xformat $yformat]
 
 	# plot the data
@@ -848,20 +907,24 @@ proc DisplayPlot {} {
 
 proc DisplayTextDump {} {
 	# put the contents of the file into the text display
+	variable HDFFiles
 	variable hdfdata
 	variable w
 	$w(textdump) delete 1.0 end
+	if {[llength $HDFFiles]!=1} { return }
+
 	$w(textdump) insert end [Dump $hdfdata]
 	ValidateDisplay Text 
 }
 
 proc DisplayTable {} {
 	variable w
-	variable plotdata
 	variable tbldata
 	variable tblheader
-	
+	variable HDFFiles
+
 	$w(tbltbl) delete 0 end
+	if {[llength $HDFFiles]!=1} { return }
 	
 	foreach var $tblheader {
 		lappend columns 0 $var left
@@ -876,7 +939,8 @@ proc DisplayTree {} {
 	variable w
 	variable hdfdata
 	variable HDFFiles
-	
+
+	if {[llength $HDFFiles]!=1} { return }
 	# create dictionary for values of standard motors etc.
 	set values {}
 	

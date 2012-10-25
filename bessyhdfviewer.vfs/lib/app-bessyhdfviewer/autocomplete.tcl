@@ -34,7 +34,7 @@ snit::widgetadaptor AutoComplete {
 			set head [string range $input 0 $insertpos-1]
 			set tail [string range $input $insertpos end]
 
-			puts "Cursor: $head|$tail"
+			#puts "Cursor: $head|$tail"
 
 			# look backwards for \$ or \{ 
 			
@@ -49,7 +49,7 @@ snit::widgetadaptor AutoComplete {
 				set matches [lsort -nocase $matches]
 				lappend matches $varhead
 
-				puts "Possible matches [join $matches ,]"
+				#puts "Possible matches [join $matches ,]"
 
 				set suggind 0
 				set ACavailable true
@@ -89,7 +89,7 @@ snit::widgetadaptor AutoComplete {
 
 	method InvalidateAutoComplete {} {
 		set matches {}
-		puts "AC invalidated"
+		#puts "AC invalidated"
 	}
 
 }
