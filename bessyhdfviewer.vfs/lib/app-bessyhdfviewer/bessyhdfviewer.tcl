@@ -881,6 +881,18 @@ proc DisplayPlot {args} {
 			set yformat $stdy
 		}
 
+		# add the axes to the autocompletion list
+		set aclist [PreferenceGet AutoCompleteList {Energy}]
+		foreach axis $axes {
+			if {$axis ni $aclist} {
+				# O(n), don't care
+				lappend aclist $axis
+			}
+		}
+
+		$w(xent) configure -aclist $aclist
+		$w(yent) configure -aclist $aclist
+
 	}
 
 	if {$explicit && $focus=="x"} {
