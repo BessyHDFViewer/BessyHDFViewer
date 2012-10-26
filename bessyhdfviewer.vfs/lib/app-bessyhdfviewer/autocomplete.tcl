@@ -43,7 +43,9 @@ snit::widgetadaptor AutoComplete {
 			# like Sample-X, which must be ${Sample-X} or Det.-X
 
 			set formula [regexp {^(.*)(\$)(\{?)(.+)$} $head -> front dollar brace varhead]
-			if {!$formula} {
+			if {$formula} {
+				set singlevar false
+			} else {
 				set singlevar [regexp {^([[:space:]]*)(.+)$} $head -> space varhead]
 				set front {}
 			}
