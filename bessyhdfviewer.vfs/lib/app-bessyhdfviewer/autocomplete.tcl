@@ -7,9 +7,11 @@ snit::widgetadaptor AutoComplete {
 	variable matches
 	variable front
 	variable tail
+	variable singlevar
+	variable formula
 
 
-	option -aclist -default {Energy Keithley4 Keithley1 Sample-X}
+	option -aclist -default {Energy Keithley4 Keithley1 Sample-X Det.-X}
 
 	delegate option * to hull
 	delegate method * to hull
@@ -25,7 +27,6 @@ snit::widgetadaptor AutoComplete {
 	}
 
 	method AutoComplete {} {
-		variable ACInfo
 
 		set ACavailable false
 		if {[llength $matches] == 0} {
@@ -36,9 +37,18 @@ snit::widgetadaptor AutoComplete {
 
 			#puts "Cursor: $head|$tail"
 
-			# look backwards for \$ or \{ 
+			# match for either: something ${varname tail}
+			# or whitespace + something
+			# complicated because of non-canonical variable names
+			# like Sample-X, which must be ${Sample-X} or Det.-X
+
+			set formula [regexp {^(.*)(\$)(\{?)(.+)$} $head -> front dollar brace varhead]
+			if {!$formula} {
+				set singlevar [regexp {^([[:space:]]*)(.+)$} $head -> space varhead]
+				set front {}
+			}
 			
-			if {[regexp {^(.*)(\$)(\{?)(.*)$} $head -> front dollar brace varhead]} {
+			if {$formula || $singlevar} {
 				# look for possible matches of varhead in autocomplete list
 				set matches {}
 				foreach varname $options(-aclist) {
@@ -63,17 +73,24 @@ snit::widgetadaptor AutoComplete {
 		if {$ACavailable} {
 			set suggestion [lindex $matches $suggind]
 			# replace by suggestion
-			if {[regexp {^[[:alpha:]][[:alnum:]]*$} $suggestion]} {
-				# only alphanumeric - don't use braces
-				set output "$front\$$suggestion"
-				set insertpos [string length $output]
-				append output $tail
+			set output $front
+
+			if {$singlevar} {
+				# single variable - just insert it
+				set output $suggestion
 			} else {
-				# insert braces for safety
-				set output "$front\$\{$suggestion\}"
-				set insertpos [string length $output]
-				append output $tail
+				# formula - $ and brace suggestion
+				if {[regexp {^[[:alpha:]][[:alnum:]]*$} $suggestion]} {
+					# only alphanumeric - don't use braces
+					append output "\$$suggestion"
+				} else {
+					# insert braces for safety
+					append output "\$\{$suggestion\}"
+				}
 			}
+			set insertpos [string length $output]
+			append output $tail
+			
 			# insert text and 
 			# move cursor to end of inserted text
 			$hull delete 0 end

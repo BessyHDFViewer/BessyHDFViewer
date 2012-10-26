@@ -834,6 +834,9 @@ proc DisplayPlot {args} {
 		return -code error "DisplayPlot ?-explicit bool? ?-focus x|y?"
 	}
 
+	set explicit [dict get $opts -explicit]
+	set focus [dict get $opts -focus]
+
 	variable plotid
 	if {[info exists plotid]} {
 		$w(Graph) clear
@@ -873,23 +876,24 @@ proc DisplayPlot {args} {
 			return
 		}
 
-		set explicit [dict get $opts -explicit]
-		set focus [dict get $opts -focus]
-
 		if {!$explicit && !$keepformat} {
 			set xformat $stdx
 			set yformat $stdy
 		}
 
-		if {$explicit && $focus=="x"} {
-			focus $w(yent)
-		}
-		
-		if {$explicit && $focus=="y"} {
-			focus $w(xent)
-		}
 	}
 
+	if {$explicit && $focus=="x"} {
+		focus $w(yent)
+		$w(yent) selection range 0 end
+		$w(yent) icursor end
+	}
+	
+	if {$explicit && $focus=="y"} {
+		focus $w(xent)
+		$w(xent) selection range 0 end
+		$w(xent) icursor end
+	}
 
 	# get units / axis labels for the current plot
 	if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
