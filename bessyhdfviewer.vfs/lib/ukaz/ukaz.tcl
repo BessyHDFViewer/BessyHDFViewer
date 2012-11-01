@@ -278,8 +278,9 @@ namespace eval ukaz {
 			::bind $can <Destroy> [mymethod destroy]
 			# Bindings for zooming
 			::bind $can <ButtonPress-1> [mymethod zoomstart %x %y]
-			::bind $can <Motion> [mymethod zoommove %x %y]
+			::bind $can <Button1-Motion> [mymethod zoommove %x %y]
 			::bind $can <ButtonRelease-1> [mymethod zoomend %x %y]
+			::bind $can <Motion> [mymethod motionevent %x %y]
 			if {[tk windowingsystem]=="aqua"} {
 				set rb <Button-2>
 			} else {
@@ -1122,6 +1123,10 @@ namespace eval ukaz {
 			$pdf canvas $can
 			$pdf write -file $fn
 			$pdf destroy
+		}
+
+		method motionevent {x y} {
+			event generate $can <<MotionEvent>> -data [$self pixelToCoords $x $y]
 		}
 
 		method zoomstart {x y} {
