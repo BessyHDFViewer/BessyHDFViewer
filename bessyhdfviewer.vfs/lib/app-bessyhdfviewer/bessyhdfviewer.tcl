@@ -122,7 +122,7 @@ proc InitGUI {} {
 	#  Progress bar 
 	set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
 	
-	variable browsepath /messung/kmc/daten 
+	variable browsepath [PreferenceGet HomeDir {/messung/}]
 	if {![file isdirectory $browsepath]} {
 		set browsepath [file normalize [pwd]]
 	}
@@ -185,11 +185,28 @@ proc InitGUI {} {
 	set w(plotfr) [ttk::frame $w(mainfr).plotfr]
 	set w(axebar) [ttk::frame $w(plotfr).axebar]
 	set w(canv) [canvas $w(plotfr).c -background white]
+	set w(legend) [ttk::label $w(plotfr).frame]
+	
 
 	grid $w(axebar) -sticky nsew
 	grid $w(canv) -sticky nsew
+	grid $w(legend) -sticky nsew
 	grid columnconfigure $w(plotfr) 0 -weight 1
 	grid rowconfigure $w(plotfr) 1 -weight 1
+
+	# pointer info. Series of labels
+
+	foreach {wid desc var } {
+		xlb "x: " xv 
+		ylb "y: " yv 
+		nrlb "Point: " cnr 
+		cxlb "x: " cx
+		cylb "y: " cy } {
+		set w(point.$wid) [ttk::label $w(legend).$wid -text $desc]
+		set w(point.$var) [ttk::label $w(legend).$var -textvariable ${ns}::pointerinfo($var) -width 10]
+
+		pack $w(point.$wid) $w(point.$var) -anchor w -side left
+	}
 	
 	set w(xlbl) [ttk::label $w(axebar).xlbl -text "X axis:"]
 	set w(xent) [ttk::combobox $w(axebar).xent -textvariable ${ns}::xformat -exportselection 0]
@@ -212,6 +229,9 @@ proc InitGUI {} {
 
 	# Graph
 	set w(Graph) [ukaz::box %AUTO% $w(canv)]
+	bind [$w(Graph) getcanv] <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
+	$w(Graph) bind <1> [list ${ns}::UpdatePointerInfo click]
+
 
 	$w(displayfr) add $w(plotfr) -text "Plot"
 
@@ -814,8 +834,44 @@ proc ExportCmd {} {
 	}
 }
 
+set pointerinfo(clickx) ""
+set pointerinfo(clicky) ""
+proc UpdatePointerInfo {action args} {
+	# callback for mouse events on canvas
+	variable pointerinfo
+	variable w
+	switch $action {
+		motion {
+			lassign $args coords
+			lassign $coords x y
+			set pointerinfo(x) $x
+			set pointerinfo(y) $y
+			set pointerinfo(xv) [format %8.5g $x]
+			set pointerinfo(yv) [format %11.5g $y]
+		}
+
+		click {
+			lassign $args nr tag
+			set coords [$w(Graph) getpointfromtag $tag $nr]
+			set pointerinfo(cnr) $nr
+			if {[llength $coords] == 2} {
+				lassign $coords x y
+				set pointerinfo(clickx) $x
+				set pointerinfo(clicky) $y
+				set pointerinfo(cx) [format %8.5g $x]
+				set pointerinfo(cy) [format %8.5g $y]
+			} else {
+				set pointerinfo(cx) ""
+				set pointerinfo(cy) ""
+			}
+		}
+	}
+}
+
+
 
 variable plotstylecache {}
+variable formathistory [dict create x {} y {}] ; # 
 proc DisplayPlot {args} {
 	variable w
 	variable plotdata
@@ -826,6 +882,7 @@ proc DisplayPlot {args} {
 	variable keepformat
 
 	variable plotstylecache
+	variable formathistory
 	
 	# parse arg
 	set defaults [dict create -explicit false -focus {}]
@@ -853,23 +910,24 @@ proc DisplayPlot {args} {
 		# and enable/disable the axis format choosers appropriately
 		variable BessyClass
 		dict_assign $BessyClass class motor detector motors detectors axes
-
 		if {$class == "MCA"} {
-			$w(xent) configure -values {Row}
-			$w(yent) configure -values {MCA}
+			set xformatlist {Row}
+			set yformatlist {MCA}
 			$w(xent) state !disabled
 			$w(yent) state !disabled
 			set stdx Row
 			set stdy MCA
 		} elseif {$axes!= {}} {
 			# insert available axes into axis choosers
-			$w(xent) configure -values $motors
-			$w(yent) configure -values $detectors
+			set xformatlist $motors
+			set yformatlist $detectors
 			$w(xent) state !disabled
 			$w(yent) state !disabled
 			set stdx $motor
 			set stdy $detector
 		} else {
+			set xformatlist {}
+			set yformatlist {}
 			$w(xent) state disabled
 			$w(yent) state disabled
 			$w(Graph) clear
@@ -889,11 +947,51 @@ proc DisplayPlot {args} {
 				lappend aclist $axis
 			}
 		}
+		# mouseclicks
+		lappend aclist CLICKX CLICKY
+		
 
 		$w(xent) configure -aclist $aclist
 		$w(yent) configure -aclist $aclist
 
+	} else {
+		# more than one file selected
+		set xformatlist {}
+		set yformatlist {}
 	}
+
+	# append history to format entries
+	# if the value in xformat or yformat is no standard axis, add to dropdown list
+	if {$explicit && $xformat ne {} && $yformat ne {}} {
+		if {$xformat ni $xformatlist} {
+			dict unset formathistory x $xformat
+			dict set formathistory x $xformat 1
+		}
+
+		if {$yformat ni $yformatlist} {
+			dict unset formathistory y $yformat
+			dict set formathistory y $yformat 1
+		}
+
+		# for more than 10 entries, clear format history
+		set maxhistsize [PreferenceGet MaxFormatHistorySize 10]
+		dict with formathistory {
+			while {[dict size $x]>$maxhistsize} { 
+				dict unset x [lindex [dict keys $x] 0]
+			}
+		
+			while {[dict size $y]>$maxhistsize} { 
+				dict unset y [lindex [dict keys $y] 0]
+			}
+		}
+
+	}
+	
+	lappend xformatlist  {*}[lreverse [dict keys [dict get $formathistory x]]]
+	lappend yformatlist {*}[lreverse [dict keys [dict get $formathistory y]]]
+
+	$w(xent) configure -values $xformatlist
+	$w(yent) configure -values $yformatlist
 
 	if {$explicit && $focus=="x"} {
 		focus $w(yent)
@@ -957,13 +1055,15 @@ proc DisplayPlot {args} {
 
 	
 	# plot the data
+	variable pointerinfo
+	set extravars [dict create CLICKX $pointerinfo(clickx) CLICKY $pointerinfo(clicky)] 
 	dict for {fn style} $styles {
 		if {$nfiles == 1} {
 			# for one file, operate on the cached data
-			set data [SELECTdata $fmtlist $hdfdata -allnan true]
+			set data [SELECTdata $fmtlist $hdfdata -allnan true -extravars $extravars]
 		} else {
 			# for multiple files, read the file
-			set data [SELECT $fmtlist $fn -allnan true]
+			set data [SELECT $fmtlist $fn -allnan true -extravars $extravars]
 		}
 		# reduce to flat list
 		set data [concat {*}$data]
@@ -1111,6 +1211,7 @@ proc DirChanged {dir} {
 	# dir was changed by double clicking in dirviewer
 	variable browsepath
 	set browsepath $dir
+	PreferenceSet HomeDir $dir
 }
 
 proc DirUpdate {} {
@@ -1131,6 +1232,7 @@ proc DirUpdate {} {
 
 	if {$isdir} {
 		$w(filelist) display $browsepath
+		PreferenceSet HomeDir $browsepath
 	} else {
 		tk_messageBox -type ok -icon error -title "Error opening directory" \
 			-message $errmsg -detail "when opening '$browsepath'"

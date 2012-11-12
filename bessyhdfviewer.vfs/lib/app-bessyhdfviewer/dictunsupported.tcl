@@ -24,7 +24,8 @@ namespace eval DictUnsupported {
    ## helper function - do the real work recursively 
    # use accumulator for indentation 
    proc dictformat_rec {dict indent indentstring} {
-      # unpack this dimension 
+      # unpack this dimension
+	  set result {}
       dict for {key value} $dict { 
          if {[isdict $value]} { 
             append result "$indent[list $key]\n$indent\{\n" 

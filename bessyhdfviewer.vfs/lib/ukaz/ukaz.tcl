@@ -811,6 +811,17 @@ namespace eval ukaz {
 			set dimensioned 0
 		}
 
+		method getpointfromtag {tag point} {
+			dict for {pt data} $pointdata {
+				lassign $data coords color shape cid
+				if {$tag eq $cid} {
+					set ind [expr {$point*2}]
+					return [lrange $coords $ind $ind+1]
+				}
+			}
+			return {}
+		}
+
 		method connectpoints_nosave {coordlist color extraargs {prefix {}} } {
 			if {$prefix == {}} {
 				incr pttagnr
@@ -1104,14 +1115,14 @@ namespace eval ukaz {
 			variable pointclickhandler
 			puts "Click on point $nr, tag $tag in $selfns"
 			if {$pointclickhandler != {}} {
-				uplevel [list $pointclickhandler $nr $tag $selfns]
+				uplevel #0 [list {*}$pointclickhandler $nr $tag $selfns]
 			}
 		}
 
 		method pointrightclick {nr tag} {
 			puts "Right click on point $nr, tag $tag in $selfns"
 			if {$rightclickhandler != {}} {
-				uplevel [list $rightclickhandler $nr $tag $selfns]
+				uplevel #0 [list {*}$rightclickhandler $nr $tag $selfns]
 			}
 		}
 
@@ -1326,7 +1337,7 @@ namespace eval ukaz {
 				if {$commandescape} {
 					set commandescape false
 				} else {
-					uplevel #0 [list $options(-command) $pos]
+					uplevel #0 [list {*}$options(-command) $pos]
 				}	
 			}
 		}
