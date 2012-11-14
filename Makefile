@@ -8,4 +8,4 @@ starpacks:
 	sdx wrap BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/Windows_runtime32.exe
 
 install: starpacks
-	cp BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
+	cp -p BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
