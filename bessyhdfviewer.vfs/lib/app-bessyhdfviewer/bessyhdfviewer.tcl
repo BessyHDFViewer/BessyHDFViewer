@@ -650,7 +650,7 @@ proc MakeTable {} {
 	variable tblheader 
 	
 	if {[dict get $BessyClass class] == "MCA"} {
-		set plotdata $hdfdata
+		set plotdata [list MCA [dict get $hdfdata MCA]]
 	} else {
 		# insert available axes into plotdata
 		if {[catch {
@@ -687,7 +687,12 @@ proc Dump {hdfdata} {
 	# create readable ASCII representation of Bessy HDF files
 	set result ""
 
-
+	# look for global attributes
+	if {[dict exists $hdfdata {}]} {
+		# bessy_reshape put the attributes directly under {}
+		append result [DumpAttrib [dict get $hdfdata {}]]
+		append result "#\n"
+	}
 	if {[dict exists $hdfdata MCA]} {
 		# MCA file, has only one key with attribs and data
 		append result "# MCA:\n"
@@ -1575,7 +1580,7 @@ proc bessy_get_field {hdfdata field} {
 		}
 	}
 
-	foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot} {
+	foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot {}} {
 		# keys that might store the field as a single value in the attrs
 		if {[dict exists $hdfdata $attrkey $field]} {
 			lappend values [dict get $hdfdata $attrkey $field]
