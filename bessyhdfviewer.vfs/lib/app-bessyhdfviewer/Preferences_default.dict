@@ -2,7 +2,8 @@ Columns {
 	Motor
 	Detector
 	Energy
-	Modified
+	StartDate
+	StartTime
 }
 
 ColumnsAvailableTree {
@@ -79,14 +80,14 @@ ColumnsAvailableTree {
 		{GROUP Slits {
 		
 			{GROUP {Slit 1} {{LIST {		
-				Slit_1_hor_size
 				Slit_1_vert_size
-				Slit_1_hor_pos
+				Slit_1_hor_size
 				Slit_1_vert_pos
-				Slit_1_left
-				Slit_1_right
+				Slit_1_hor_pos
 				Slit_1_up
 				Slit_1_down
+				Slit_1_left
+				Slit_1_right
 			}}}
 			}
 
@@ -99,27 +100,27 @@ ColumnsAvailableTree {
 			}
 
 			{GROUP {Slit 3} {{LIST {		
-				Slit_3_hor_size
 				Slit_3_vert_size
-				Slit_3_hor_pos
+				Slit_3_hor_size
 				Slit_3_vert_pos
-				Slit_3_left
-				Slit_3_right
+				Slit_3_hor_pos
 				Slit_3_up
 				Slit_3_down
+				Slit_3_left
+				Slit_3_right
 			}}}
 			}
 
 
 			{GROUP {Slit 4} {{LIST {		
-				Slit_4_hor_size
 				Slit_4_vert_size
-				Slit_4_hor_pos
+				Slit_4_hor_size
 				Slit_4_vert_pos
-				Slit_4_left
-				Slit_4_right
+				Slit_4_hor_pos
 				Slit_4_up
 				Slit_4_down
+				Slit_4_left
+				Slit_4_right
 			}}}
 			}
 		}}
