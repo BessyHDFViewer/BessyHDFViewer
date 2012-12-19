@@ -10,8 +10,12 @@ ColumnsAvailableTree {
 		Motor
 		Detector
 		Modified
-		class
 		Energy
+		class
+		NRows
+		StartDate
+		StartTime
+		EndTime
 
 		}}
 	}}

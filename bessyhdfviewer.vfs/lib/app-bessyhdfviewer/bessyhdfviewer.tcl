@@ -502,7 +502,7 @@ proc ClassifyHDF {type fn} {
 
 			}
 			
-			dict_assign [bessy_class $temphdfdata] class motor detector
+			dict_assign [bessy_class $temphdfdata] class motor detector nrows
 			
 			# don't check cache for this file any longer
 			set cachemiss true
@@ -521,6 +521,10 @@ proc ClassifyHDF {type fn} {
 
 			Modified {
 				set value $mtime
+			}
+
+			NRows {
+				set value $nrows
 			}
 
 			default {
@@ -1128,19 +1132,20 @@ proc DisplayTree {} {
 	# create dictionary for values of standard motors etc.
 	set values {}
 	
-	foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
+	foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
 		if {[dict exists $hdfdata $key]} {
 			set values [dict merge $values [dict get $hdfdata $key]]
 		}
 	}
 
-	dict_assign [bessy_class $hdfdata] class motor detector
+	dict_assign [bessy_class $hdfdata] class motor detector nrows
 	set mtime [file mtime [lindex $HDFFiles 0]]
 
 	dict set values class $class
 	dict set values Motor $motor
 	dict set values Detector $detector
 	dict set values Modified [list [formatDate $mtime]]
+	dict set values NRows $nrows
 
 	# save expansion state 
 	set expandedkeys [$w(treetbl) expandedkeys]
