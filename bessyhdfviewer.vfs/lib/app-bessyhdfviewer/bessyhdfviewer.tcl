@@ -476,7 +476,7 @@ proc ClassifyHDF {type fn} {
 
 	set cachemiss false
 	# check cache
-	if {[dict exists $HDFCache $fn]} {
+	if {[dict exists $HDFCache $fn Modified] && $mtime == [dict get $HDFCache $fn Modified] } {
 		set cached [dict get $HDFCache $fn]
 		set class [dict get $cached class]
 	} else {
@@ -536,8 +536,9 @@ proc ClassifyHDF {type fn} {
 	}
 
 	if {$cachemiss} {
-		# write back class to cacha
+		# write back class & mtime to cache
 		dict set HDFCache $fn class $class
+		dict set HDFCache $fn Modified $mtime
 	}
 	
 
@@ -1247,7 +1248,7 @@ proc DirUpdate {} {
 proc OpenStart {max} {
 	variable w
 	variable ProgressClock [clock milliseconds]
-	variable ProgressDelay 200 ;# only after 200ms one feels a delay
+	variable ProgressDelay 100 ;# only after 100ms one feels a delay
 	$w(progbar) configure -maximum $max
 	tk_busy hold .
 }
