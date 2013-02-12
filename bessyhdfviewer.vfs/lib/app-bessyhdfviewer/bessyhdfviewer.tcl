@@ -46,7 +46,7 @@ set tkcon::OPT(exec) ""
 variable ns [namespace current]
 
 # load support modules
-foreach module {dirViewer.tcl listeditor.tcl dictunsupported.tcl exportdialog.tcl autocomplete.tcl} {
+foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl autocomplete.tcl} {
 	source [file join $basedir $module]
 }
 
@@ -759,7 +759,7 @@ proc Dump {hdfdata} {
 	}
 
 	# if we are here, it is not a BESSY HDF file. Dump the internal representation
-	dict format $hdfdata
+	hformat $hdfdata
 }
 
 proc DumpToFile {hdf dat} {
