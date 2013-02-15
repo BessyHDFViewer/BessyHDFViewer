@@ -1529,6 +1529,46 @@ proc eveH5getDSNames {d chain} {
 	}]
 }
 
+proc eveH5OuterJoin {reshapedvar joinlist} {
+	upvar $reshapedvar reshaped
+	
+	# read data 
+	set data {}
+	foreach {group dset} $joinlist {
+		set ds [dict get $reshaped $group $dset data]
+		lappend data $ds
+	}
+
+	# build unique PosList
+	set PosList {}
+	foreach ds $data {
+		foreach {Pos dummy} $ds { lappend PosList $Pos }
+	}
+	
+	# OUTER JOIN into result
+	set UniquePosList [lsort -unique -integer $PosList]
+	set result {}
+	foreach ds $data {
+		set column {}
+		foreach Pos $UniquePosList {
+			if {![dict exists $ds $Pos]} {
+				set val NaN
+			} else {
+				set val [dict get $ds $Pos]
+			}
+			lappend column $val
+		}
+		lappend result $column
+	}
+
+	# write back
+	foreach {group dset} $joinlist {column} $result {
+		dict set reshaped $group $dset data $column
+	}
+
+	return $result
+}
+
 proc bessy_reshape_hdf5 {fn} {
 	autovar hdf H5pp %AUTO% $fn
 	set rawd [$hdf dump]
@@ -1551,17 +1591,21 @@ proc bessy_reshape_hdf5 {fn} {
 			set name [dict get $rawd data $chain data $ds attrs Name]
 			dict_move rawd [list data $chain data $ds attrs] reshaped [list $group $name attrs]
 			dict_move rawd [list data $chain data $ds data] reshaped [list $group $name data]
-			lappend joinsets $group $ds
+			lappend joinsets $group $name
 		}
 
 	}
 	
-	dict_move rawd [list data $chain data meta PosCountTimer attrs] reshaped [list Detector PosCountTimer attrs]
-	dict_move rawd [list data $chain data meta PosCountTimer data] reshaped [list Detector PosCountTimer data]
+	dict_move rawd [list data $chain data meta data PosCountTimer attrs] reshaped [list Detector PosCountTimer attrs]
+	dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Detector PosCountTimer data]
 	lappend joinsets Detector PosCountTimer
 
 	# now join the datasets via PosCount
-	# eveH5OuterJoin reshaped $joinsets
+	eveH5OuterJoin reshaped $joinsets
+
+	foreach {group name} $joinsets {
+		dict_move reshaped [list $group $name attrs unit] reshaped [list $group $name attrs Unit]
+	}
 
 	dict set reshaped Unresolved $rawd
 
