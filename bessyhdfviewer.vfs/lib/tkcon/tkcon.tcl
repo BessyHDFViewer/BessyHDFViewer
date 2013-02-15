@@ -1,4 +1,5 @@
 #!/bin/sh
+# -*- tcl -*-
 # \
 exec wish "$0" ${1+"$@"}
 
@@ -12,7 +13,7 @@ exec wish "$0" ${1+"$@"}
 ## Thanks to the following (among many) for early bug reports & code ideas:
 ## Steven Wahl, Jan Nijtmans, Mark Crimmins, Wart
 ##
-## Copyright (c) 1995-2004 Jeffrey Hobbs, jeff(a)hobbs(.)org
+## Copyright (c) 1995-2011 Jeffrey Hobbs, jeff(a)hobbs(.)org
 ## Initiated: Thu Aug 17 15:36:47 PDT 1995
 ##
 ## source standard_disclaimer.tcl
@@ -38,10 +39,10 @@ exec wish "$0" ${1+"$@"}
 #    tkcon master set ::tkcon:PRIV(proxy) wwwproxy:8080
 #
 
-if {$tcl_version < 8.0} {
-    return -code error "tkcon requires at least Tcl/Tk8"
+if {$tcl_version < 8.4} {
+    return -code error "tkcon requires at least Tcl/Tk 8.4"
 } else {
-    package require Tk
+    package require Tk 8.4
 }
 
 # We need to load some package to get what's available, and we
@@ -51,31 +52,21 @@ foreach pkg [info loaded {}] {
     set file [lindex $pkg 0]
     set name [lindex $pkg 1]
     if {![catch {set version [package require $name]}]} {
-	if {[string match {} [package ifneeded $name $version]]} {
+	if {[package ifneeded $name $version] eq ""} {
 	    package ifneeded $name $version [list load $file $name]
 	}
     }
 }
-catch {unset pkg file name version}
 
-# Tk 8.4 makes previously exposed stuff private.
-# FIX: Update tkcon to not rely on the private Tk code.
-#
-if {![llength [info globals tkPriv]]} {
-    ::tk::unsupported::ExposePrivateVariable tkPriv
-}
-foreach cmd {SetCursor UpDownLine Transpose ScrollPages} {
-    if {![llength [info commands tkText$cmd]]} {
-        ::tk::unsupported::ExposePrivateCommand tkText$cmd
-    }
-}
+# Unset temporary global vars
+catch {unset pkg file name version}
 
 # Initialize the ::tkcon namespace
 #
 namespace eval ::tkcon {
     # when modifying this line, make sure that the auto-upgrade check
     # for version still works.
-    variable VERSION "2.5"
+    variable VERSION "2.7"
     # The OPT variable is an array containing most of the optional
     # info to configure.  COLOR has the color data.
     variable OPT
@@ -84,6 +75,9 @@ namespace eval ::tkcon {
     # PRIV is used for internal data that only tkcon should fiddle with.
     variable PRIV
     set PRIV(WWW) [info exists embed_args]
+    set PRIV(AQUA) [expr {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"}]
+    set PRIV(CTRL) [expr {$PRIV(AQUA) ? "Command-" : "Control-"}]
+    set PRIV(ACC) [expr {$PRIV(AQUA) ? "Command-" : "Ctrl+"}]
 
     variable EXPECT 0
 }
@@ -191,7 +185,7 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.102 2008/02/07 21:02:53 hobbs Exp $}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.113 2012/03/07 03:02:21 hobbs Exp $}
 	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
 
 	docs		"http://tkcon.sourceforge.net/"
@@ -359,7 +353,7 @@ proc ::tkcon::Init {args} {
     option add $optclass*Menu.tearOff 0
     option add $optclass*Menu.borderWidth 1
     option add $optclass*Menu.activeBorderWidth 1
-    if {$::tcl_version >= 8.4 && [tk windowingsystem] != "aqua"} {
+    if {!$PRIV(AQUA)} {
 	option add $optclass*Scrollbar.borderWidth 1
     }
 
@@ -375,9 +369,15 @@ proc ::tkcon::Init {args} {
     ## input and output is handled by tkcon
     if {![catch {rename ::puts ::tkcon_tcl_puts}]} {
 	interp alias {} ::puts {} ::tkcon_puts
+	if {[llength [info commands ::tcl::chan::puts]]} {
+	    interp alias {} ::tcl::chan::puts {} ::tkcon_puts
+	}
     }
     if {($OPT(gets) != "") && ![catch {rename ::gets ::tkcon_tcl_gets}]} {
 	interp alias {} ::gets {} ::tkcon_gets
+	if {[llength [info commands ::tcl::chan::gets]]} {
+	    interp alias {} ::tcl::chan::gets {} ::tkcon_gets
+	}
     }
 
     EvalSlave history keep $OPT(history)
@@ -413,8 +413,7 @@ proc ::tkcon::Init {args} {
     }
 
     ## Evaluate maineval in slave
-    if {[string compare {} $OPT(maineval)] && \
-	    [catch {uplevel \#0 $OPT(maineval)} merr]} {
+    if {($OPT(maineval) ne "") && [catch {uplevel \#0 $OPT(maineval)} merr]} {
 	puts stderr "error in eval:\n$merr"
 	append PRIV(errorInfo) $errorInfo\n
     }
@@ -429,17 +428,17 @@ proc ::tkcon::Init {args} {
     }
 
     ## Evaluate slaveeval in slave
-    if {[string compare {} $OPT(slaveeval)] && \
-	    [catch {interp eval $OPT(exec) $OPT(slaveeval)} serr]} {
+    if {($OPT(slaveeval) ne "")
+	&& [catch {interp eval $OPT(exec) $OPT(slaveeval)} serr]} {
 	puts stderr "error in slave eval:\n$serr"
 	append PRIV(errorInfo) $errorInfo\n
     }
     ## Output any error/output that may have been returned from rcfile
-    if {[info exists code] && $code && [string compare {} $err]} {
+    if {[info exists code] && $code && ($err ne "")} {
 	puts stderr "error in $PRIV(rcfile):\n$err"
 	append PRIV(errorInfo) $errorInfo
     }
-    if {[string compare {} $OPT(exec)]} {
+    if {$OPT(exec) ne ""} {
 	StateCheckpoint [concat $PRIV(name) $OPT(exec)] slave
     }
     StateCheckpoint $PRIV(name) slave
@@ -464,7 +463,7 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
     variable PRIV
     global argv0 tcl_interactive tcl_library env auto_path tk_library
 
-    if {[string match {} $slave]} {
+    if {$slave eq ""} {
 	return -code error "Don't init the master interpreter, goofball"
     }
     if {![interp exists $slave]} { interp create $slave }
@@ -493,9 +492,15 @@ proc ::tkcon::InitSlave {slave {slaveargs {}} {slaveargv0 {}}} {
     foreach cmd $PRIV(slavealias) { $slave alias $cmd $cmd }
     interp alias $slave ::ls $slave ::dir -full
     interp alias $slave ::puts $slave ::tkcon_puts
+    if {[llength [info commands ::tcl::chan::puts]]} {
+	interp alias $slave ::tcl::chan::puts $slave ::tkcon_puts
+    }
     if {$OPT(gets) != ""} {
 	interp eval $slave { catch {rename ::gets ::tkcon_tcl_gets} }
 	interp alias $slave ::gets $slave ::tkcon_gets
+	if {[llength [info commands ::tcl::chan::gets]]} {
+	    interp alias $slave ::tcl::chan::gets $slave ::tkcon_gets
+	}
     }
     if {$slaveargv0 != ""} {
 	# If tkcon was invoked with 1 or more filenames, then make the
@@ -538,8 +543,9 @@ proc ::tkcon::InitInterp {name type} {
     variable PRIV
 
     ## Don't allow messing up a local master interpreter
-    if {[string match namespace $type] || ([string match slave $type] && \
-	    [regexp {^([Mm]ain|Slave[0-9]+)$} $name])} return
+    if {($type eq "namespace")
+	|| (($type eq "slave") &&
+	    [regexp {^([Mm]ain|Slave[0-9]+)$} $name])} { return }
     set old [Attach]
     set oldname $PRIV(namesp)
     catch {
@@ -564,6 +570,8 @@ proc ::tkcon::InitInterp {name type} {
 	    catch {interp alias {} ::ls {} ::dir -full}
 	    if {[catch {interp alias {} ::puts {} ::tkcon_puts}]} {
 		catch {rename ::tkcon_puts ::puts}
+	    } elseif {[llength [info commands ::tcl::chan::puts]]} {
+		catch {interp alias {} ::tcl::chan::puts {} ::tkcon_puts}
 	    }
 	}
 	if {$OPT(gets) != ""} {
@@ -571,6 +579,8 @@ proc ::tkcon::InitInterp {name type} {
 		catch {rename ::gets ::tkcon_tcl_gets}
 		if {[catch {interp alias {} ::gets {} ::tkcon_gets}]} {
 		    catch {rename ::tkcon_gets ::gets}
+		} elseif {[llength [info commands ::tcl::chan::gets]]} {
+		    catch {interp alias {} ::tcl::chan::gets {} ::tkcon_gets}
 		}
 	    }
 	}
@@ -578,7 +588,7 @@ proc ::tkcon::InitInterp {name type} {
     } {err}
     eval Attach $old
     AttachNamespace $oldname
-    if {[string compare {} $err]} { return -code error $err }
+    if {$err ne ""} { return -code error $err }
 }
 
 ## ::tkcon::InitUI - inits UI portion (console) of tkcon
@@ -593,7 +603,7 @@ proc ::tkcon::InitUI {title} {
     variable COLOR
 
     set root $PRIV(root)
-    if {[string match . $root]} { set w {} } else { set w [toplevel $root] }
+    if {$root eq "."} { set w {} } else { set w [toplevel $root] }
     if {!$PRIV(WWW)} {
 	wm withdraw $root
 	wm protocol $root WM_DELETE_WINDOW $PRIV(protocol)
@@ -613,16 +623,17 @@ proc ::tkcon::InitUI {title} {
     label $sbar.cursor -relief sunken -borderwidth 1 -anchor e -width 6 \
 	    -textvariable ::tkcon::PRIV(StatusCursor)
     set padx [expr {![info exists ::tcl_platform(os)]
-		    || ![string match "Windows CE" $::tcl_platform(os)]}]
+		    || ($::tcl_platform(os) ne "Windows CE")}]
     grid $PRIV(X) $PRIV(tabframe) $sbar.cursor -sticky news -padx $padx
     grid configure $PRIV(tabframe) -sticky nsw
     grid configure $PRIV(X) -pady 0 -padx 0
     grid columnconfigure $sbar 1 -weight 1
     grid rowconfigure $sbar 0 -weight 1
     grid rowconfigure $PRIV(tabframe) 0 -weight 1
-    if {$::tcl_version >= 8.4 && [tk windowingsystem] == "aqua"} {
-	# resize control space
+    if {$PRIV(AQUA)} {
+	# resize control space and correct "X" button space
 	grid columnconfigure $sbar [lindex [grid size $sbar] 0] -minsize 16
+	$PRIV(X) configure -pady 5 -padx 4
     }
 
     ## Create console tab
@@ -644,7 +655,7 @@ proc ::tkcon::InitUI {title} {
 
     # scrollbar
     set sy [scrollbar $w.sy -takefocus 0 -command [list $con yview]]
-    if {!$PRIV(WWW) && [string match "Windows CE" $::tcl_platform(os)]} {
+    if {!$PRIV(WWW) && ($::tcl_platform(os) eq "Windows CE")} {
 	$w.sy configure -width 10
     }
 
@@ -676,6 +687,16 @@ proc ::tkcon::InitUI {title} {
 	grid remove $sbar
     }
 
+    # If we can locate the XDG icon file then make use of it.
+    if {[package vsatisfies [package provide Tk] 8.6]} {
+        if {[tk windowingsystem] eq "x11"} {
+            if {[set icon [locate_xdg_icon tkcon-icon.png]] ne ""} {
+                image create photo tkcon_icon -file $icon
+                wm iconphoto $root tkcon_icon
+            }
+        }
+    }
+
     if {!$PRIV(WWW)} {
 	wm title $root "tkcon $PRIV(version) $title"
 	if {$PRIV(showOnStartup)} { wm deiconify $root }
@@ -684,6 +705,28 @@ proc ::tkcon::InitUI {title} {
     if {$OPT(gc-delay)} {
 	after $OPT(gc-delay) ::tkcon::GarbageCollect
     }
+}
+
+# Hunt around the XDG defined directories for the icon.
+# Note: hicolor is the standard theme used by xdg-icon-resource.
+proc ::tkcon::locate_xdg_icon {name} {
+    global env
+    set dirs [list /usr/local/share /usr/share]
+    if {[info exists env(XDG_DATA_DIRS)]} {
+        set dirs [split $env(XDG_DATA_DIRS) :]
+    }
+    if {[file isdirectory ~/.local/share]} {
+        set dirs [linsert $dirs 0 ~/.local/share]
+    }
+    foreach dir $dirs {
+        foreach path [list icons icons/hicolor/48x48/apps] {
+            set path [file join $dir $path $name]
+            if {[file exists $path]} {
+                return $path
+            }
+        }
+    }
+    return ""
 }
 
 proc ::tkcon::InitTab {w} {
@@ -698,14 +741,14 @@ proc ::tkcon::InitTab {w} {
 	-insertbackground $COLOR(cursor) -borderwidth 1 -highlightthickness 0
     $con mark set output 1.0
     $con mark set limit 1.0
-    if {[string compare {} $COLOR(bg)]} {
+    if {$COLOR(bg) ne ""} {
 	$con configure -background $COLOR(bg)
     }
     set COLOR(bg) [$con cget -background]
-    if {[string compare {} $OPT(font)]} {
+    if {$OPT(font) ne ""} {
 	## Set user-requested font, if any
 	$con configure -font $OPT(font)
-    } elseif {[string compare unix $::tcl_platform(platform)]} {
+    } elseif {$::tcl_platform(platform) ne "unix"} {
 	## otherwise make sure the font is monospace
 	set font [$con cget -font]
 	if {![font metrics $font -fixed]} {
@@ -719,7 +762,7 @@ proc ::tkcon::InitTab {w} {
 
     # scrollbar
     if {!$PRIV(WWW)} {
-	if {[string match "Windows CE" $::tcl_platform(os)]} {
+	if {$::tcl_platform(os) eq "Windows CE"} {
 	    font configure tkconfixed -family Tahoma -size 8
 	    $con configure -font tkconfixed -borderwidth 0 -padx 0 -pady 0
 	    set cw [font measure tkconfixed "0"]
@@ -757,6 +800,9 @@ proc ::tkcon::InitTab {w} {
 		-command [list ::tkcon::GotoTab $con]]
     if {$::tcl_version >= 8.4} {
 	$rb configure -offrelief flat -overrelief raised
+    }
+    if {$PRIV(AQUA)} {
+	$rb configure -padx 4 -pady 4 -highlightthickness 0
     }
     grid $rb -row 0 -column [lindex [grid size $PRIV(tabframe)] 0] -sticky ns
     grid $con -row 1 -column 1 -sticky news
@@ -902,13 +948,13 @@ proc ::tkcon::GarbageCollect {} {
 # Calls:	::tkcon::CmdGet, ::tkcon::CmdSep, ::tkcon::EvalCmd
 ## 
 proc ::tkcon::Eval {w} {
-    set incomplete [CmdSep [CmdGet $w] cmds last]
+    set complete [CmdSep [CmdGet $w] cmds last]
     $w mark set insert end-1c
     $w insert end \n
     if {[llength $cmds]} {
 	foreach c $cmds {EvalCmd $w $c}
 	$w insert insert $last {}
-    } elseif {!$incomplete} {
+    } elseif {$complete} {
 	EvalCmd $w $last
     }
     if {[winfo exists $w]} {
@@ -928,13 +974,13 @@ proc ::tkcon::EvalCmd {w cmd} {
     variable PRIV
 
     $w mark set output end
-    if {[string compare {} $cmd]} {
+    if {$cmd ne ""} {
 	set code 0
 	if {$OPT(subhistory)} {
 	    set ev [EvalSlave history nextid]
 	    incr ev -1
 	    ## FIX: calcmode doesn't work with requesting history events
-	    if {[string match !! $cmd]} {
+	    if {$cmd eq "!!"} {
 		set code [catch {EvalSlave history event $ev} cmd]
 		if {!$code} {$w insert output $cmd\n stdin}
 	    } elseif {[regexp {^!(.+)$} $cmd dummy event]} {
@@ -964,12 +1010,12 @@ proc ::tkcon::EvalCmd {w cmd} {
 	    ## evaluation of this command - for cases like the command
 	    ## has a vwait or something in it
 	    $w mark set limit end
-	    if {$OPT(nontcl) && [string match interp $PRIV(apptype)]} {
+	    if {$OPT(nontcl) && ($PRIV(apptype) eq "interp")} {
 		set code [catch {EvalSend $cmd} res]
 		if {$code == 1} {
 		    set PRIV(errorInfo) "Non-Tcl errorInfo not available"
 		}
-	    } elseif {[string match socket $PRIV(apptype)]} {
+	    } elseif {$PRIV(apptype) eq "socket"} {
 		set code [catch {EvalSocket $cmd} res]
 		if {$code == 1} {
 		    set PRIV(errorInfo) "Socket-based errorInfo not available"
@@ -1017,12 +1063,12 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    $w tag bind $tag <Leave> \
 			    [list $w tag configure $tag -under 0]
 		    $w tag bind $tag <ButtonRelease-1> \
-			    "if {!\[info exists tkPriv(mouseMoved)\] || !\$tkPriv(mouseMoved)} \
+			    "if {!\[info exists tk::Priv(mouseMoved)\] || !\$tk::Priv(mouseMoved)} \
 			    {[list $OPT(edit) -attach [Attach] -type error -- $PRIV(errorInfo)]}"
 		} else {
 		    $w insert output $res\n$trailer stderr
 		}
-	    } elseif {[string compare {} $res]} {
+	    } elseif {$res ne ""} {
 		$w insert output $res stdout $trailer stderr \n stdout
 	    }
 	}
@@ -1046,7 +1092,7 @@ proc ::tkcon::EvalSlave args {
 #	type	- (slave|interp)
 ##
 proc ::tkcon::EvalOther { app type args } {
-    if {[string compare slave $type]==0} {
+    if {$type eq "slave"} {
 	return [Slave $app $args]
     } else {
 	return [uplevel 1 ::send::send [list $app] $args]
@@ -1063,7 +1109,7 @@ proc ::tkcon::AddSlaveHistory cmd {
     set ev [EvalSlave history nextid]
     incr ev -1
     set code [catch {EvalSlave history event $ev} lastCmd]
-    if {$code || [string compare $cmd $lastCmd]} {
+    if {$code || $cmd ne $lastCmd} {
 	EvalSlave history add $cmd
     }
 }
@@ -1090,12 +1136,12 @@ proc ::tkcon::EvalSend cmd {
     set code [catch {::send::send -displayof $PRIV(displayWin) $PRIV(app) $cmd} result]
     if {$code && [lsearch -exact [::send::interps] $PRIV(app)]<0} {
 	## Interpreter disappeared
-	if {[string compare leave $OPT(dead)] && \
-		([string match ignore $OPT(dead)] || \
-		     [tk_messageBox -title "Dead Attachment" -type yesno \
-			  -icon info -message \
-			  "\"$PRIV(app)\" appears to have died.\
-		\nReturn to primary slave interpreter?"]=="no")} {
+	if {($OPT(dead) ne "leave") &&
+	    (($OPT(dead) eq "ignore") ||
+	     [tk_messageBox -title "Dead Attachment" -type yesno \
+		  -icon info -message \
+		  "\"$PRIV(app)\" appears to have died.\
+		\nReturn to primary slave interpreter?"] eq "no")} {
 	    set PRIV(appname) "DEAD:$PRIV(appname)"
 	    set PRIV(deadapp) 1
 	} else {
@@ -1174,17 +1220,17 @@ proc ::tkcon::EvalSocketClosed {sock} {
     variable PRIV
 
     catch {close $sock}
-    if {![string match $sock $PRIV(app)]} {
+    if {$sock ne $PRIV(app)} {
 	# If we are not still attached to that socket, just return.
 	# Might be nice to tell the user the socket closed ...
 	return
     }
-    if {[string compare leave $OPT(dead)] && \
-	    ([string match ignore $OPT(dead)] || \
-		 [tk_messageBox -title "Dead Attachment" -type yesno \
-		      -icon question \
-		      -message "\"$PRIV(app)\" appears to have died.\
-	    \nReturn to primary slave interpreter?"] == "no")} {
+    if {$OPT(dead) ne "leave" &&
+	($OPT(dead) eq "ignore" ||
+	 [tk_messageBox -title "Dead Attachment" -type yesno \
+	      -icon question \
+	      -message "\"$PRIV(app)\" appears to have died.\
+	    \nReturn to primary slave interpreter?"] eq "no")} {
 	set PRIV(appname) "DEAD:$PRIV(appname)"
 	set PRIV(deadapp) 1
     } else {
@@ -1217,7 +1263,7 @@ proc ::tkcon::EvalNamespace { attached namespace args } {
 #
 ##
 proc ::tkcon::Namespaces {{ns ::} {l {}}} {
-    if {[string compare {} $ns]} { lappend l $ns }
+    if {$ns ne ""} { lappend l $ns }
     foreach i [EvalAttached [list namespace children $ns]] {
 	set l [Namespaces $i $l]
     }
@@ -1247,7 +1293,7 @@ proc ::tkcon::CmdSep {cmd list last} {
     set inc {}
     set cmds {}
     foreach c [split [string trimleft $cmd] \n] {
-	if {[string compare $inc {}]} {
+	if {$inc ne ""} {
 	    append inc \n$c
 	} else {
 	    append inc [string trimleft $c]
@@ -1257,8 +1303,8 @@ proc ::tkcon::CmdSep {cmd list last} {
 	    set inc {}
 	}
     }
-    set i [string compare $inc {}]
-    if {!$i && [string compare $cmds {}] && ![string match *\n $cmd]} {
+    set i [string equal $inc {}]
+    if {$i && $cmds ne "" && ![string match *\n $cmd]} {
 	set inc [lindex $cmds end]
 	set cmds [lreplace $cmds end end]
     }
@@ -1273,7 +1319,7 @@ proc ::tkcon::CmdSplit {cmd} {
     set inc {}
     set cmds {}
     foreach cmd [split [string trimleft $cmd] \n] {
-	if {[string compare {} $inc]} {
+	if {$inc ne ""} {
 	    append inc \n$cmd
 	} else {
 	    append inc [string trimleft $cmd]
@@ -1322,17 +1368,17 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
 
     set w $PRIV(console)
     if {![winfo exists $w]} { return }
-    if {[string compare {} $pre]} { $w insert end $pre stdout }
+    if {$pre ne ""} { $w insert end $pre stdout }
     set i [$w index end-1c]
     if {!$OPT(showstatusbar)} {
-	if {[string compare {} $PRIV(appname)]} {
+	if {$PRIV(appname) ne ""} {
 	    $w insert end ">$PRIV(appname)< " prompt
 	}
-	if {[string compare :: $PRIV(namesp)]} {
+	if {$PRIV(namesp) ne "::"} {
 	    $w insert end "<$PRIV(namesp)> " prompt
 	}
     }
-    if {[string compare {} $prompt]} {
+    if {$prompt ne ""} {
 	$w insert end $prompt prompt
     } else {
 	$w insert end [EvalSlave subst $OPT(prompt1)] prompt
@@ -1341,7 +1387,7 @@ proc ::tkcon::Prompt {{pre {}} {post {}} {prompt {}}} {
     $w mark set insert end
     $w mark set limit insert
     $w mark gravity limit left
-    if {[string compare {} $post]} { $w insert end $post stdin }
+    if {$post ne ""} { $w insert end $post stdin }
     ConstrainBuffer $w $OPT(buffer)
     set ::tkcon::PRIV(StatusCursor) [$w index insert]
     $w see end
@@ -1370,6 +1416,7 @@ proc ::tkcon::About {} {
 	wm withdraw $w
 	wm transient $w $PRIV(root)
 	wm group $w $PRIV(root)
+	catch {wm attributes $w -type dialog}
 	wm title $w "About tkcon v$PRIV(version)"
 	wm resizable $w 0 0
 	button $w.b -text Dismiss -command [list wm withdraw $w]
@@ -1435,7 +1482,8 @@ proc ::tkcon::InitMenus {w title} {
 	$m add command -label "Load File" -underline 0 -command ::tkcon::Load
 	$m add cascade -label "Save ..."  -underline 0 -menu $m.save
 	$m add separator
-	$m add command -label "Quit" -underline 0 -accel Ctrl-q -command exit
+	$m add command -label "Quit" -underline 0 -accel $PRIV(ACC)q \
+	    -command exit
 
 	## Save Menu
 	##
@@ -1458,17 +1506,17 @@ proc ::tkcon::InitMenus {w title} {
     foreach m [list [menu $w.console -disabledfore $COLOR(disabled)] \
 	    [menu $w.pop.console -disabledfore $COLOR(disabled)]] {
 	$m add command -label "$title Console"	-state disabled
-	$m add command -label "New Console"	-underline 0 -accel Ctrl-N \
+	$m add command -label "New Console" -underline 0 -accel $PRIV(ACC)N \
 		-command ::tkcon::New
-	$m add command -label "New Tab"		-underline 4 -accel Ctrl-T \
+	$m add command -label "New Tab" -underline 4 -accel $PRIV(ACC)T \
 		-command ::tkcon::NewTab
-	$m add command -label "Delete Tab"	-underline 0 \
+	$m add command -label "Delete Tab" -underline 0 \
 		-command ::tkcon::DeleteTab -state disabled
-	$m add command -label "Close Console"	-underline 0 -accel Ctrl-w \
+	$m add command -label "Close Console" -underline 0 -accel $PRIV(ACC)w \
 		-command ::tkcon::Destroy
-	$m add command -label "Clear Console"	-underline 1 -accel Ctrl-l \
+	$m add command -label "Clear Console" -underline 1 -accel Ctrl-l \
 		-command { clear; ::tkcon::Prompt }
-	if {[string match unix $tcl_platform(platform)]} {
+	if {[tk windowingsystem] eq "x11"} {
 	    $m add separator
 	    $m add command -label "Make Xauth Secure" -und 5 \
 		    -command ::tkcon::XauthSecure
@@ -1492,17 +1540,13 @@ proc ::tkcon::InitMenus {w title} {
 	menu $sub.name -disabledforeground $COLOR(disabled) \
 		-postcommand [list ::tkcon::NamespaceMenu $sub.name]
 
-	if {$::tcl_version >= 8.3} {
-	    ## Attach Socket Menu
-	    ##
-	    # This uses [file channels] to create the menu, so we only
-	    # want it for newer versions of Tcl.
-	    $sub add cascade -label "Socket" -underline 0 -menu $sub.sock
-	    menu $sub.sock -disabledforeground $COLOR(disabled) \
-		    -postcommand [list ::tkcon::SocketMenu $sub.sock]
-	}
+	## Attach Socket Menu
+	##
+	$sub add cascade -label "Socket" -underline 0 -menu $sub.sock
+	menu $sub.sock -disabledforeground $COLOR(disabled) \
+	    -postcommand [list ::tkcon::SocketMenu $sub.sock]
 
-	if {![string compare "unix" $tcl_platform(platform)]} {
+	if {[tk windowingsystem] eq "x11"} {
 	    ## Attach Display Menu
 	    ##
 	    $sub add cascade -label "Display" -underline 0 -menu $sub.disp
@@ -1515,14 +1559,14 @@ proc ::tkcon::InitMenus {w title} {
     ##
     set text $PRIV(console)
     foreach m [list [menu $w.edit] [menu $w.pop.edit]] {
-	$m add command -label "Cut"   -underline 2 -accel Ctrl-x \
+	$m add command -label "Cut"   -underline 2 -accel $PRIV(ACC)x \
 		-command [list ::tkcon::Cut $text]
-	$m add command -label "Copy"  -underline 0 -accel Ctrl-c \
+	$m add command -label "Copy"  -underline 0 -accel $PRIV(ACC)c \
 		-command [list ::tkcon::Copy $text]
-	$m add command -label "Paste" -underline 0 -accel Ctrl-v \
+	$m add command -label "Paste" -underline 0 -accel $PRIV(ACC)v \
 		 -command [list ::tkcon::Paste $text]
 	$m add separator
-	$m add command -label "Find"  -underline 0 -accel Ctrl-F \
+	$m add command -label "Find"  -underline 0 -accel $PRIV(ACC)F \
 		-command [list ::tkcon::FindBox $text]
     }
 
@@ -1550,10 +1594,15 @@ proc ::tkcon::InitMenus {w title} {
 		-underline 1 -variable ::tkcon::OPT(calcmode)
 	$m add check -label "Show Multiple Matches" \
 		-underline 0 -variable ::tkcon::OPT(showmultiple)
-	$m add check -label "Show Menubar" \
+	if {!$PRIV(AQUA)} {
+	    $m add check -label "Show Menubar" \
 		-underline 5 -variable ::tkcon::OPT(showmenu) \
-		-command {$::tkcon::PRIV(root) configure -menu [expr \
-		{$::tkcon::OPT(showmenu) ? $::tkcon::PRIV(menubar) : {}}]}
+		-command {
+		    $::tkcon::PRIV(root) configure \
+			-menu [expr {$::tkcon::OPT(showmenu) ?
+				     $::tkcon::PRIV(menubar) : {}}]
+		}
+	}
 	$m add check -label "Show Statusbar" \
 	    -underline 5 -variable ::tkcon::OPT(showstatusbar) \
 	    -command {
@@ -1584,7 +1633,7 @@ proc ::tkcon::InitMenus {w title} {
     ## Help Menu
     ##
     foreach m [list [menu $w.help] [menu $w.pop.help]] {
-	$m add command -label "About " -underline 0 -accel Ctrl-A \
+	$m add command -label "About " -underline 0 -accel $PRIV(ACC)A \
 		-command ::tkcon::About
 	$m add command -label "Retrieve Latest Version" -underline 0 \
 		-command ::tkcon::Retrieve
@@ -1658,7 +1707,7 @@ proc ::tkcon::InterpMenu w {
     $w delete 0 end
     foreach {app type} [Attach] break
     $w add command -label "[string toupper $type]: $app" -state disabled
-    if {($OPT(nontcl) && [string match interp $type]) || $PRIV(deadapp)} {
+    if {($OPT(nontcl) && $type eq "interp") || $PRIV(deadapp)} {
 	$w add separator
 	$w add command -state disabled -label "Communication disabled to"
 	$w add command -state disabled -label "dead or non-Tcl interps"
@@ -1707,6 +1756,7 @@ proc ::tkcon::InterpPkgs {app type} {
 	wm title $t "$app Packages"
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
+	catch {wm attributes $t -type dialog}
 	bind $t <Escape> [list destroy $t]
 
 	label $t.ll -text "Loadable:" -anchor w
@@ -1727,6 +1777,9 @@ proc ::tkcon::InterpPkgs {app type} {
 	button $f.refresh -width 8 -text "Refresh" -command [info level 0]
 	button $f.dismiss -width 8 -text "Dismiss" -command [list destroy $t]
 	grid $f.refresh $f.dismiss -padx 4 -pady 3 -sticky ew
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $f [lindex [grid size $f] 0] -minsize 16
+	}
 
 	grid $t.ll x x $t.lr x -sticky ew
 	grid $t.loadable $t.llsy $t.load $t.loaded $t.lrsy -sticky news
@@ -1756,7 +1809,7 @@ proc ::tkcon::InterpPkgs {app type} {
     # get all package names currently visible
     foreach pkg [lremove [EvalAttached {package names}] Tcl] {
 	set version [EvalAttached [list package provide $pkg]]
-	if {[string compare {} $version]} {
+	if {$version ne ""} {
 	    set loaded($pkg) $version
 	} elseif {![info exists loaded($pkg)]} {
 	    set loadable($pkg) package
@@ -1816,7 +1869,7 @@ proc ::tkcon::AttachMenu m {
 
     $m delete 0 end
     set cmd {::tkcon::RePrompt \n [::tkcon::CmdGet $::tkcon::PRIV(console)]}
-    $m add radio -label {None (use local slave) } -accel Ctrl-1 \
+    $m add radio -label {None (use local slave) } -accel $PRIV(ACC)1 \
 	    -variable ::tkcon::PRIV(app) \
 	    -value [concat $::tkcon::PRIV(name) $::tkcon::OPT(exec)] \
 	    -command "::tkcon::Attach {}; $cmd"
@@ -1830,19 +1883,19 @@ proc ::tkcon::AttachMenu m {
 
     $m add command -label "tkcon Interpreters" -state disabled
     foreach i [lsort [array names interps]] {
-	if {[string match {} $interps($i)]} { set interps($i) "no Tk" }
+	if {$interps($i) eq ""} { set interps($i) "no Tk" }
 	if {[regexp {^Slave[0-9]+} $i]} {
 	    set opts [list -label "$i ($interps($i))" \
 		    -variable ::tkcon::PRIV(app) -value $i \
 		    -command "::tkcon::Attach [list $i] slave; $cmd"]
-	    if {[string match $PRIV(name) $i]} {
-		append opts " -accel Ctrl-2"
+	    if {$PRIV(name) eq $i} {
+		append opts " -accel $PRIV(ACC)2"
 	    }
-	    eval $m add radio $opts
+	    eval [list $m add radio] $opts
 	} else {
 	    set name [concat Main $i]
-	    if {[string match Main $name]} {
-		$m add radio -label "$name ($interps($i))" -accel Ctrl-3 \
+	    if {$name eq "Main"} {
+		$m add radio -label "$name ($interps($i))" -accel $PRIV(ACC)3 \
 			-variable ::tkcon::PRIV(app) -value Main \
 			-command "::tkcon::Attach [list $name] slave; $cmd"
 	    } else {
@@ -1894,8 +1947,8 @@ proc ::tkcon::NamespaceMenu m {
     variable OPT
 
     $m delete 0 end
-    if {($PRIV(deadapp) || [string match socket $PRIV(apptype)] || \
-	    ($OPT(nontcl) && [string match interp $PRIV(apptype)]))} {
+    if {($PRIV(deadapp) || $PRIV(apptype) eq "socket" || \
+	    ($OPT(nontcl) && $PRIV(apptype) eq "interp"))} {
 	$m add command -label "No Namespaces" -state disabled
 	return
     }
@@ -1910,7 +1963,7 @@ proc ::tkcon::NamespaceMenu m {
 		-command [list ::tkcon::NamespacesList $names]
     } else {
 	foreach i $names {
-	    if {[string match :: $i]} {
+	    if {$i eq "::"} {
 		$m add radio -label "Main" -value $i \
 			-variable ::tkcon::PRIV(namesp) \
 			-command "::tkcon::AttachNamespace [list $i]; $cmd"
@@ -1931,6 +1984,7 @@ proc ::tkcon::NamespacesList {names} {
     set f $PRIV(base).namespaces
     catch {destroy $f}
     toplevel $f
+    catch {wm attributes $f -type dialog}
     listbox $f.names -width 30 -height 15 -selectmode single \
 	-yscrollcommand [list $f.scrollv set] \
 	-xscrollcommand [list $f.scrollh set] \
@@ -1949,7 +2003,7 @@ proc ::tkcon::NamespacesList {names} {
     grid rowconfigure $f  0 -weight 1
     #fill the listbox
     foreach i $names {
-	if {[string match :: $i]} {
+	if {$i eq "::"} {
 	    $f.names insert 0 Main
 	} else {
 	    $f.names insert end $i
@@ -1978,7 +2032,7 @@ proc ::tkcon::NamespacesList {names} {
 proc ::tkcon::XauthSecure {} {
     global tcl_platform
 
-    if {[string compare unix $tcl_platform(platform)]} {
+    if {[tk windowingsystem] ne "x11"} {
 	# This makes no sense outside of Unix
 	return
     }
@@ -2002,30 +2056,39 @@ proc ::tkcon::FindBox {w {str {}}} {
     if {![winfo exists $base]} {
 	toplevel $base
 	wm withdraw $base
+	catch {wm attributes $base -type dialog}
 	wm title $base "tkcon Find"
+	wm resizable $base 1 0
 
-	pack [frame $base.f] -fill x -expand 1
-	label $base.f.l -text "Find:"
-	entry $base.f.e -textvariable ::tkcon::PRIV(find)
-	pack [frame $base.opt] -fill x
-	checkbutton $base.opt.c -text "Case Sensitive" \
-		-variable ::tkcon::PRIV(find,case)
-	checkbutton $base.opt.r -text "Use Regexp" \
+	label $base.l -text "Find:" -anchor e
+	entry $base.e -textvariable ::tkcon::PRIV(find)
+
+	checkbutton $base.case -text "Case Sensitive" \
+	    -variable ::tkcon::PRIV(find,case)
+	checkbutton $base.re -text "Use Regexp" \
 	    -variable ::tkcon::PRIV(find,reg)
-	pack $base.f.l -side left
-	pack $base.f.e $base.opt.c $base.opt.r -side left -fill both -expand 1
-	pack [frame $base.sep -borderwidth 2 -relief sunken -height 4] -fill x
-	pack [frame $base.btn] -fill both
+
+	frame $base.sep -borderwidth 1 -relief sunken -height 2
+	frame $base.btn
+	grid $base.l $base.e - - -sticky ew
+	grid $base.case - $base.re -sticky ew
+	grid $base.sep -columnspan 4 -sticky ew
+	grid $base.btn -columnspan 4 -sticky ew
+	grid columnconfigure $base 3 -weight 1
+
 	button $base.btn.fnd -text "Find" -width 6
 	button $base.btn.clr -text "Clear" -width 6
 	button $base.btn.dis -text "Dismiss" -width 6
-	eval pack [winfo children $base.btn] -padx 4 -pady 2 \
-		-side left -fill both
+	eval grid [winfo children $base.btn] -padx 4 -pady 2 -sticky ew
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $base.btn \
+		[lindex [grid size $base.btn] 0] -minsize 16
+	}
 
-	focus $base.f.e
+	focus $base.e
 
-	bind $base.f.e <Return> [list $base.btn.fnd invoke]
-	bind $base.f.e <Escape> [list $base.btn.dis invoke]
+	bind $base.e <Return> [list $base.btn.fnd invoke]
+	bind $base.e <Escape> [list $base.btn.dis invoke]
     }
     $base.btn.fnd config -command "::tkcon::Find [list $w] \$::tkcon::PRIV(find) \
 	    -case \$::tkcon::PRIV(find,case) -reg \$::tkcon::PRIV(find,reg)"
@@ -2037,15 +2100,15 @@ proc ::tkcon::FindBox {w {str {}}} {
     [list $w] tag remove find 1.0 end
     wm withdraw [list $base]
     "
-    if {[string compare {} $str]} {
+    if {$str ne ""} {
 	set PRIV(find) $str
 	$base.btn.fnd invoke
     }
 
-    if {[string compare normal [wm state $base]]} {
+    if {[wm state $base] ne "normal"} {
 	wm deiconify $base
     } else { raise $base }
-    $base.f.e select range 0 end
+    $base.e select range 0 end
 }
 
 ## ::tkcon::Find - searches in text widget $w for $str and highlights it
@@ -2067,10 +2130,10 @@ proc ::tkcon::Find {w str args} {
 	}
     }
     if {![info exists case]} { lappend opts -nocase }
-    if {[string match {} $str]} return
+    if {$str eq ""} { return }
     $w mark set findmark 1.0
-    while {[string compare {} [set ix [eval $w search $opts -count numc -- \
-	    [list $str] findmark end]]]} {
+    while {[set ix [eval $w search $opts -count numc -- \
+			[list $str] findmark end]] ne ""} {
 	$w tag add find $ix ${ix}+${numc}c
 	$w mark set findmark ${ix}+1c
     }
@@ -2100,7 +2163,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
     set path [concat $PRIV(name) $OPT(exec)]
 
     set PRIV(displayWin) .
-    if {[string match namespace $type]} {
+    if {$type eq "namespace"} {
 	return [uplevel 1 ::tkcon::AttachNamespace $name]
     } elseif {[string match dpy:* $type]} {
 	set PRIV(displayWin) [string range $type 4 end]
@@ -2114,17 +2177,17 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
 	}
 	set app $name
 	set type socket
-    } elseif {[string compare {} $name]} {
+    } elseif {$name ne ""} {
 	array set interps [Interps]
 	if {[string match {[Mm]ain} [lindex $name 0]]} {
 	    set name [lrange $name 1 end]
 	}
-	if {[string match $path $name]} {
+	if {$name eq $path} {
 	    set name {}
 	    set app $path
 	    set type slave
 	} elseif {[info exists interps($name)]} {
-	    if {[string match {} $name]} { set name Main; set app Main }
+	    if {$name eq ""} { set name Main; set app Main }
 	    set type slave
 	} elseif {[interp exists $name]} {
 	    set name [concat $PRIV(name) $name]
@@ -2133,8 +2196,8 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
 	    set name [concat $path $name]
 	    set type slave
 	} elseif {[lsearch -exact [::send::interps] $name] > -1} {
-	    if {[EvalSlave info exists tk_library] \
-		    && [string match $name [EvalSlave tk appname]]} {
+	    if {[EvalSlave info exists tk_library] 
+		&& $name eq [EvalSlave tk appname]} {
 		set name {}
 		set app $path
 		set type slave
@@ -2165,12 +2228,12 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
     set namespOK 0
     switch -glob -- $type {
 	slave {
-	    if {[string match {} $name]} {
+	    if {$name eq ""} {
 		interp alias {} ::tkcon::EvalAttached {} \
 			::tkcon::EvalSlave uplevel \#0
-	    } elseif {[string match Main $PRIV(app)]} {
+	    } elseif {$PRIV(app) eq "Main"} {
 		interp alias {} ::tkcon::EvalAttached {} ::tkcon::Main
-	    } elseif {[string match $PRIV(name) $PRIV(app)]} {
+	    } elseif {$PRIV(name) eq $PRIV(app)} {
 		interp alias {} ::tkcon::EvalAttached {} uplevel \#0
 	    } else {
 		interp alias {} ::tkcon::EvalAttached {} \
@@ -2200,7 +2263,7 @@ proc ::tkcon::Attach {{name <NONE>} {type slave} {ns {}}} {
 		    a valid type: must be slave or interp"
 	}
     }
-    if {![string match {} $ns] && $namespOK} {
+    if {$ns ne "" && $namespOK} {
 	AttachNamespace $ns
     }
     return [AttachId]
@@ -2210,7 +2273,7 @@ proc ::tkcon::AttachId {} {
     # return Attach info in a form that Attach accepts again
     variable PRIV
 
-    if {[string match {} $PRIV(appname)]} {
+    if {$PRIV(appname) eq ""} {
 	variable OPT
 	set appname [concat $PRIV(name) $OPT(exec)]
     } else {
@@ -2219,7 +2282,7 @@ proc ::tkcon::AttachId {} {
     set id [list $appname $PRIV(apptype)]
     # only display ns info if it isn't "::" as that is what is also
     # used to indicate no eval in namespace
-    if {![string match :: $PRIV(namesp)]} { lappend id $PRIV(namesp) }
+    if {$PRIV(namesp) ne "::"} { lappend id $PRIV(namesp) }
     if {[info exists PRIV(console)]} {
 	variable ATTACH
 	set ATTACH($PRIV(console)) $id
@@ -2237,14 +2300,13 @@ proc ::tkcon::AttachNamespace { name } {
 
     # We could enable 'socket' bound Tcl interps, but we'd have to create
     # a return listening socket
-    if {($OPT(nontcl) && [string match interp $PRIV(apptype)]) \
-	    || [string match socket $PRIV(apptype)] \
-	    || $PRIV(deadapp)} {
+    if {($OPT(nontcl) && $PRIV(apptype) eq "interp")
+	|| $PRIV(apptype) eq "socket"
+	|| $PRIV(deadapp)} {
 	return -code error "can't attach to namespace in attached environment"
     }
-    if {[string match Main $name]} {set name ::}
-    if {[string compare {} $name] && \
-	    [lsearch [Namespaces ::] $name] == -1} {
+    if {$name eq "Main"} {set name ::}
+    if {$name ne "" && [lsearch [Namespaces ::] $name] == -1} {
 	return -code error "No known namespace \"$name\""
     }
     if {[regexp {^(|::)$} $name]} {
@@ -2274,7 +2336,9 @@ proc ::tkcon::NewSocket {} {
     if {![winfo exists $t]} {
 	toplevel $t
 	wm withdraw $t
+	catch {wm attributes $t -type dialog}
 	wm title $t "tkcon Create Socket"
+	wm resizable $t 1 0
 	label $t.lhost -text "Host: "
 	entry $t.host -width 16 -takefocus 1
 	label $t.lport -text "Port: "
@@ -2288,6 +2352,9 @@ proc ::tkcon::NewSocket {} {
 	grid configure $t.ok -padx 4 -pady 2
 	grid columnconfig $t 1 -weight 1
 	grid rowconfigure $t 1 -weight 1
+	if {$PRIV(AQUA)} { # corner resize control space
+	    grid columnconfigure $t [lindex [grid size $t] 0] -minsize 16
+	}
 	wm transient $t $PRIV(root)
 	wm group $t $PRIV(root)
 	wm geometry $t +[expr {([winfo screenwidth $t]-[winfo \
@@ -2337,10 +2404,9 @@ proc ::tkcon::Load { {fn ""} } {
     } else {
 	set opencmd [list tk_getOpenFile]
     }
-    if {
-	[string match {} $fn] &&
+    if {$fn eq "" &&
 	([catch {tk_getOpenFile -filetypes $types \
-	    -title "Source File"} fn] || [string match {} $fn])
+		     -title "Source File"} fn] || $fn eq "")
     } { return }
     EvalAttached [list source $fn]
 }
@@ -2370,7 +2436,7 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
     } else {
 	set savecmd [list tk_getSaveFile]
     }
-    if {[string match {} $fn]} {
+    if {$fn eq ""} {
 	set types {
 	    {{Tcl Files}	{.tcl .tk}}
 	    {{Text Files}	{.txt}}
@@ -2379,7 +2445,7 @@ proc ::tkcon::Save { {fn ""} {type ""} {opt ""} {mode w} } {
 	if {[catch {eval $savecmd [list -defaultextension .tcl \
 				       -filetypes $types \
 				       -title "Save $type"]} fn]
-	     || [string match {} $fn]} return
+	     || $fn eq ""} return
     }
     set type [string tolower $type]
     switch $type {
@@ -2478,8 +2544,7 @@ proc ::tkcon::MainInit {} {
 	variable OPT
 
 	## Slave interpreter exit request
-	if {[string match exit $OPT(slaveexit)]
-	    || [llength $PRIV(interps)] == 1} {
+	if {$OPT(slaveexit) eq "exit" || [llength $PRIV(interps)] == 1} {
 	    ## Only exit if it specifically is stated to do so, or this
 	    ## is the last interp
 	    uplevel 1 exit $args
@@ -2536,7 +2601,7 @@ proc ::tkcon::MainInit {} {
 		    ## FIX: This puts history in backwards!!
 		    while {($id < $max) && ![catch \
 			    {::tkcon::EvalSlave history event $id} cmd]} {
-			if {[string compare {} $cmd]} {
+			if {$cmd ne ""} {
 			    puts $fid "::tkcon::EvalSlave\
 				    history add [list $cmd]"
 			}
@@ -2576,12 +2641,12 @@ proc ::tkcon::MainInit {} {
     }
 
     proc ::tkcon::Interps {{ls {}} {interp {}}} {
-	if {[string match {} $interp]} {
+	if {$interp eq ""} {
 	    lappend ls {} [tk appname]
 	}
 	foreach i [interp slaves $interp] {
-	    if {[string compare {} $interp]} { set i "$interp $i" }
-	    if {[string compare {} [interp eval $i package provide Tk]]} {
+	    if {$interp ne ""} { set i "$interp $i" }
+	    if {[interp eval $i package provide Tk] ne ""} {
 		# beware safe interps with Tk
 		if {[catch {interp eval $i tk appname} name]} {
 		    set name {}
@@ -2614,6 +2679,7 @@ proc ::tkcon::MainInit {} {
 	if {![winfo exists $t]} {
 	    toplevel $t
 	    wm withdraw $t
+	    catch {wm attributes $t -type dialog}
 	    wm title $t "tkcon Attach to Display"
 	    label $t.gets -text "New Display: "
 	    entry $t.data -width 32
@@ -2717,6 +2783,7 @@ proc ::tkcon::MainInit {} {
 	    $w.text delete 1.0 end
 	} else {
 	    toplevel $w
+	    catch {wm attributes $w -type dialog}
 	    frame $w.btn
 	    scrollbar $w.sy -command [list $w.text yview]
 	    text $w.text -yscrollcommand [list $w.sy set] -height 12 \
@@ -2724,42 +2791,43 @@ proc ::tkcon::MainInit {} {
 		    -background $COLOR(bg) \
 		    -insertbackground $COLOR(cursor) \
 		    -font $OPT(font) -borderwidth 1 -highlightthickness 0
-	    pack $w.btn -side bottom -fill x
-	    pack $w.sy -side right -fill y
-	    pack $w.text -fill both -expand 1
-	    button $w.btn.close -text "Dismiss" -width 11 \
-		    -command [list destroy $w]
-	    button $w.btn.check  -text "Recheckpoint" -width 11
-	    button $w.btn.revert -text "Revert" -width 11
-	    button $w.btn.expand -text "Verbose" -width 11
-	    button $w.btn.update -text "Update" -width 11
-	    pack $w.btn.check $w.btn.revert $w.btn.expand $w.btn.update \
-		    $w.btn.close -side left -fill x -padx 4 -pady 2 -expand 1
 	    $w.text tag config red -foreground red
+	    button $w.close -text "Dismiss" -width 8 \
+		-command [list destroy $w]
+	    button $w.check  -text "Recheckpoint" -width 11
+	    button $w.revert -text "Revert" -width 8
+	    button $w.expand -text "Verbose" -width 8
+	    button $w.update -text "Update" -width 8
+
+	    grid $w.text - - - - - $w.sy -sticky news
+	    grid x $w.check $w.revert $w.expand $w.update $w.close
+	    grid configure $w.close -padx {4 0}
+	    grid rowconfigure $w 0 -weight 1
+	    grid columnconfigure $w 0 -weight 1
 	}
 	wm title $w "Compare State: $type [list $app]"
 
-	$w.btn.check config \
+	$w.check config \
 		-command "::tkcon::StateCheckpoint [list $app] $type; \
 		::tkcon::StateCompare [list $app] $type $verbose"
-	$w.btn.revert config \
+	$w.revert config \
 		-command "::tkcon::StateRevert [list $app] $type; \
 		::tkcon::StateCompare [list $app] $type $verbose"
-	$w.btn.update config -command [info level 0]
+	$w.update config -command [info level 0]
 	if {$verbose} {
-	    $w.btn.expand config -text Brief \
+	    $w.expand config -text Brief \
 		    -command [list ::tkcon::StateCompare $app $type 0]
 	} else {
-	    $w.btn.expand config -text Verbose \
+	    $w.expand config -text Verbose \
 		    -command [list ::tkcon::StateCompare $app $type 1]
 	}
 	## Don't allow verbose mode unless 'dump' exists in $app
 	## We're assuming this is tkcon's dump command
 	set hasdump [llength [EvalOther $app $type info commands dump]]
 	if {$hasdump} {
-	    $w.btn.expand config -state normal
+	    $w.expand config -state normal
 	} else {
-	    $w.btn.expand config -state disabled
+	    $w.expand config -state disabled
 	}
 
 	set cmds [lremove [EvalOther $app $type info commands *] \
@@ -2842,7 +2910,7 @@ proc ::tkcon::Event {int {str {}}} {
     set w $PRIV(console)
 
     set nextid [EvalSlave history nextid]
-    if {[string compare {} $str]} {
+    if {$str ne ""} {
 	## String is not empty, do an event search
 	set event $PRIV(event)
 	if {$int < 0 && $event == $nextid} { set PRIV(cmdbuf) $str }
@@ -2980,7 +3048,7 @@ proc ::tkcon::HighlightError w {
 	    $w tag configure $tag -foreground $COLOR(stdout)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -find $what -- $cmd]}"
 	}
 	set info [string range $info $c1 end]
@@ -3009,7 +3077,7 @@ proc ::tkcon::HighlightError w {
 	    $w tag configure $tag -foreground $COLOR(proc)
 	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
 	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
-	    $w tag bind $tag <ButtonRelease-1> "if {!\$tkPriv(mouseMoved)} \
+	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -- $cmd]}"
 	}
     }
@@ -3453,6 +3521,7 @@ proc tkcon {cmd args} {
 	    if {![winfo exists $t]} {
 		toplevel $t
 		wm withdraw $t
+		catch {wm attributes $t -type dialog}
 		wm title $t "tkcon gets stdin request"
 		label $t.gets -text "\"gets stdin\" request:"
 		text $t.data -width 32 -height 5 -wrap none \
@@ -3602,7 +3671,7 @@ proc tkcon {cmd args} {
 		set OPT(exec) ""
 	    }
 	    if {![winfo exists $PRIV(root)]} {
-		::tkcon::Init
+		eval [linsert $args 0 ::tkcon::Init]
 	    }
 	    wm deiconify $PRIV(root)
 	    raise $PRIV(root)
@@ -3750,6 +3819,9 @@ proc tkcon_gets args {
 # Returns:	nothing
 ## 
 proc edit {args} {
+    variable ::tkcon::PRIV
+    variable ::tkcon::COLOR
+
     array set opts {-find {} -type {} -attach {} -wrap {none}}
     while {[string match -* [lindex $args 0]]} {
 	switch -glob -- [lindex $args 0] {
@@ -3784,7 +3856,7 @@ proc edit {args} {
     }
 
     # Create unique edit window toplevel
-    set w $::tkcon::PRIV(base).__edit
+    set w $PRIV(base).__edit
     set i 0
     while {[winfo exists $w[incr i]]} {}
     append w $i
@@ -3804,9 +3876,9 @@ proc edit {args} {
     $w.text configure -wrap $opts(-wrap) \
 	-xscrollcommand [list $w.sx set] \
 	-yscrollcommand [list $w.sy set] \
-	-foreground $::tkcon::COLOR(stdin) \
-	-background $::tkcon::COLOR(bg) \
-	-insertbackground $::tkcon::COLOR(cursor) \
+	-foreground $COLOR(stdin) \
+	-background $COLOR(bg) \
+	-insertbackground $COLOR(cursor) \
 	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0
     catch {
 	# 8.4+ stuff
@@ -3826,10 +3898,10 @@ proc edit {args} {
     $m add command -label "Append To..."  -underline 0 \
 	-command [list ::tkcon::Save {} widget $w.text a+]
     $m add separator
-    $m add command -label "Dismiss" -underline 0 -accel "Ctrl-w" \
+    $m add command -label "Dismiss" -underline 0 -accel $PRIV(ACC)w \
 	-command [list destroy $w]
-    bind $w <Control-w>			[list destroy $w]
-    bind $w <$::tkcon::PRIV(meta)-w>	[list destroy $w]
+    bind $w <$PRIV(CTRL)w>		[list destroy $w]
+    bind $w <Alt-w>		[list destroy $w]
 
     ## Edit Menu
     ##
@@ -4287,8 +4359,8 @@ proc idebug {opt args} {
 		    }
 		}
 		if {[string match {} $line]} continue
-		set key [lindex $line 0]
-		if {![regexp {^([#-]?[0-9]+)} [lreplace $line 0 0] lvl]} {
+		set key [regexp -inline {\S+} $line]
+		if {![regexp {^\s*\S+\s+([#-]?[0-9]+)} $line -> lvl]} {
 		    set lvl \#$level
 		}
 		set res {}; set c 0
@@ -4989,57 +5061,44 @@ proc ::tkcon::Bindings {} {
     global tcl_platform tk_version
 
     #-----------------------------------------------------------------------
-    # Elements of tkPriv that are used in this file:
+    # Elements of tk::Priv that are used in this file:
     #
-    # char -		Character position on the line;  kept in order
-    #			to allow moving up or down past short lines while
-    #			still remembering the desired position.
     # mouseMoved -	Non-zero means the mouse has moved a significant
     #			amount since the button went down (so, for example,
     #			start dragging out a selection).
-    # prevPos -		Used when moving up or down lines via the keyboard.
-    #			Keeps track of the previous insert position, so
-    #			we can distinguish a series of ups and downs, all
-    #			in a row, from a new up or down.
-    # selectMode -	The style of selection currently underway:
-    #			char, word, or line.
-    # x, y -		Last known mouse coordinates for scanning
-    #			and auto-scanning.
     #-----------------------------------------------------------------------
-
-    switch -glob $tcl_platform(platform) {
-	win*	{ set PRIV(meta) Alt }
-	mac*	{ set PRIV(meta) Command }
-	default	{ set PRIV(meta) Meta }
-    }
 
     ## Get all Text bindings into TkConsole
     foreach ev [bind Text] { bind TkConsole $ev [bind Text $ev] }
     ## We really didn't want the newline insertion
     bind TkConsole <Control-Key-o> {}
 
+    ## in 8.6b3, the virtual events <<NextLine>> and <<PrevLine>> 
+    #  mess up our history feature
+    bind TkConsole <<NextLine>> {}
+    bind TkConsole <<PrevLine>> {}
+
     ## Now make all our virtual event bindings
-    foreach {ev key} [subst -nocommand -noback {
-	<<TkCon_Exit>>		<Control-q>
-	<<TkCon_New>>		<Control-N>
-	<<TkCon_NewTab>>	<Control-T>
+    set bindings {
+	<<TkCon_Exit>>		<$PRIV(CTRL)-q>
+	<<TkCon_New>>		<$PRIV(CTRL)-N>
+	<<TkCon_NewTab>>	<$PRIV(CTRL)-T>
 	<<TkCon_NextTab>>	<Control-Key-Tab>
 	<<TkCon_PrevTab>>	<Control-Shift-Key-Tab>
-	<<TkCon_Close>>		<Control-w>
-	<<TkCon_About>>		<Control-A>
-	<<TkCon_Help>>		<Control-H>
-	<<TkCon_Find>>		<Control-F>
-	<<TkCon_Slave>>		<Control-Key-1>
-	<<TkCon_Master>>	<Control-Key-2>
-	<<TkCon_Main>>		<Control-Key-3>
+	<<TkCon_Close>>		<$PRIV(CTRL)-w>
+	<<TkCon_About>>		<$PRIV(CTRL)-A>
+	<<TkCon_Find>>		<$PRIV(CTRL)F>
+	<<TkCon_Slave>>		<$PRIV(CTRL)Key-1>
+	<<TkCon_Master>>	<$PRIV(CTRL)Key-2>
+	<<TkCon_Main>>		<$PRIV(CTRL)Key-3>
 	<<TkCon_Expand>>	<Key-Tab>
 	<<TkCon_ExpandFile>>	<Key-Escape>
 	<<TkCon_ExpandProc>>	<Control-P>
 	<<TkCon_ExpandVar>>	<Control-V>
 	<<TkCon_Tab>>		<Control-i>
-	<<TkCon_Tab>>		<$PRIV(meta)-i>
+	<<TkCon_Tab>>		<Alt-i>
 	<<TkCon_Newline>>	<Control-o>
-	<<TkCon_Newline>>	<$PRIV(meta)-o>
+	<<TkCon_Newline>>	<Alt-o>
 	<<TkCon_Newline>>	<Control-Key-Return>
 	<<TkCon_Newline>>	<Control-Key-KP_Enter>
 	<<TkCon_Eval>>		<Return>
@@ -5054,8 +5113,14 @@ proc ::tkcon::Bindings {} {
 	<<TkCon_Transpose>>	<Control-t>
 	<<TkCon_ClearLine>>	<Control-u>
 	<<TkCon_SaveCommand>>	<Control-z>
-	<<TkCon_Popup>>		<Button-3>
-    }] {
+    }
+    if {$PRIV(AQUA)} {
+	lappend bindings <<TkCon_Popup>> <Control-Button-1> \
+	    <<TkCon_Popup>> <Button-2>
+    } else {
+	lappend bindings <<TkCon_Popup>> <Button-3>
+    }
+    foreach {ev key} [subst -nocommand -noback $bindings] {
 	event add $ev $key
 	## Make sure the specific key won't be defined
 	bind TkConsole $key {}
@@ -5069,7 +5134,6 @@ proc ::tkcon::Bindings {} {
     bind $PRIV(root) <<TkCon_PrevTab>>	{ ::tkcon::GotoTab -1 ; break }
     bind $PRIV(root) <<TkCon_Close>>	{ ::tkcon::Destroy }
     bind $PRIV(root) <<TkCon_About>>	{ ::tkcon::About }
-    bind $PRIV(root) <<TkCon_Help>>	{ ::tkcon::Help }
     bind $PRIV(root) <<TkCon_Find>>	{ ::tkcon::FindBox $::tkcon::PRIV(console) }
     bind $PRIV(root) <<TkCon_Slave>>	{
 	::tkcon::Attach {}
@@ -5164,7 +5228,7 @@ proc ::tkcon::Bindings {} {
 
     ## Redefine for TkConsole what we need
     ##
-    event delete <<Paste>> <Control-V>
+    event delete <<Paste>> <$PRIV(CTRL)V>
     ::tkcon::ClipboardKeysyms <Copy> <Cut> <Paste>
 
     bind TkConsole <Insert> {
@@ -5237,9 +5301,9 @@ proc ::tkcon::Bindings {} {
 
     bind TkConsole <Control-a> {
 	if {[%W compare {limit linestart} == {insert linestart}]} {
-	    tkTextSetCursor %W limit
+	    tk::TextSetCursor %W limit
 	} else {
-	    tkTextSetCursor %W {insert linestart}
+	    tk::TextSetCursor %W {insert linestart}
 	}
     }
     bind TkConsole <Key-Home> [bind TkConsole <Control-a>]
@@ -5263,14 +5327,14 @@ proc ::tkcon::Bindings {} {
     }
     bind TkConsole <<TkCon_Previous>> {
 	if {[%W compare {insert linestart} != {limit linestart}]} {
-	    tkTextSetCursor %W [tkTextUpDownLine %W -1]
+	    tk::TextSetCursor %W [tk::TextUpDownLine %W -1]
 	} else {
 	    ::tkcon::Event -1
 	}
     }
     bind TkConsole <<TkCon_Next>> {
 	if {[%W compare {insert linestart} != {end-1c linestart}]} {
-	    tkTextSetCursor %W [tkTextUpDownLine %W 1]
+	    tk::TextSetCursor %W [tk::TextUpDownLine %W 1]
 	} else {
 	    ::tkcon::Event 1
 	}
@@ -5285,7 +5349,7 @@ proc ::tkcon::Bindings {} {
     }
     bind TkConsole <<TkCon_Transpose>>	{
 	## Transpose current and previous chars
-	if {[%W compare insert > "limit+1c"]} { tkTextTranspose %W }
+	if {[%W compare insert > "limit+1c"]} { tk::TextTranspose %W }
     }
     bind TkConsole <<TkCon_ClearLine>> {
 	## Clear command line (Unix shell staple)
@@ -5303,28 +5367,28 @@ proc ::tkcon::Bindings {} {
 	::tkcon::Insert %W $::tkcon::PRIV(tmp)
 	%W see end
     }
-    catch {bind TkConsole <Key-Page_Up>   { tkTextScrollPages %W -1 }}
-    catch {bind TkConsole <Key-Prior>     { tkTextScrollPages %W -1 }}
-    catch {bind TkConsole <Key-Page_Down> { tkTextScrollPages %W 1 }}
-    catch {bind TkConsole <Key-Next>      { tkTextScrollPages %W 1 }}
-    bind TkConsole <$PRIV(meta)-d> {
+    catch {bind TkConsole <Key-Page_Up>   { tk::TextScrollPages %W -1 }}
+    catch {bind TkConsole <Key-Prior>     { tk::TextScrollPages %W -1 }}
+    catch {bind TkConsole <Key-Page_Down> { tk::TextScrollPages %W 1 }}
+    catch {bind TkConsole <Key-Next>      { tk::TextScrollPages %W 1 }}
+    bind TkConsole <Alt-d> {
 	if {[%W compare insert >= limit]} {
 	    %W delete insert {insert wordend}
 	}
     }
-    bind TkConsole <$PRIV(meta)-BackSpace> {
+    bind TkConsole <Alt-BackSpace> {
 	if {[%W compare {insert -1c wordstart} >= limit]} {
 	    %W delete {insert -1c wordstart} insert
 	}
     }
-    bind TkConsole <$PRIV(meta)-Delete> {
+    bind TkConsole <Alt-Delete> {
 	if {[%W compare insert >= limit]} {
 	    %W delete insert {insert wordend}
 	}
     }
     bind TkConsole <ButtonRelease-2> {
 	if {
-	    (!$tkPriv(mouseMoved) || $tk_strictMotif) &&
+	    (!$tk::Priv(mouseMoved) || $tk_strictMotif) &&
 	    ![catch {::tkcon::GetSelection %W} ::tkcon::PRIV(tmp)]
 	} {
 	    if {[%W compare @%x,%y < limit]} {
@@ -6091,6 +6155,7 @@ proc ::tkcon::RetrieveAuthentication {} {
     }
 
     set dlg [toplevel .auth]
+    catch {wm attributes $dlg -type dialog}
     wm title $dlg "Authenticating Proxy Configuration"
     set f1 [frame ${dlg}.f1]
     set f2 [frame ${dlg}.f2]
@@ -6148,6 +6213,22 @@ proc ::tkcon::Retrieve {} {
 	::http::wait $token
 	set code [catch {
 	    set ncode [::http::ncode $token]
+	    set i 0
+	    while {(($ncode >= 301) && ($ncode <= 307)) && [incr i] < 5} {
+		# redirect to meta Location
+		array set meta [::http::meta $token]
+		::http::cleanup $token
+		if {![info exists meta(Location)]} { break }
+		set url $meta(Location)
+		if {![string match "http*" $url]
+		    && [regexp {https?://[^/]+} $PRIV(HEADURL) srvr]} {
+		    # attach the same http server info
+		    set url $srvr/$url
+		}
+		set token [::http::geturl $url -headers $headers -timeout 30000]
+		::http::wait $token
+		set ncode [::http::ncode $token]
+	    }
 	    if {$ncode != 200} {
 		return "expected http return code 200, received $ncode"
 	    }
@@ -6307,7 +6388,7 @@ proc ::send::Pop {varname {nth 0}} {
     return $r
 }
 ##
-## end 'send' pacakge
+## end 'send' package
 
 ## special case 'tk appname' in Tcl plugin
 if {$::tkcon::PRIV(WWW)} {

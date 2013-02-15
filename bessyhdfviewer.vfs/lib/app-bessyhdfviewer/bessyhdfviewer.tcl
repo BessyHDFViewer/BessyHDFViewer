@@ -133,7 +133,7 @@ proc InitGUI {} {
 	set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
 		-classifycommand ${ns}::ClassifyHDF \
 		-selectcommand ${ns}::PreviewFile \
-		-globpattern {*.hdf} \
+		-globpattern {*.hdf *.h5} \
 		-selectmode extended]
 
 	bind $w(filelist) <<DirviewerChDir>> [list ${ns}::DirChanged %d]
@@ -1450,6 +1450,14 @@ proc ConsoleShow {} {
 }
 
 proc bessy_reshape {fn} {
+	# switch on the file extension
+	switch [file extension $fn] {
+		.hdf { return [bessy_reshape_hdf4 $fn] }
+		default { return [bessy_reshape_hdf5 $fn] }
+	}
+}
+
+proc bessy_reshape_hdf4 {fn} {
 
 	autovar hdf HDFpp %AUTO% $fn
 	set hlist [$hdf dump]
@@ -1504,6 +1512,60 @@ proc bessy_reshape {fn} {
 	}
 
 	return $hdict
+}
+
+proc dict_move {dict1 key1 dict2 key2} {
+	upvar $dict1 d1
+	upvar $dict2 d2
+	if {[dict exists $d1 {*}$key1]} {
+		dict set d2 {*}$key2 [dict get $d1 {*}$key1]
+		dict unset d1 {*}$key1
+	}
+}
+
+proc eveH5getDSNames {d chain} {
+	dict keys [dict filter [dict get $d data c1 data] script {key value} {
+		expr {[dict get $value type]=="DATASET"}
+	}]
+}
+
+proc bessy_reshape_hdf5 {fn} {
+	autovar hdf H5pp %AUTO% $fn
+	set rawd [$hdf dump]
+	# new HDF5 stores data under /c1/deviceid
+	# and MotorPos etc. under /device/
+	set reshaped {}
+	dict_move rawd {attrs} reshaped {{}}
+	set chain c1
+	set DSnames [eveH5getDSNames $rawd $chain]
+	set joinsets {}
+	foreach ds $DSnames {
+		if {![catch {
+			switch [dict get $rawd data $chain data $ds attrs DeviceType] {
+				Channel { set group Detector }
+				Axis { set group Motor }
+				default { set group Detector }
+			}
+		}]} {
+			# no error - move this dataset
+			set name [dict get $rawd data $chain data $ds attrs Name]
+			dict_move rawd [list data $chain data $ds attrs] reshaped [list $group $name attrs]
+			dict_move rawd [list data $chain data $ds data] reshaped [list $group $name data]
+			lappend joinsets $group $ds
+		}
+
+	}
+	
+	dict_move rawd [list data $chain data meta PosCountTimer attrs] reshaped [list Detector PosCountTimer attrs]
+	dict_move rawd [list data $chain data meta PosCountTimer data] reshaped [list Detector PosCountTimer data]
+	lappend joinsets Detector PosCountTimer
+
+	# now join the datasets via PosCount
+	# eveH5OuterJoin reshaped $joinsets
+
+	dict set reshaped Unresolved $rawd
+
+	return $reshaped
 }
 
 proc bessy_class {data} {

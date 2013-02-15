@@ -7,4 +7,4 @@
 # in response to "package require" commands.  When this
 # script is sourced, the variable $dir must contain the
 # full path name of this file's directory.
-package ifneeded tkcon 2.5 [list source [file join $dir tkcon.tcl]]
+package ifneeded tkcon 2.7 [list source [file join $dir tkcon.tcl]]
