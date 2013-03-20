@@ -21,12 +21,18 @@ snit::widget ExportDialog {
 	variable colformat
 	variable activecolumn
 
+	variable headerFN
+	variable headerAtt
+	variable headerCol
+	variable headerBareCol
+
 	option -files -default {}
 	option -format -default {{$Energy}}
 	option -title -default {Select export options} -configuremethod SetTitle
 	delegate option -aclist to fmtfield
 	option -stdformat -default true
 	option -parent -default {}
+	option -headerfmt -default {}
 
 	# call this function to get the modal dialog
 	typevariable resultdict
@@ -44,10 +50,12 @@ snit::widget ExportDialog {
 		pack $mainframe -expand yes -fill both 
 
 		set pathframe  [ttk::labelframe $mainframe.pathfr -text "Destination"]
+		set hfmtframe  [ttk::labelframe $mainframe.hfmtfr -text "Header"]
 		set fmtframe  [ttk::labelframe $mainframe.fmtfr -text "Format"]
 		set butframe [ttk::frame $mainframe.butframe]
 
 		grid $pathframe -sticky nsew
+		grid $hfmtframe -sticky nsew
 		grid $fmtframe -sticky nsew
 		grid $butframe -sticky nsew
 
@@ -66,6 +74,16 @@ snit::widget ExportDialog {
 		grid $sfbtn $dirbtn x -sticky w
 		grid $pathentry - $selbtn -sticky ew
 		grid columnconfigure $pathframe 1 -weight 1
+		
+		set hbtnFn	[ttk::checkbutton $hfmtframe.hbtnFn -text "Original filename" -variable [myvar headerFN]]
+		set hbtnAtt [ttk::checkbutton $hfmtframe.hbtnAtt -text "Attributes" -variable [myvar headerAtt]]
+		set hbtnCol [ttk::checkbutton $hfmtframe.hbtnCols -text "Column names" -variable [myvar headerCol]]
+		set hbtnBCol [ttk::checkbutton $hfmtframe.hbtnBCols -text "Bare column names" -variable [myvar headerBareCol]]
+
+		grid $hbtnFn -sticky w
+		grid $hbtnAtt -sticky w
+		grid $hbtnCol -sticky w
+		grid $hbtnBCol -sticky w
 
 		
 		set stdbtn [ttk::radiobutton $fmtframe.sfbtn -text "Standard Format" \
@@ -132,6 +150,12 @@ snit::widget ExportDialog {
 		}
 		append title "to ASCII"
 
+		# configure checkbuttons for header format
+		set headerFN [expr {"Filename" in $options(-headerfmt)}]
+		set headerAtt [expr {"Attributes" in $options(-headerfmt)}]
+		set headerCol [expr {"Columns" in $options(-headerfmt)}]
+		set headerBareCol [expr {"BareColumns" in $options(-headerfmt)}]
+
 		if {$options(-stdformat)} {
 			set stdformat 1
 		} else {
@@ -154,7 +178,13 @@ snit::widget ExportDialog {
 			singlefile $singlefile \
 			stdformat $stdformat \
 			path $curpath \
-			format $options(-format)]
+			format $options(-format) \
+			headerfmt {}]
+		# make header format list
+		if {$headerFN} { dict lappend resultdict headerfmt Filename }
+		if {$headerAtt} { dict lappend resultdict headerfmt Attributes }
+		if {$headerCol} { dict lappend resultdict headerfmt Columns }
+		if {$headerBareCol} { dict lappend resultdict headerfmt BareColumns }
 
 		destroy $win
 	}

@@ -688,21 +688,28 @@ proc DumpAttrib {data {indent ""}} {
 	return $result
 }
 
-proc Dump {hdfdata} {
+proc Dump {hdfdata {headerfmt {Attributes Columns}}} {
 	# create readable ASCII representation of Bessy HDF files
 	set result ""
 
 	# look for global attributes
-	if {[dict exists $hdfdata {}]} {
+	if {[dict exists $hdfdata {}] && "Attributes" in $headerfmt} {
 		# bessy_reshape put the attributes directly under {}
 		append result [DumpAttrib [dict get $hdfdata {}]]
 		append result "#\n"
 	}
 	if {[dict exists $hdfdata MCA]} {
 		# MCA file, has only one key with attribs and data
-		append result "# MCA:\n"
-		append result [DumpAttrib [dict get $hdfdata MCA attrs] \t]
-		append result "# Channel\tcounts\n"
+		if {"Attributes" in $headerfmt} {
+			append result "# MCA:\n"
+			append result [DumpAttrib [dict get $hdfdata MCA attrs] \t]
+		}
+		if {"Columns" in $headerfmt} {
+			append result "# Channel\tcounts\n"
+		}
+		if {"BareColumns" in $headerfmt} {
+			append result "Channel\tcounts\n"
+		}
 		set ch 0
 		foreach v [dict get $hdfdata MCA data] {
 			append result "$ch\t$v\n"
@@ -715,7 +722,7 @@ proc Dump {hdfdata} {
 	if {[dict exists $hdfdata Motor]} {
 		# usual scan
 		foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
-			if {[dict exists $hdfdata $key]} {
+			if {[dict exists $hdfdata $key] && "Attributes" in $headerfmt} {
 				append result "# $key:\n"
 				append result [DumpAttrib [dict get $hdfdata $key] \t]
 				append result "#\n"
@@ -728,20 +735,26 @@ proc Dump {hdfdata} {
 		set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
 
 
-		# write header line
-		append result "# Motors:\n"
-		foreach motor $motors {
-			append result "# \t$motor:\n"
-			append result [DumpAttrib [dict get $table $motor attrs] \t\t]
-		}
-		append result "# Detectors:\n"
-		foreach detector $detectors {
-			append result "# \t$detector:\n"
-			append result [DumpAttrib [dict get $table $detector attrs] \t\t]
+		# write header lines
+		if {"Attributes" in $headerfmt} {
+			append result "# Motors:\n"
+			foreach motor $motors {
+				append result "# \t$motor:\n"
+				append result [DumpAttrib [dict get $table $motor attrs] \t\t]
+			}
+			append result "# Detectors:\n"
+			foreach detector $detectors {
+				append result "# \t$detector:\n"
+				append result [DumpAttrib [dict get $table $detector attrs] \t\t]
+			}
 		}
 
-		append result "# [join $variables \t]\n"
-		
+		if {"Columns" in $headerfmt} {
+			append result "# [join $variables \t]\n"
+		}
+		if {"BareColumns" in $headerfmt} {
+			append result "[join $variables \t]\n"
+		}
 		# compute maximum length for each data column - might be different due to BESSY_INF trimming
 		set maxlength 0
 		dict for {var entry} $table {
@@ -761,21 +774,6 @@ proc Dump {hdfdata} {
 	# if we are here, it is not a BESSY HDF file. Dump the internal representation
 	hformat $hdfdata
 }
-
-proc DumpToFile {hdf dat} {
-	set dump "# $hdf\n"
-	append dump [Dump [bessy_reshape $hdf]]
-
-	if {[catch {
-		set fd [open $dat w]
-		fconfigure $fd -encoding binary -translation binary
-		puts $fd $dump
-		close $fd
-	} err]} {
-		catch { close $fd }
-		return -code error $err
-	}
-}
 	
 proc ExportCmd {} {
 	# when pressing the export button
@@ -786,6 +784,7 @@ proc ExportCmd {} {
 		-aclist [PreferenceGet AutoCompleteList {HDF Energy Keithley1}] \
 		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
 		-stdformat [PreferenceGet StdExportFormat true] \
+		-headerfmt [PreferenceGet HeaderFormat {Attributes Columns Filename}] \
 		-title "Export $nfiles files to ASCII" -parent .]
 	
 	if {$choice == {}} {
@@ -796,9 +795,11 @@ proc ExportCmd {} {
 	# write back settings to prefs
 	PreferenceSet ExportFormat [dict get $choice format]
 	PreferenceSet StdExportFormat [dict get $choice stdformat]
+	PreferenceSet HeaderFormat [dict get $choice headerfmt]
 	
 	set singlefile [dict get $choice singlefile]
 	set stdformat [dict get $choice stdformat]
+	set headerfmt [dict get $choice headerfmt]
 	
 
 	if {$stdformat} {
@@ -817,27 +818,44 @@ proc ExportCmd {} {
 
 			# read HDF
 			set hdfdata [bessy_reshape $hdf]
-			puts $fd "# $hdf"
-			puts $fd [Dump $hdfdata]
+			if {"Filename" in $headerfmt} {
+				puts $fd "# $hdf"
+			}
+			puts $fd [Dump $hdfdata $headerfmt]
 		}
 	}  else {
 		# formatted output
 		set format [dict get $choice format]
 		if {$singlefile} {
 			autofd fd [dict get $choice path] wb
-			foreach hdf $HDFFiles {
-				puts $fd "# $hdf"
+			if {"Filename" in $headerfmt} {
+				foreach hdf $HDFFiles {
+					puts $fd "# $hdf"
+				}
 			}
-			puts $fd "# [join $format \t]"
 
+			if {"Columns" in $headerfmt} {
+				puts $fd "# [join $format \t]"
+			}
+			
+			if {"BareColumns" in $headerfmt} {
+				puts $fd "[join $format \t]"
+			}
 			puts $fd [deepjoin [SELECT $format $HDFFiles -allnan true] \t \n]
 		} else {
 			# individual files
 			foreach hdf $HDFFiles {
 				set roottail [file rootname [file tail $hdf]]
 				autofd fd [file join [dict get $choice path] $roottail.dat] wb
-				puts $fd "# $hdf"
-				puts $fd "# [join $format \t]"
+				if {"Filename" in $headerfmt} {
+					puts $fd "# $hdf"
+				}
+				if {"Columns" in $headerfmt} {
+					puts $fd "# [join $format \t]"
+				}
+				if {"BareColumns" in $headerfmt} {
+					puts $fd "[join $format \t]"
+				}
 				puts $fd [deepjoin [SELECT $format $hdf -allnan true] \t \n]
 			}
 		}
