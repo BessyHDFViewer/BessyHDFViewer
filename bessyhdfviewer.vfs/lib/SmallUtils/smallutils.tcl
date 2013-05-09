@@ -32,6 +32,14 @@ namespace eval SmallUtils {
 		foreach line $tree {
 			TablelistMakeTree_rec root $line
 		}
+		# now insert rest as unsorted group
+		if {[dict size $valuedict] != 0} {
+			set node [$tbl insertchild root end "Unsorted"]
+			dict for {key value} $valuedict {
+				lappend childlist [list $key {*}$value]
+			}
+			$tbl insertchildlist $node end $childlist
+		}
 	}
 	
 	proc TablelistMakeTree_rec {node tree} {
@@ -55,20 +63,17 @@ namespace eval SmallUtils {
 			LIST {
 				# a list of items
 				lassign $tree values
-				if {[dict size $valuedict]==0} {
-					$tbl insertchildlist $node end $values
-				} else {
-					# zip up contents of valuedict with these items
-					set childlist {}
-					foreach name $values {
-						if {[dict exists $valuedict $name]} {
-							lappend childlist [list $name {*}[dict get $valuedict $name]]
-						} else {
-							lappend childlist [list $name]
-						}
+				# zip up contents of valuedict with these items
+				set childlist {}
+				foreach name $values {
+					if {[dict exists $valuedict $name]} {
+						lappend childlist [list $name {*}[dict get $valuedict $name]]
+						dict unset valuedict $name
+					} else {
+						lappend childlist [list $name]
 					}
-					$tbl insertchildlist $node end $childlist
 				}
+				$tbl insertchildlist $node end $childlist
 			}
 
 			default {
