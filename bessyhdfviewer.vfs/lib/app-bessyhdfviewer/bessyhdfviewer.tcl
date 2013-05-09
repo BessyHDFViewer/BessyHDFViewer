@@ -1170,10 +1170,14 @@ proc DisplayTree {} {
 	# create dictionary for values of standard motors etc.
 	set values {}
 	
-	foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
-		if {[dict exists $hdfdata $key]} {
-			set values [dict merge $values [dict get $hdfdata $key]]
-		}
+#	foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
+#		if {[dict exists $hdfdata $key]} {
+#			set values [dict merge $values [dict get $hdfdata $key]]
+#		}
+#}
+
+	foreach key [bessy_get_keys $hdfdata] {
+		dict set values $key [list [ListFormat %g [bessy_get_field $hdfdata $key]]]
 	}
 
 	dict_assign [bessy_class $hdfdata] class motor detector nrows
