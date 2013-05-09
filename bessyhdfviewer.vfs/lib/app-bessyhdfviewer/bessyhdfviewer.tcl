@@ -306,12 +306,31 @@ proc InitGUI {} {
 	set w(diffvsb) [ttk::scrollbar $w(difffr).vsb -orient vertical -command [list $w(difftbl) yview]]
 	set w(diffhsb) [ttk::scrollbar $w(difffr).hsb -orient horizontal -command [list $w(difftbl) xview]]
 	$w(difftbl) configure -xscrollcommand [list $w(diffhsb) set] -yscrollcommand [list $w(diffvsb) set]
+	
+	set w(diffselectfr) [ttk::frame $w(difffr).sfr]
 
+	set w(diffcatmotor) [ttk::checkbutton $w(diffselectfr).cmotor \
+		-text "Motor" -variable ${ns}::diffsel(motor) -command ${ns}::DisplayDiff]
+
+	set w(diffcatdetector) [ttk::checkbutton $w(diffselectfr).cdetector \
+		-text "Detector" -variable ${ns}::diffsel(detector) -command ${ns}::DisplayDiff]
+
+	set w(diffcatmeta) [ttk::checkbutton $w(diffselectfr).cmeta \
+		-text "Meta" -variable ${ns}::diffsel(meta) -command ${ns}::DisplayDiff]
+
+	pack $w(diffcatmotor) $w(diffcatdetector) $w(diffcatmeta) -side left
+	
+	variable diffsel
+	set diffsel(motor) [PreferenceGet DiffSelMotor 1]
+	set diffsel(detector) [PreferenceGet DiffSelDetector 0]
+	set diffsel(meta) [PreferenceGet DiffSelMeta 0]
+
+	grid $w(diffselectfr) - -sticky nsew
 	grid $w(difftbl) $w(diffvsb) -sticky nsew
 	grid $w(diffhsb)  x           -sticky nsew
 
 	grid columnconfigure $w(difffr) 0 -weight 1
-	grid rowconfigure $w(difffr) 0 -weight 1
+	grid rowconfigure $w(difffr) 1 -weight 1
 
 	$w(displayfr) add $w(difffr) -text "Diff"
 	
@@ -1221,11 +1240,18 @@ proc DisplayDiff {} {
 	$w(difftbl) configure -columns [list 0 Variable left 0 $file1 left 0 $file2 left]
 
 	# make alphabetically sorted list of keys
-	set allkeys [bessy_get_keys $data1]
-	lappend allkeys {*}[bessy_get_keys $data2]
+	variable diffsel
+	set category {}
+	if {$diffsel(motor)} { lappend category Motor }
+	if {$diffsel(detector)} { lappend category Detector }
+	if {$diffsel(meta)} { lappend category Meta }
+
+	set allkeys [bessy_get_keys $data1 $category]
+	lappend allkeys {*}[bessy_get_keys $data2 $category]
 	set allkeys [lsort -uniq $allkeys]
 
 	# compute difference
+	set diff {}
 	foreach key $allkeys {
 		set value1 [bessy_get_field $data1 $key]
 		set value2 [bessy_get_field $data2 $key]
@@ -1804,15 +1830,37 @@ proc bessy_get_field {hdfdata field} {
 	}
 }
 
-proc bessy_get_keys {hdfdata} {
-	foreach datakey {Detector Motor} {
+proc bessy_get_keys {hdfdata {category {Detector Motor Meta}}} {
+	set datakeys {}
+	set attrkeys {}
+	foreach catkey $category {
+		switch $catkey {
+			Detector {
+				lappend datakeys Detector 
+				lappend attrkeys DetectorValues 
+			}
+			Motor {
+				lappend datakeys Motor 
+				lappend attrkeys MotorPositions OptionalPositions
+			}
+			Meta {
+				lappend attrkeys Plot {}
+			}
+			default {
+				return -code error "Unknown category: $catkey. Expected Motor, Detector or Meta"
+			}
+		}
+	}
+
+	set keys {}
+	foreach datakey $datakeys {
 		# keys that are tried to find data
 		if {[dict exists $hdfdata $datakey]} {
 			lappend keys {*}[dict keys [dict get $hdfdata $datakey]]
 		}
 	}
 
-	foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot {}} {
+	foreach attrkey $attrkeys {
 		# keys that might store the field as a single value in the attrs
 		if {[dict exists $hdfdata $attrkey]} {
 			lappend keys {*}[dict keys [dict get $hdfdata $attrkey]]
