@@ -295,6 +295,26 @@ proc InitGUI {} {
 
 	$w(displayfr) add $w(ttreefr) -text "Tree"
 	
+	# Difference display tab
+	#
+	set w(difffr) [ttk::frame $w(displayfr).difffr]
+	set w(difftbl) [tablelist::tablelist $w(difffr).tbl \
+		-movablecolumns yes -setgrid no -showseparators yes \
+		-exportselection 0 -selectmode single -stretch end \
+		-columns {0 Variable left 0 Value1 left 0 Value2 left}]
+
+	set w(diffvsb) [ttk::scrollbar $w(difffr).vsb -orient vertical -command [list $w(difftbl) yview]]
+	set w(diffhsb) [ttk::scrollbar $w(difffr).hsb -orient horizontal -command [list $w(difftbl) xview]]
+	$w(difftbl) configure -xscrollcommand [list $w(diffhsb) set] -yscrollcommand [list $w(diffvsb) set]
+
+	grid $w(difftbl) $w(diffvsb) -sticky nsew
+	grid $w(diffhsb)  x           -sticky nsew
+
+	grid columnconfigure $w(difffr) 0 -weight 1
+	grid rowconfigure $w(difffr) 0 -weight 1
+
+	$w(displayfr) add $w(difffr) -text "Diff"
+	
 
 }
 
@@ -1181,18 +1201,53 @@ proc DisplayTree {} {
 	ValidateDisplay Tree
 }
 
+proc DisplayDiff {} {
+	variable w
+	variable HDFFiles
+	$w(difftbl) delete 0 end
+	if {[llength $HDFFiles]!=2} {
+		return
+	}
+
+	# create heading
+	set file1 [file tail [lindex $HDFFiles 0]]
+	set file2 [file tail [lindex $HDFFiles 1]]
+	set data1 [bessy_reshape [lindex $HDFFiles 0]]
+	set data2 [bessy_reshape [lindex $HDFFiles 1]]
+	$w(difftbl) configure -columns [list 0 Variable left 0 $file1 left 0 $file2 left]
+
+	# make alphabetically sorted list of keys
+	set allkeys [bessy_get_keys $data1]
+	lappend allkeys {*}[bessy_get_keys $data2]
+	set allkeys [lsort -uniq $allkeys]
+
+	# compute difference
+	foreach key $allkeys {
+		set value1 [bessy_get_field $data1 $key]
+		set value2 [bessy_get_field $data2 $key]
+		if {$value1!=$value2} {
+			set fmt1 [ListFormat %g $value1]
+			set fmt2 [ListFormat %g $value2]
+			lappend diff [list $key $fmt1 $fmt2]
+		}
+	}
+	$w(difftbl) insertlist end $diff
+	ValidateDisplay Diff
+}
+
 proc InvalidateDisplay {} {
 	variable displayvalid
 	dict set displayvalid Plot 0
 	dict set displayvalid Text 0
 	dict set displayvalid Table 0
 	dict set displayvalid Tree 0
+	dict set displayvalid Diff 0
 }
 
 proc ValidateDisplay {what} {
 	variable displayvalid
 	if {$what=="all"} {
-		foreach display {Plot Text Table Tree} {
+		foreach display {Plot Text Table Tree Diff} {
 			ValidateDisplay $display
 		}
 	} else {
@@ -1228,6 +1283,11 @@ proc ReDisplay {} {
 		Tree {
 			if {![dict get $displayvalid Tree]} {
 				DisplayTree
+			}
+		}
+		Diff {
+			if {![dict get $displayvalid Diff]} {
+				DisplayDiff
 			}
 		}
 		default {
@@ -1312,6 +1372,9 @@ proc ListFormat {formatString what} {
 		# two-element list for min/max
 		if {[llength $what] ==2} {
 			lassign $what min max
+			if {![string is double -strict $min] || ![string is double -strict $max]} {
+				return "$min \u2014 $max"
+			}
 			return "[ListFormat $formatString $min] \u2014 [ListFormat $formatString $max]"
 		}
 
@@ -1735,6 +1798,23 @@ proc bessy_get_field {hdfdata field} {
 	} else {
 		return [list $minval $maxval]
 	}
+}
+
+proc bessy_get_keys {hdfdata} {
+	foreach datakey {Detector Motor} {
+		# keys that are tried to find data
+		if {[dict exists $hdfdata $datakey]} {
+			lappend keys {*}[dict keys [dict get $hdfdata $datakey]]
+		}
+	}
+
+	foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot {}} {
+		# keys that might store the field as a single value in the attrs
+		if {[dict exists $hdfdata $attrkey]} {
+			lappend keys {*}[dict keys [dict get $hdfdata $attrkey]]
+		}
+	}
+	return [lsort -uniq $keys]
 }
 
 proc ::tcl::mathfunc::isnan {x} {
