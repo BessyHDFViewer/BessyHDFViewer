@@ -307,30 +307,11 @@ proc InitGUI {} {
 	set w(diffhsb) [ttk::scrollbar $w(difffr).hsb -orient horizontal -command [list $w(difftbl) xview]]
 	$w(difftbl) configure -xscrollcommand [list $w(diffhsb) set] -yscrollcommand [list $w(diffvsb) set]
 	
-	set w(diffselectfr) [ttk::frame $w(difffr).sfr]
-
-	set w(diffcatmotor) [ttk::checkbutton $w(diffselectfr).cmotor \
-		-text "Motor" -variable ${ns}::diffsel(motor) -command ${ns}::DisplayDiff]
-
-	set w(diffcatdetector) [ttk::checkbutton $w(diffselectfr).cdetector \
-		-text "Detector" -variable ${ns}::diffsel(detector) -command ${ns}::DisplayDiff]
-
-	set w(diffcatmeta) [ttk::checkbutton $w(diffselectfr).cmeta \
-		-text "Meta" -variable ${ns}::diffsel(meta) -command ${ns}::DisplayDiff]
-
-	pack $w(diffcatmotor) $w(diffcatdetector) $w(diffcatmeta) -side left
-	
-	variable diffsel
-	set diffsel(motor) [PreferenceGet DiffSelMotor 1]
-	set diffsel(detector) [PreferenceGet DiffSelDetector 0]
-	set diffsel(meta) [PreferenceGet DiffSelMeta 0]
-
-	grid $w(diffselectfr) - -sticky nsew
 	grid $w(difftbl) $w(diffvsb) -sticky nsew
 	grid $w(diffhsb)  x           -sticky nsew
 
 	grid columnconfigure $w(difffr) 0 -weight 1
-	grid rowconfigure $w(difffr) 1 -weight 1
+	grid rowconfigure $w(difffr) 0 -weight 1
 
 	$w(displayfr) add $w(difffr) -text "Diff"
 	
@@ -1228,40 +1209,50 @@ proc DisplayDiff {} {
 	variable w
 	variable HDFFiles
 	$w(difftbl) delete 0 end
-	if {[llength $HDFFiles]!=2} {
-		return
+	
+	# create heading
+	set filenames {}
+	set data {}
+	set columnconfig {0 Variables left}
+	foreach fullname $HDFFiles {
+		set shortname [file tail $fullname]
+		lappend data [bessy_reshape $fullname]
+		append columnconfig " 0 $shortname left"
 	}
 
-	# create heading
-	set file1 [file tail [lindex $HDFFiles 0]]
-	set file2 [file tail [lindex $HDFFiles 1]]
-	set data1 [bessy_reshape [lindex $HDFFiles 0]]
-	set data2 [bessy_reshape [lindex $HDFFiles 1]]
-	$w(difftbl) configure -columns [list 0 Variable left 0 $file1 left 0 $file2 left]
+	$w(difftbl) configure -columns $columnconfig
 
 	# make alphabetically sorted list of keys
-	variable diffsel
-	set category {}
-	if {$diffsel(motor)} { lappend category Motor }
-	if {$diffsel(detector)} { lappend category Detector }
-	if {$diffsel(meta)} { lappend category Meta }
-
-	set allkeys [bessy_get_keys $data1 $category]
-	lappend allkeys {*}[bessy_get_keys $data2 $category]
-	set allkeys [lsort -uniq $allkeys]
-
-	# compute difference
-	set diff {}
-	foreach key $allkeys {
-		set value1 [bessy_get_field $data1 $key]
-		set value2 [bessy_get_field $data2 $key]
-		if {$value1!=$value2} {
-			set fmt1 [ListFormat %g $value1]
-			set fmt2 [ListFormat %g $value2]
-			lappend diff [list $key $fmt1 $fmt2]
+	set allkeys {Motor {} Detector {} Meta {}}
+	foreach category {Motor Detector Meta} {
+		foreach dataset $data {
+			dict lappend allkeys $category {*}[bessy_get_keys $dataset $category]
 		}
 	}
-	$w(difftbl) insertlist end $diff
+	
+	dict for {category keys} $allkeys {
+		dict set allkeys $category [lsort -dictionary -uniq $keys]
+	}
+
+	# compute difference
+	foreach category  {Motor Detector Meta} {
+		set node [$w(difftbl) insertchild root end [list $category]]
+		set diff {}
+		foreach key [dict get $allkeys $category] {
+			set values {}
+			foreach dataset $data {
+				lappend values [bessy_get_field $dataset $key]
+			}
+			if {!allequal($values)} {
+				set fmts {}
+				foreach value $values {
+					lappend fmts [ListFormat %g $value]
+				}
+				lappend diff [list $key {*}$fmts]
+			}
+		}
+		$w(difftbl) insertchildlist $node end $diff
+	}
 	ValidateDisplay Diff
 }
 
@@ -1410,7 +1401,11 @@ proc ListFormat {formatString what} {
 
 		# single double value
 		if {[string is double -strict $what]} {
-			return [format $formatString $what]
+			if {[catch {format $formatString $what} formatresult]} {
+				return $what;# error formatting, return string rep
+			} else {
+				return $formatresult
+			}
 		}
 
 		# string
@@ -1871,6 +1866,17 @@ proc bessy_get_keys {hdfdata {category {Detector Motor Meta}}} {
 
 proc ::tcl::mathfunc::isnan {x} {
 	expr {$x != $x}
+}
+
+proc ::tcl::mathfunc::allequal {l} {
+	# return true if all elements in l are equal
+	set first [lindex $l 0]
+	foreach el $l {
+		if {$el ne $first} {
+			return false
+		}
+	}
+	return true
 }
 
 proc filternan {l} {
