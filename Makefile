@@ -10,3 +10,5 @@ starpacks:
 
 install: starpacks
 	cp -p BessyHDFViewer_Linux64 BessyHDFViewer_Linux32 BessyHDFViewer.exe $(INSTALLDIR)
+	# install to BAM
+	scp  BessyHDFViewer_Linux64 ptb@bam15.usr.bessy.de:/soft/home/ptb/BessyHDFViewer/BessyHDFViewer_Linux64
