@@ -21,6 +21,7 @@ snit::widget ExportDialog {
 	variable colformat
 	variable activecolumn
 	variable selectcolors
+	variable previewlimit 100
 
 	variable headerFN
 	variable headerAtt
@@ -96,7 +97,7 @@ snit::widget ExportDialog {
 		install previewtable using tablelist::tablelist $fmtframe.tbl \
 			-labelcommand [mymethod EditColumn] \
 			-movablerows 0 -movablecolumns 1 \
-			-movecolumncursor hand1 -exportselection 0 -selectmode single \
+			-movecolumncursor hand1 -exportselection 0 -selectmode none \
 			-stripebg ""
 		set prevhsb [ttk::scrollbar $fmtframe.hsb -orient horizontal -command [list $previewtable xview]]
 		$previewtable configure -xscrollcommand [list $prevhsb set]
@@ -104,7 +105,7 @@ snit::widget ExportDialog {
 		set selectcolors [list [$previewtable cget -selectforeground] [$previewtable cget -selectbackground]]
 		
 		bind $previewtable <<TablelistColumnMoved>> [mymethod ColumnMoved %d]
-
+		bind [$previewtable bodytag] <1> [mymethod CellClicked %W %x %y]
 		
 		grid $stdbtn $custbtn -sticky w
 		grid $colfmtframe - -sticky nsew
@@ -117,10 +118,12 @@ snit::widget ExportDialog {
 		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
 		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
 		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
-		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [IconGet delete] -command [mymethod RemoveAll] -style Toolbutton]
+		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [IconGet edit-clear] -command [mymethod RemoveAll] -style Toolbutton]
+		set limlabel [ttk::label $colfmtframe.llable -text "Preview row limit"]
+		set limentry [ttk::entry $colfmtframe.lentry -textvariable [myvar previewlimit]]
 
-		grid $fmtfield $pbutton $mbutton $xbutton -sticky ew
-		grid columnconfigure $colfmtframe 0 -weight 1
+		grid $xbutton $pbutton $mbutton $fmtfield -sticky ew
+		grid columnconfigure $colfmtframe 3 -weight 1
 
 		bind $fmtfield <Return> [mymethod AcceptEditColumn]
 		AutoComplete $fmtfield
@@ -267,6 +270,18 @@ snit::widget ExportDialog {
 		set activecolumn $col
 	}
 
+	method CellClicked {W x y} {
+        lassign [tablelist::convEventFields $W $x $y] W x y
+		set col [$previewtable containingcolumn $x]
+		if {$col>=0} { 
+			$self EditColumn $previewtable $col
+		} else {
+			$self SetActiveColumn {}
+			set colformat {}
+		}
+		return -code break
+	}
+
 	method EditColumn {w col} {
 		# click on the table header 
 		# copy that format into the field
@@ -280,13 +295,14 @@ snit::widget ExportDialog {
 				lset options(-format) $activecolumn $colformat
 			} else {
 				lappend options(-format) $colformat
+				set colformat {}
 			}
 			$self PreviewFormat
 		}
 	}
 
 	method Add {} {
-		# insert current format at the active column
+		# insert new empty column
 		if {$activecolumn == {}} { 
 			set insertcolumn [llength $options(-format)]
 		} else {
@@ -295,7 +311,7 @@ snit::widget ExportDialog {
 		# remove selection
 		$self SetActiveColumn {}
 		# rebuild table
-		set options(-format) [linsert $options(-format) $insertcolumn "0"]
+		set options(-format) [linsert $options(-format) $insertcolumn ""]
 		$self PreviewFormat
 		# select new column
 		$self SetActiveColumn $insertcolumn
@@ -323,8 +339,11 @@ snit::widget ExportDialog {
 		# user has changed the order of the columns interactively
 		set options(-format) [$previewtable cget -columntitles]
 		lassign $idxlist from to
-		puts "Move ($from) -> ($to)"
-		$self SetActiveColumn $to
+		if {$to<$from} {
+			$self SetActiveColumn $to
+		} else {
+			$self SetActiveColumn [expr {$to-1}]
+		}
 		# Preview not necessary
 	}
 
@@ -342,7 +361,7 @@ snit::widget ExportDialog {
 			if {$cols != {}} {
 				$previewtable configure -columns $cols
 				# get data
-				set data [SELECT $options(-format) $options(-files) LIMIT 20]
+				set data [SELECT $options(-format) $options(-files) LIMIT $previewlimit]
 				$previewtable insertlist end $data
 			}
 		}

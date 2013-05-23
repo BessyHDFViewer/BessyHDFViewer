@@ -1517,6 +1517,9 @@ proc SELECTdata {fmtlist hdfdata args} {
 			# no $ found - interpret the whole thing as one variable name
 			lset fmtlist $i "\${$fmt}"
 		}
+		if {$fmt == {}} {
+			lset fmtlist $i {{}}
+		}
 		incr i
 	}
 	
