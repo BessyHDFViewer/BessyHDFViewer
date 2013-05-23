@@ -217,8 +217,8 @@ proc InitGUI {} {
 	
 	bind $w(xent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 	bind $w(yent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
-	AutoComplete $w(xent) -aclist [PreferenceGet AutoCompleteList {Energy}]
-	AutoComplete $w(yent) -aclist [PreferenceGet AutoCompleteList {Energy}]
+	AutoComplete $w(xent) -aclist {Energy Row}
+	AutoComplete $w(yent) -aclist {Energy Row}
 	bind $w(xent) <Return> [list ${ns}::DisplayPlot -explicit true -focus x]
 	bind $w(yent) <Return> [list ${ns}::DisplayPlot -explicit true -focus y]
 	bind $w(xlbl) <1> ${ns}::ConsoleShow
@@ -800,8 +800,10 @@ proc ExportCmd {} {
 	variable HDFFiles
 
 	set nfiles [llength $HDFFiles]
+	set aclist [bessy_get_keys_flist $HDFFiles]
+	lappend aclist HDF
 	set choice [ExportDialog show -files $HDFFiles \
-		-aclist [PreferenceGet AutoCompleteList {HDF Energy Keithley1}] \
+		-aclist $aclist \
 		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
 		-stdformat [PreferenceGet StdExportFormat true] \
 		-headerfmt [PreferenceGet HeaderFormat {Attributes Columns Filename}] \
@@ -987,21 +989,6 @@ proc DisplayPlot {args} {
 			set yformat $stdy
 		}
 
-		# add the axes to the autocompletion list
-		set aclist [PreferenceGet AutoCompleteList {Energy}]
-		foreach axis $axes {
-			if {$axis ni $aclist} {
-				# O(n), don't care
-				lappend aclist $axis
-			}
-		}
-		# mouseclicks
-		lappend aclist CLICKX CLICKY
-		
-
-		$w(xent) configure -aclist $aclist
-		$w(yent) configure -aclist $aclist
-
 	} else {
 		# more than one file selected
 		set xformatlist {}
@@ -1105,14 +1092,17 @@ proc DisplayPlot {args} {
 	# plot the data
 	variable pointerinfo
 	set extravars [dict create CLICKX $pointerinfo(clickx) CLICKY $pointerinfo(clicky)] 
+	set aclist {CLICKX CLICKY Row}
+
 	dict for {fn style} $styles {
-		if {$nfiles == 1} {
-			# for one file, operate on the cached data
-			set data [SELECTdata $fmtlist $hdfdata -allnan true -extravars $extravars]
-		} else {
-			# for multiple files, read the file
-			set data [SELECT $fmtlist $fn -allnan true -extravars $extravars]
+		if {$nfiles != 1} {
+			# for multiple files, read the content to hdfdata
+			# for single file, it's already there
+			set hdfdata [bessy_reshape $fn]
 		}
+			
+		# operate on the cached data
+		set data [SELECTdata $fmtlist $hdfdata -allnan true -extravars $extravars]
 		# reduce to flat list
 		set data [concat {*}$data]
 
@@ -1120,6 +1110,8 @@ proc DisplayPlot {args} {
 			lappend plotid [$w(Graph) connectpoints_autodim $data {*}[dict get $style line]]
 			lappend plotid [$w(Graph) showpoints_autodim $data {*}[dict get $style point]]
 		}
+		# build up autocomplete list
+		lappend aclist {*}[bessy_get_keys $hdfdata]
 	}
 
 	set plotstylecache $styles
@@ -1127,6 +1119,12 @@ proc DisplayPlot {args} {
 	if {$plotid != {}} {
 		$w(Graph) autoresize
 	}
+	
+
+	# configure the autocompletion list
+	set aclist [lsort -uniq -dictionary $aclist]
+	$w(xent) configure -aclist $aclist
+	$w(yent) configure -aclist $aclist
 
 	ValidateDisplay Plot
 }
@@ -1866,6 +1864,17 @@ proc bessy_get_keys {hdfdata {category {Detector Motor Meta}}} {
 	}
 	return [lsort -uniq $keys]
 }
+
+proc bessy_get_keys_flist {flist {category {Detector Motor Meta}}} {
+	set allkeys {}
+	foreach fn $flist {
+		if {![catch {bessy_reshape $fn} data]} {
+			lappend allkeys {*}[bessy_get_keys $data $category]
+		}
+	}
+	return [lsort -uniq $allkeys]
+}
+
 
 proc ::tcl::mathfunc::isnan {x} {
 	expr {$x != $x}
