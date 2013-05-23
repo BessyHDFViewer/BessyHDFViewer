@@ -319,10 +319,12 @@ snit::widget ExportDialog {
 		$self SetActiveColumn {}
 	}	
 
-	method ColumnMoved {idx} {
+	method ColumnMoved {idxlist} {
 		# user has changed the order of the columns interactively
 		set options(-format) [$previewtable cget -columntitles]
-		$self SetActiveColumn {}
+		lassign $idxlist from to
+		puts "Move ($from) -> ($to)"
+		$self SetActiveColumn $to
 		# Preview not necessary
 	}
 
