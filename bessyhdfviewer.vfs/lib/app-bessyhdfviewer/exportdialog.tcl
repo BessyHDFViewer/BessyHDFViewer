@@ -20,6 +20,7 @@ snit::widget ExportDialog {
 	variable fmtlist
 	variable colformat
 	variable activecolumn
+	variable selectcolors
 
 	variable headerFN
 	variable headerAtt
@@ -59,7 +60,7 @@ snit::widget ExportDialog {
 		grid $fmtframe -sticky nsew
 		grid $butframe -sticky nsew
 
-		grid rowconfigure $mainframe 1 -weight 1
+		grid rowconfigure $mainframe 2 -weight 1
 		grid columnconfigure $mainframe 0 -weight 1
 
 		set sfbtn [ttk::radiobutton $pathframe.sfbtn -text "Single file" \
@@ -95,11 +96,14 @@ snit::widget ExportDialog {
 		install previewtable using tablelist::tablelist $fmtframe.tbl \
 			-labelcommand [mymethod EditColumn] \
 			-movablerows 0 -movablecolumns 1 \
-			-movecolumncursor hand1 -exportselection 0 -selectmode single
+			-movecolumncursor hand1 -exportselection 0 -selectmode single \
+			-stripebg ""
 		set prevhsb [ttk::scrollbar $fmtframe.hsb -orient horizontal -command [list $previewtable xview]]
 		$previewtable configure -xscrollcommand [list $prevhsb set]
+		# get matching colors for selected items for the current theme
+		set selectcolors [list [$previewtable cget -selectforeground] [$previewtable cget -selectbackground]]
 		
-		bind $previewtable <<TablelistColumnMoved>> [mymethod ColumnMoved]
+		bind $previewtable <<TablelistColumnMoved>> [mymethod ColumnMoved %d]
 
 		
 		grid $stdbtn $custbtn -sticky w
@@ -113,8 +117,9 @@ snit::widget ExportDialog {
 		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
 		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
 		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
+		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [IconGet delete] -command [mymethod RemoveAll] -style Toolbutton]
 
-		grid $fmtfield $pbutton $mbutton -sticky ew
+		grid $fmtfield $pbutton $mbutton $xbutton -sticky ew
 		grid columnconfigure $colfmtframe 0 -weight 1
 
 		bind $fmtfield <Return> [mymethod AcceptEditColumn]
@@ -243,43 +248,81 @@ snit::widget ExportDialog {
 
 	}
 
+	method SetActiveColumn {col} {
+		# change background for selected column
+		# as visual feedback
+		if {$activecolumn != {}} {
+			# remove tag from all columns, 
+			# as the previous activecolumn might have 
+			# moved or disappeared
+			set ncols [llength [$previewtable cget -columntitles]]
+			for {set i 0} {$i<$ncols} {incr i} {
+				$previewtable columnconfigure $i -fg "" -bg ""
+			}
+		}
+		if {$col != {}} {
+			lassign $selectcolors fg bg
+			$previewtable columnconfigure $col -bg $bg -fg $fg
+		} 
+		set activecolumn $col
+	}
+
 	method EditColumn {w col} {
 		# click on the table header 
 		# copy that format into the field
-		set activecolumn $col
+		$self SetActiveColumn $col
 		set colformat [lindex $options(-format) $col]
 	}
 
 	method AcceptEditColumn {} {
-		if {$activecolumn != {} && $colformat != {}} {
-			lset options(-format) $activecolumn $colformat
+		if {$colformat != {}} {
+			if {$activecolumn != {}} {
+				lset options(-format) $activecolumn $colformat
+			} else {
+				lappend options(-format) $colformat
+			}
 			$self PreviewFormat
 		}
 	}
 
 	method Add {} {
 		# insert current format at the active column
-		if {$colformat eq {}} { return }
-
 		if {$activecolumn == {}} { 
-			set activecolumn end
+			set insertcolumn [llength $options(-format)]
+		} else {
+			set insertcolumn $activecolumn
 		}
-		set options(-format) [linsert $options(-format) $activecolumn $colformat]
+		# remove selection
+		$self SetActiveColumn {}
+		# rebuild table
+		set options(-format) [linsert $options(-format) $insertcolumn "0"]
 		$self PreviewFormat
+		# select new column
+		$self SetActiveColumn $insertcolumn
 	}
 
 	method Remove {} {
 		if {$activecolumn != {}} {
-			set options(-format) [lreplace $options(-format) $activecolumn $activecolumn]
-			set activecolumn {}
+			set deletecolumn $activecolumn
+			$self SetActiveColumn {}
+			set options(-format) [lreplace $options(-format) $deletecolumn $deletecolumn]
 			$self PreviewFormat
+			if {$deletecolumn < [llength $options(-format)]} {
+				$self SetActiveColumn $deletecolumn
+			}
 		}
 	}
 
-	method ColumnMoved {} {
+	method RemoveAll {} {
+		set options(-format) ""
+		$self PreviewFormat
+		$self SetActiveColumn {}
+	}	
+
+	method ColumnMoved {idx} {
 		# user has changed the order of the columns interactively
 		set options(-format) [$previewtable cget -columntitles]
-		set activecolumn {}
+		$self SetActiveColumn {}
 		# Preview not necessary
 	}
 
