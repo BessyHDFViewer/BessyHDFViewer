@@ -1550,6 +1550,117 @@ proc SELECTdata {fmtlist hdfdata args} {
 
 }
 
+proc GROUP_BY {selectdata grouplist} {
+	# simulate SQL GROUP BY operator and
+	# aggregate functions over result set from SELECT
+	
+	catch {namespace delete ::GROUP}
+	namespace eval ::GROUP {
+		proc join {sep list} {
+			# same as ::join, but with different order
+			::join $list $sep
+		}
+		proc index {idx list} { lindex $list $idx }
+
+		proc mean {list} { expr {[sum $list]/[count $list]} }
+
+		proc sum {list} {
+			set result 0
+			foreach v $list {
+				set result [expr {$result+$v}]
+			}
+			return $result
+		}
+
+		proc min {list} { tcl::mathfunc::min {*}$list }
+
+		proc max {list} { tcl::mathfunc::max {*}$list }
+ 
+		proc count {list} { llength $list }
+	} 
+	
+	set ncols [llength $grouplist]
+	# build list of format strings for each 
+	# group_by element idx1 fmt1 idx2 fmt2 ...
+	set groupidx {}
+	set idx 0
+	foreach col $grouplist {
+		set args [lassign $col aggregate_func]
+		switch $aggregate_func {
+			group {
+				if {[llength $col]==1} { 
+					set fmt %s
+				} else { 
+					set fmt [lindex $args 0]
+				}
+				lappend groupidx $idx $fmt
+			}
+
+			default {
+			}
+		}
+		incr idx
+	}
+
+	set groupdata {}
+	# reshape into dictionary with index group_by
+	foreach row $selectdata {
+		if {[llength $row]!=$ncols} {
+			return -code error "Length of format $ncols doesn't match row $row"
+		}
+		# compute groupkey
+		set groupkey {}
+		foreach {idx fmt} $groupidx {
+			lappend groupkey [format $fmt [lindex $row $idx]]
+		}
+		dictlappend_vec groupdata $groupkey $row
+	}
+	
+	# groupdata is now a grouped dictionary
+	# now apply aggregate functions
+	set result {}
+	dict for {rowkey rowdata} $groupdata {
+		set row {}
+		set gidx 0
+		foreach col $grouplist vlist $rowdata {
+			set args [lassign $col aggregate_func]
+			switch $aggregate_func {
+				group {
+					lappend row [lindex $rowkey $gidx]
+					incr gidx
+				}
+
+				default {
+					# call the given aggregate function 
+					lappend row [namespace eval ::GROUP [linsert $col end $vlist]]
+				}
+			}
+		}
+		lappend result $row
+	}
+	return $result
+}
+
+proc dictlappend_vec {varname key vlist} {
+	# lappend into nested structure with 
+	# dict-list scheme
+	upvar $varname dl
+	if {![dict exists $dl $key]} {
+		set newlist {}
+		foreach v $vlist {
+			lappend newlist [list $v]
+		}
+		dict set dl $key $newlist
+	} else {
+		set newlist {}
+		foreach row [dict get $dl $key] val $vlist {
+			lappend row $val
+			lappend newlist $row
+		}
+		dict set dl $key $newlist
+	}
+}
+
 
 proc ConsoleShow {} {
 	tkcon show

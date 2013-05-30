@@ -7,6 +7,7 @@ snit::widget ExportDialog {
 	component mainframe
 	component pathentry
 	component fmtfield
+	component groupbtn
 	component mbutton
 	component pbutton
 	component colfmtframe
@@ -19,6 +20,7 @@ snit::widget ExportDialog {
 	variable firstfile
 	variable fmtlist
 	variable colformat
+	variable grouping
 	variable activecolumn
 	variable selectcolors
 	variable previewlimit 100
@@ -30,6 +32,7 @@ snit::widget ExportDialog {
 
 	option -files -default {}
 	option -format -default {{$Energy}}
+	option -group_by -default {{}} 
 	option -title -default {Select export options} -configuremethod SetTitle
 	delegate option -aclist to fmtfield
 	option -stdformat -default true
@@ -87,18 +90,27 @@ snit::widget ExportDialog {
 		grid $hbtnCol -sticky w
 		grid $hbtnBCol -sticky w
 
-		
-		set stdbtn [ttk::radiobutton $fmtframe.sfbtn -text "Standard Format" \
+		set fmtbtnframe [ttk::frame $fmtframe.btnfr]
+
+		set stdbtn [ttk::radiobutton $fmtbtnframe.sfbtn -text "Standard Format" \
 			-variable [myvar stdformat] -value 1 -command [mymethod SwitchStdFormat]]
-		set custbtn [ttk::radiobutton $fmtframe.custbtn -text "Custom Format" \
+		set custbtn [ttk::radiobutton $fmtbtnframe.custbtn -text "Custom Format" \
 			-variable [myvar stdformat] -value 0 -command [mymethod SwitchStdFormat]]
+		install groupbtn using ttk::checkbutton $fmtbtnframe.groupbtn -text "Grouping" \
+			-variable [myvar grouping] -command [mymethod SwitchGrouping]
+		
+		grid $stdbtn $custbtn $groupbtn -sticky w
 		
 		install colfmtframe using ttk::frame $fmtframe.colfmtfr
 		install previewtable using tablelist::tablelist $fmtframe.tbl \
 			-labelcommand [mymethod EditColumn] \
 			-movablerows 0 -movablecolumns 1 \
 			-movecolumncursor hand1 -exportselection 0 -selectmode none \
-			-stripebg ""
+			-stripebg "" \
+			-editstartcommand [mymethod EditStartCmd] \
+			-editendcommand [mymethod EditEndCmd]
+		# editing is needed for the GROUP BY operator
+
 		set prevhsb [ttk::scrollbar $fmtframe.hsb -orient horizontal -command [list $previewtable xview]]
 		$previewtable configure -xscrollcommand [list $prevhsb set]
 		# get matching colors for selected items for the current theme
@@ -107,12 +119,13 @@ snit::widget ExportDialog {
 		bind $previewtable <<TablelistColumnMoved>> [mymethod ColumnMoved %d]
 		bind [$previewtable bodytag] <1> [mymethod CellClicked %W %x %y]
 		
-		grid $stdbtn $custbtn -sticky w
-		grid $colfmtframe - -sticky nsew
-		grid $previewtable - -sticky nsew
-		grid $prevhsb     -  -sticky nsew
+
+		grid $fmtbtnframe -sticky nsew
+		grid $colfmtframe  -sticky nsew
+		grid $previewtable -sticky nsew
+		grid $prevhsb     -sticky nsew
 		grid rowconfigure $fmtframe 2 -weight 1
-		grid columnconfigure $fmtframe 1 -weight 1
+		grid columnconfigure $fmtframe 0 -weight 1
 
 
 		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
@@ -185,8 +198,10 @@ snit::widget ExportDialog {
 		set resultdict [dict create \
 			singlefile $singlefile \
 			stdformat $stdformat \
+			grouping $grouping \
 			path $curpath \
 			format $options(-format) \
+			group_by $options(-groupby) \
 			headerfmt {}]
 		# make header format list
 		if {$headerFN} { dict lappend resultdict headerfmt Filename }
@@ -218,12 +233,18 @@ snit::widget ExportDialog {
 			$fmtfield configure -state disabled
 			$pbutton state disabled
 			$mbutton state disabled
+			$groupbtn state disabled
 		} else {
 			$previewtable configure -state normal
 			$fmtfield configure -state normal
 			$pbutton state !disabled
 			$mbutton state !disabled
+			$groupbtn state !disabled
 		}
+		$self PreviewFormat
+	}
+
+	method SwitchGrouping {} {
 		$self PreviewFormat
 	}
 
