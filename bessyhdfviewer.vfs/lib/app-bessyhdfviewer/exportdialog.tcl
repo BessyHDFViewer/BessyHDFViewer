@@ -20,7 +20,7 @@ snit::widget ExportDialog {
 	variable firstfile
 	variable fmtlist
 	variable colformat
-	variable grouping
+	variable grouping 0
 	variable activecolumn
 	variable selectcolors
 	variable previewlimit 100
@@ -32,7 +32,7 @@ snit::widget ExportDialog {
 
 	option -files -default {}
 	option -format -default {{$Energy}}
-	option -group_by -default {{}} 
+	option -groupby -default {{}} 
 	option -title -default {Select export options} -configuremethod SetTitle
 	delegate option -aclist to fmtfield
 	option -stdformat -default true
