@@ -1156,6 +1156,11 @@ proc DisplayTable {} {
 	}
 	$w(tbltbl) configure -columns $columns
 
+	# set sortmode to dictionary for all columns
+	for {set col 0} {$col<[llength $tblheader]} {incr col} {
+		$w(tbltbl) columnconfigure $col -sortmode dictionary
+	}
+
 	$w(tbltbl) insertlist 0 $tbldata
 	ValidateDisplay Table
 }
