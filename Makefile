@@ -12,3 +12,10 @@ install: starpacks
 	cp -p BessyHDFViewer_Linux64 BessyHDFViewer_Linux32 BessyHDFViewer.exe $(INSTALLDIR)
 	# install to BAM
 	scp  BessyHDFViewer_Linux64 ptb@bam15.usr.bessy.de:/soft/home/ptb/BessyHDFViewer/BessyHDFViewer_Linux64
+
+mac:
+	# create application for Mac OSX
+	sdx wrap BessyHDFViewer.app/Contents/MacOS/BessyHDFViewer -vfs bessyhdfviewer.vfs/ -runtime Runtime/Mac_runtime64
+	# make icons
+	cd ArtWork && make mac
+	cp ArtWork/BessyHDFViewer.icns BessyHDFViewer.app/Contents/Resources/
