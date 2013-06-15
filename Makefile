@@ -15,7 +15,19 @@ install: starpacks
 
 mac:
 	# create application for Mac OSX
+	mkdir -p BessyHDFViewer.app/Contents/MacOS/
 	sdx wrap BessyHDFViewer.app/Contents/MacOS/BessyHDFViewer -vfs bessyhdfviewer.vfs/ -runtime Runtime/Mac_runtime64
 	# make icons
 	cd ArtWork && make mac
 	cp ArtWork/BessyHDFViewer.icns BessyHDFViewer.app/Contents/Resources/
+	# create DMG
+	rm -rf dmg
+	mkdir dmg
+	cp -r BessyHDFViewer.app dmg/
+	ln -s /Applications dmg/
+	rm -f BessyHDFViewer.dmg; hdiutil create -srcfolder dmg -format UDZO -volname BessyHDFViewer.dmg BessyHDFViewer.dmg
+	rm -rf dmg
+
+clean:
+	rm -rf BessyHDFViewer_Linux32 BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg 
+
