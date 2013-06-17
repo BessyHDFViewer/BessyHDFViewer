@@ -46,9 +46,9 @@
 	<string>Version 1.0</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>PTB 7.11</string>
-	<key>LSRequiresCarbon</key>
-	<true/>
 	<key>CSResourcesFileMapped</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>
 </plist>

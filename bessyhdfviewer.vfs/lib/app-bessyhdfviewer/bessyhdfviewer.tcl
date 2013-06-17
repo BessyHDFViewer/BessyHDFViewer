@@ -51,7 +51,7 @@ foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl autoco
 	source [file join $basedir $module]
 }
 
-proc Init {} {
+proc Init {argv} {
 	variable ns
 	variable profiledir
 	
@@ -87,6 +87,11 @@ proc Init {} {
 	ReadPreferences
 	InitCache
 	InitGUI
+
+	if {[llength $argv] != 0} {
+		# start arguments
+		OpenArgument $argv
+	}
 }
 
 proc ExitProc {} {
@@ -1353,6 +1358,26 @@ proc DirUpdate {} {
 	}
 }
 
+proc OpenArgument {files} {
+	variable w
+	# take a number of absolute file names
+	# navigate to top dir and display
+	if {[llength $files]<1} { return }	
+	
+	# find common ancestor
+	set ancestor [SmallUtils::file_common_dir $files]
+	$w(filelist) display $ancestor
+	$w(filelist) selectfiles $files
+	set fileabs [lmap x $files {file normalize $x}]
+	PreviewFile $fileabs
+}
+
+# trigger opening of files from Mac OSX signal
+
+proc ::tk::mac::OpenDocument {args} {
+	OpenArgument $args
+}
+
 proc OpenStart {max} {
 	variable w
 	variable ProgressClock [clock milliseconds]
@@ -2088,4 +2113,4 @@ proc IconGet {name} {
 }
 
 
-Init
+Init $argv

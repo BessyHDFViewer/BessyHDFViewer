@@ -83,5 +83,29 @@ namespace eval SmallUtils {
 
 	}
 
+	proc file_common_dir {flist} {
+		# find common directory for files in flist
+		set flistabs {}
+		foreach fn $flist {
+			lappend flistabs [file dirname [file normalize $fn]]
+		}
+		set ancestor [file split [lindex $flistabs 0]]
+		foreach fn $flistabs {
+			set fnsplit [file split $fn]
+			# shorten to common length
+			set maxidx [expr {max([llength $fnsplit],[llength $ancestor])-1}]
+			set fnsplit [lrange $fnsplit 0 $maxidx]
+			set ancestor [lrange $ancestor 0 $maxidx]
+			# trim from back until we are equal
+			while {$fnsplit!=$ancestor} {
+				set fnsplit [lrange $fnsplit 0 end-1]
+				set ancestor [lrange $ancestor 0 end-1]
+			}
+		}
+
+		if {$ancestor == ""} { return "/" }
+		file join {*}$ancestor
+	}
+
 }
 

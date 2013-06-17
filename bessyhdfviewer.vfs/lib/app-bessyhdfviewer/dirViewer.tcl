@@ -501,6 +501,55 @@ namespace eval dirViewer {} {
 			return $state
 		}
 
+		method selectfiles {flist} {
+			# iteratively expand directories
+			# such that the files given in flist can 
+			# be selected. Silently ignore errors
+			set cwds [file split [file normalize $cwd]]
+			set splitidx [expr {[llength $cwds]-1}]
+
+			set selectkeys {}
+
+			foreach fn $flist {
+				set abspath [file normalize $fn]
+				# skip directories
+				if {[file isdirectory $abspath]} { continue }
+				
+				# skip files which are not under the current cwd
+				set fns [file split $abspath]
+				if {[lrange $fns 0 $splitidx] != $cwds} { continue }
+
+				set rem [lrange $fns $splitidx+1 end-1]
+				set curnode root
+				foreach part $rem { 
+					# expand node
+					set keylist [$tbl childkeys $curnode]
+					foreach key $keylist {
+						if {[lindex [$tbl get $key] 0]==$part} {
+							set curnode $key
+							$tbl expand $key -partly
+							break
+						}
+					}
+				}
+
+				set part [lindex $fns end]
+				puts "$part"
+				set keylist [$tbl childkeys $curnode]
+				puts "$keylist"
+				foreach key $keylist {
+					puts [$tbl get $key]
+					if {[lindex [$tbl get $key] 0 1]==$part} {
+						lappend selectkeys $key
+						break
+					}
+				}
+			}
+		
+			puts "$tbl selection set \{$selectkeys\}"
+			$tbl selection set $selectkeys
+		}
+
 		method notifySelect {} {
 			set rows [$tbl curselection]
 			set fullnames {}
