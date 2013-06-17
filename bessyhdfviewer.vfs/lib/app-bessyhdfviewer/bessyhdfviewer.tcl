@@ -88,7 +88,7 @@ proc Init {argv} {
 	InitCache
 	InitGUI
 
-	if {[llength $argv] != 0} {
+	if {[llength $argv] != 0 && [tk windowingsystem] != "aqua"} {
 		# start arguments
 		OpenArgument $argv
 	}
