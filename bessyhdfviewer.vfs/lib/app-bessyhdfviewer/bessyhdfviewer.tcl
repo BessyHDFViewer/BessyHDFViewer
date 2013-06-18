@@ -1593,6 +1593,10 @@ proc GROUP_BY {selectdata grouplist} {
 		}
 		proc index {idx list} { lindex $list $idx }
 
+		proc first {list} { lindex $list 0 }
+
+		proc last {list} { lindex $list end }
+
 		proc mean {list} { expr {[sum $list]/[count $list]} }
 
 		proc sum {list} {

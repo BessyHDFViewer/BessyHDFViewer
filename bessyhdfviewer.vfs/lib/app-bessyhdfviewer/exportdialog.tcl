@@ -294,6 +294,10 @@ snit::widget ExportDialog {
 	method CellClicked {W x y} {
         lassign [tablelist::convEventFields $W $x $y] W x y
 		set col [$previewtable containingcolumn $x]
+		set row [$previewtable containingrow $y]
+		if {$row==0 && $grouping} {
+			
+		}
 		if {$col>=0} { 
 			$self EditColumn $previewtable $col
 		} else {
@@ -381,6 +385,10 @@ snit::widget ExportDialog {
 			$previewtable delete 0 end
 			if {$cols != {}} {
 				$previewtable configure -columns $cols
+				if {$grouping} {
+					$previewtable insert end $options(-groupby)
+				}
+
 				# get data
 				set data [SELECT $options(-format) $options(-files) LIMIT $previewlimit]
 				$previewtable insertlist end $data
