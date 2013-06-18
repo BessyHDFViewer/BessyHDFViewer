@@ -20,8 +20,8 @@ snit::widget ExportDialog {
 	variable stdformat
 	variable firstfile
 	variable fmtlist
-	variable colformat
-	variable colgroup
+	variable colformat {}
+	variable colgroup {}
 	variable grouping 0
 	variable activecolumn
 	variable selectcolors
@@ -35,7 +35,8 @@ snit::widget ExportDialog {
 	variable groupsuggestions {{group %.2f} {mean} {sum} {count} {first} {last}}
 
 	option -files -default {}
-	option -format -default {{$Energy}}
+	option -format -default {{Energy}}
+	option -suggestion -default {{Energy}}
 	option -groupby -default {""}
 	option -grouping -cgetmethod groupget -configuremethod groupset
 	option -title -default {Select export options} -configuremethod SetTitle
@@ -111,9 +112,7 @@ snit::widget ExportDialog {
 			-labelcommand [mymethod EditColumn] \
 			-movablerows 0 -movablecolumns 1 \
 			-movecolumncursor hand1 -exportselection 0 -selectmode none \
-			-stripebg "" \
-			-editstartcommand [mymethod EditStartCmd] \
-			-editendcommand [mymethod EditEndCmd]
+			-stripebg ""
 		# editing is needed for the GROUP BY operator
 
 		set prevhsb [ttk::scrollbar $fmtframe.hsb -orient horizontal -command [list $previewtable xview]]
@@ -352,21 +351,6 @@ snit::widget ExportDialog {
 		return -code break
 	}
 
-	method EditStartCmd {tbl row col text} {
-		set w [$tbl editwinpath]
-		# insert suggestions
-		$w configure -values {{group %.2f} {sum} {mean} {count} {first} {last} {index 0}}
-		return $text
-	}
-	
-	method EditEndCmd {tbl row col text} {
-		# transfer edited list to variable
-		set options(-group_by) [$tbl get {0}]
-		puts "Edited: $options(-group_by)"
-		return $text
-	}
-
-
 	method EditColumn {w col} {
 		# click on the table header 
 		# copy that format into the field
@@ -425,6 +409,13 @@ snit::widget ExportDialog {
 		$self PreviewFormat
 		$self SetActiveColumn {}
 	}	
+	
+	method AutomaticFill {} {
+		set options(-format) $options(-suggestion)
+		set options(-groupby) [lrepeat [llength $options(-format)] {}]
+		$self PreviewFormat
+		$self SetActiveColumn {}
+	}
 
 	method ColumnMoved {idxlist} {
 		lassign $idxlist from to	

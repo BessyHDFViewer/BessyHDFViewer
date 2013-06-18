@@ -807,10 +807,12 @@ proc ExportCmd {} {
 
 	set nfiles [llength $HDFFiles]
 	set aclist [bessy_get_keys_flist $HDFFiles]
+	set suggestion [bessy_get_keys_flist $HDFFiles Axes]
 	lappend aclist HDF
 	set choice [ExportDialog show -files $HDFFiles \
 		-aclist $aclist \
-		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
+		-format [PreferenceGet ExportFormat $suggestion] \
+		-suggestion $suggestion \
 		-stdformat [PreferenceGet StdExportFormat true] \
 		-grouping [PreferenceGet ExportGrouping false] \
 		-groupby [PreferenceGet ExportGroupBy {}] \
@@ -832,6 +834,8 @@ proc ExportCmd {} {
 	set singlefile [dict get $choice singlefile]
 	set stdformat [dict get $choice stdformat]
 	set headerfmt [dict get $choice headerfmt]
+	set grouping  [dict get $choice grouping]
+	set groupby [dict get $choice groupby]
 	
 
 	if {$stdformat} {
@@ -867,13 +871,22 @@ proc ExportCmd {} {
 			}
 
 			if {"Columns" in $headerfmt} {
+				if {$grouping} {
+					puts $fd "# [join $groupby \t]"
+				}
 				puts $fd "# [join $format \t]"
 			}
 			
 			if {"BareColumns" in $headerfmt} {
 				puts $fd "[join $format \t]"
 			}
-			puts $fd [deepjoin [SELECT $format $HDFFiles -allnan true] \t \n]
+
+			set data [SELECT $format $HDFFiles -allnan true]
+			if {$grouping} {
+				set data [GROUP_BY $data $groupby]
+			}	
+			puts $fd [deepjoin $data \t \n]
+
 		} else {
 			# individual files
 			foreach hdf $HDFFiles {
@@ -883,12 +896,20 @@ proc ExportCmd {} {
 					puts $fd "# $hdf"
 				}
 				if {"Columns" in $headerfmt} {
+					if {$grouping} {
+						puts $fd "# [join $groupby \t]"
+					}
 					puts $fd "# [join $format \t]"
 				}
 				if {"BareColumns" in $headerfmt} {
 					puts $fd "[join $format \t]"
 				}
-				puts $fd [deepjoin [SELECT $format $hdf -allnan true] \t \n]
+				set data [SELECT $format $hdf -allnan true]
+				if {$grouping} {
+					set data [GROUP_BY $data $groupby]
+				}
+				puts $fd [deepjoin $data \t \n]
+
 			}
 		}
 	}
@@ -1987,6 +2008,9 @@ proc bessy_get_keys {hdfdata {category {Detector Motor Meta}}} {
 			}
 			Meta {
 				lappend attrkeys Plot {}
+			}
+			Axes {
+				lappend datakeys Detector Motor
 			}
 			default {
 				return -code error "Unknown category: $catkey. Expected Motor, Detector or Meta"
