@@ -7,6 +7,7 @@ snit::widget ExportDialog {
 	component mainframe
 	component pathentry
 	component fmtfield
+	component groupfield
 	component groupbtn
 	component mbutton
 	component pbutton
@@ -20,6 +21,7 @@ snit::widget ExportDialog {
 	variable firstfile
 	variable fmtlist
 	variable colformat
+	variable colgroup
 	variable grouping 0
 	variable activecolumn
 	variable selectcolors
@@ -30,9 +32,12 @@ snit::widget ExportDialog {
 	variable headerCol
 	variable headerBareCol
 
+	variable groupsuggestions {{group %.2f} {mean} {sum} {count} {first} {last}}
+
 	option -files -default {}
 	option -format -default {{$Energy}}
-	option -groupby -default {{}} 
+	option -groupby -default {""}
+	option -grouping -cgetmethod groupget -configuremethod groupset
 	option -title -default {Select export options} -configuremethod SetTitle
 	delegate option -aclist to fmtfield
 	option -stdformat -default true
@@ -129,16 +134,23 @@ snit::widget ExportDialog {
 
 
 		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
+		install groupfield using ttk::combobox $colfmtframe.gent -textvariable [myvar colgroup] -values $groupsuggestions
+
 		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
 		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
 		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [IconGet edit-clear] -command [mymethod RemoveAll] -style Toolbutton]
+		set abutton [ttk::button $colfmtframe.abut -text "*" -image [IconGet automatic-fill] -command [mymethod AutomaticFill] -style Toolbutton]
+		
 		set limlabel [ttk::label $colfmtframe.llable -text "Preview row limit"]
 		set limentry [ttk::entry $colfmtframe.lentry -textvariable [myvar previewlimit]]
 
-		grid $xbutton $pbutton $mbutton $fmtfield -sticky ew
-		grid columnconfigure $colfmtframe 3 -weight 1
+		grid $xbutton $abutton $pbutton $mbutton $groupfield $fmtfield -sticky ew
+		grid columnconfigure $colfmtframe $fmtfield -weight 1
 
 		bind $fmtfield <Return> [mymethod AcceptEditColumn]
+		bind $groupfield <Return> [mymethod AcceptEditColumn]
+		bind $groupfield <<ComboboxSelected>> [mymethod AcceptEditColumn]
+
 		AutoComplete $fmtfield
 		set activecolumn {}
 
@@ -182,13 +194,34 @@ snit::widget ExportDialog {
 		} else {
 			set stdformat 0
 		}
+		
+		# check group_by list
+		set grouplength [llength $options(-groupby)]
+		set fmtlength [llength $options(-format)]
+		if {$grouplength< $fmtlength} {
+			# pad with empty elements
+			lappend options(-groupby) {*}[lrepeat [expr {$fmtlength - $grouplength}] {}] 
+		}
+		if {$fmtlength < $grouplength} {
+			# trim groupby 
+			set options(-groupby) [lrange $options(-groupby) 0 $fmtlength-1]
+		}
 
 		$self SwitchSingleFile
 		$self SwitchStdFormat
+		$self SwitchGrouping
 		$self PreviewFormat
 		set resultdict {}
 	}
 
+	method groupget {option} {
+		return $grouping
+	}
+
+	method groupset {option value} {
+		set grouping $value
+	}
+	
 	method SetTitle {option title} {
 		set options($option) $title
 		wm title $win $title
@@ -201,7 +234,7 @@ snit::widget ExportDialog {
 			grouping $grouping \
 			path $curpath \
 			format $options(-format) \
-			group_by $options(-groupby) \
+			groupby $options(-groupby) \
 			headerfmt {}]
 		# make header format list
 		if {$headerFN} { dict lappend resultdict headerfmt Filename }
@@ -217,6 +250,7 @@ snit::widget ExportDialog {
 		destroy $win
 	}	
 
+	
 	method SwitchSingleFile {} {
 		if {$singlefile} {
 			# path is currently a dir
@@ -245,6 +279,12 @@ snit::widget ExportDialog {
 	}
 
 	method SwitchGrouping {} {
+		if {$grouping} {
+			grid $groupfield
+		} else {
+			grid remove $groupfield
+		}
+
 		$self PreviewFormat
 	}
 
@@ -294,10 +334,15 @@ snit::widget ExportDialog {
 	method CellClicked {W x y} {
         lassign [tablelist::convEventFields $W $x $y] W x y
 		set col [$previewtable containingcolumn $x]
-		set row [$previewtable containingrow $y]
-		if {$row==0 && $grouping} {
-			
+		set row [$previewtable containing $y]
+		
+		# for editable cell, run standard action
+		set cell [$previewtable containingcell $x $y]
+		if {$row >= 0 && $col>=0 && [$previewtable cellcget $cell -editable]} {
+			return
 		}
+		
+		# non-editable cell: "select" column 
 		if {$col>=0} { 
 			$self EditColumn $previewtable $col
 		} else {
@@ -307,19 +352,37 @@ snit::widget ExportDialog {
 		return -code break
 	}
 
+	method EditStartCmd {tbl row col text} {
+		set w [$tbl editwinpath]
+		# insert suggestions
+		$w configure -values {{group %.2f} {sum} {mean} {count} {first} {last} {index 0}}
+		return $text
+	}
+	
+	method EditEndCmd {tbl row col text} {
+		# transfer edited list to variable
+		set options(-group_by) [$tbl get {0}]
+		puts "Edited: $options(-group_by)"
+		return $text
+	}
+
+
 	method EditColumn {w col} {
 		# click on the table header 
 		# copy that format into the field
 		$self SetActiveColumn $col
 		set colformat [lindex $options(-format) $col]
+		set colgroup [lindex $options(-groupby) $col]
 	}
 
 	method AcceptEditColumn {} {
 		if {$colformat != {}} {
 			if {$activecolumn != {}} {
 				lset options(-format) $activecolumn $colformat
+				lset options(-groupby) $activecolumn $colgroup
 			} else {
 				lappend options(-format) $colformat
+				lappend options(-groupby) $colgroup
 				set colformat {}
 			}
 			$self PreviewFormat
@@ -337,6 +400,7 @@ snit::widget ExportDialog {
 		$self SetActiveColumn {}
 		# rebuild table
 		set options(-format) [linsert $options(-format) $insertcolumn ""]
+		set options(-groupby) [linsert $options(-groupby) $insertcolumn ""]
 		$self PreviewFormat
 		# select new column
 		$self SetActiveColumn $insertcolumn
@@ -347,6 +411,7 @@ snit::widget ExportDialog {
 			set deletecolumn $activecolumn
 			$self SetActiveColumn {}
 			set options(-format) [lreplace $options(-format) $deletecolumn $deletecolumn]
+			set options(-groupby) [lreplace $options(-groupby) $deletecolumn $deletecolumn]
 			$self PreviewFormat
 			if {$deletecolumn < [llength $options(-format)]} {
 				$self SetActiveColumn $deletecolumn
@@ -356,19 +421,28 @@ snit::widget ExportDialog {
 
 	method RemoveAll {} {
 		set options(-format) ""
+		set options(-groupby) ""
 		$self PreviewFormat
 		$self SetActiveColumn {}
 	}	
 
 	method ColumnMoved {idxlist} {
+		lassign $idxlist from to	
+		
+		if {$to<$from} {
+			set newto $to
+		} else {
+			set newto [expr {$to-1}]
+		}
+
 		# user has changed the order of the columns interactively
 		set options(-format) [$previewtable cget -columntitles]
-		lassign $idxlist from to
-		if {$to<$from} {
-			$self SetActiveColumn $to
-		} else {
-			$self SetActiveColumn [expr {$to-1}]
-		}
+		# move group by accordingly 
+		set to_move [lindex $options(-groupby) $from]
+		set options(-groupby) [linsert [lreplace $options(-groupby) $from $from] $newto $to_move]
+		#	puts "Moved: $from->$to  $options(-groupby)"
+		$self SetActiveColumn $newto
+		
 		# Preview not necessary
 	}
 

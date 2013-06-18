@@ -812,6 +812,8 @@ proc ExportCmd {} {
 		-aclist $aclist \
 		-format [PreferenceGet ExportFormat {$HDF $Energy $Keithley1}] \
 		-stdformat [PreferenceGet StdExportFormat true] \
+		-grouping [PreferenceGet ExportGrouping false] \
+		-groupby [PreferenceGet ExportGroupBy {}] \
 		-headerfmt [PreferenceGet HeaderFormat {Attributes Columns Filename}] \
 		-title "Export $nfiles files to ASCII" -parent .]
 	
@@ -822,6 +824,8 @@ proc ExportCmd {} {
 
 	# write back settings to prefs
 	PreferenceSet ExportFormat [dict get $choice format]
+	PreferenceSet ExportGrouping [dict get $choice grouping]
+	PreferenceSet ExportGroupBy [dict get $choice groupby]
 	PreferenceSet StdExportFormat [dict get $choice stdformat]
 	PreferenceSet HeaderFormat [dict get $choice headerfmt]
 	
@@ -1179,12 +1183,6 @@ proc DisplayTree {} {
 	# create dictionary for values of standard motors etc.
 	set values {}
 	
-#	foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
-#		if {[dict exists $hdfdata $key]} {
-#			set values [dict merge $values [dict get $hdfdata $key]]
-#		}
-#}
-
 	foreach key [bessy_get_keys $hdfdata] {
 		dict set values $key [list [ListFormat %g [bessy_get_field $hdfdata $key]]]
 	}
@@ -1374,8 +1372,10 @@ proc OpenArgument {files} {
 
 # trigger opening of files from Mac OSX signal
 
-proc ::tk::mac::OpenDocument {args} {
-	OpenArgument $args
+if {[tk windowingsystem]=="aqua"} {
+	proc ::tk::mac::OpenDocument {args} {
+		OpenArgument $args
+	}
 }
 
 proc OpenStart {max} {
