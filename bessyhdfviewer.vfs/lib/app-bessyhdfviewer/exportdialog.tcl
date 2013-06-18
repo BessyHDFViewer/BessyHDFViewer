@@ -32,7 +32,7 @@ snit::widget ExportDialog {
 	variable headerCol
 	variable headerBareCol
 
-	variable groupsuggestions {{group %.2f} {mean} {sum} {count} {first} {last}}
+	variable groupsuggestions {{group %.2f} {mean} {sum} {first} {last} {join ,} {count}}
 
 	option -files -default {}
 	option -format -default {{Energy}}
