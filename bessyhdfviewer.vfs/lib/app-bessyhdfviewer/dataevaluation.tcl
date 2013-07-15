@@ -94,23 +94,39 @@ namespace eval DataEvaluation {
 			set fdata {}
 			foreach {x y} $data {
 				if {isnan($x) || isnan($y)} { continue }
-				lappend fdata [list $x $y]
+				lappend fdata $x $y
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
 			# now rip off the y-values only
 			set vlist {}
 			foreach {x y} $fdata { lappend vlist $y }
 			# compute minima / maxima
-			set minima [ampd_min $fdata]
-			set maxima [ampd_max $fdata]
+			set minima [ampd_min $vlist]
+			set maxima [ampd_max $vlist]
 			# generate output
-			append output "# $fn \n"
-			append output "# Minima:"
+			lappend output "# $fn"
+			lappend output "# Minima:"
+			set minimaxy {}
 			foreach idx $minima {
-				append output "[lindex $fdata [expr {2*$idx}] [expr {2*$idx+1}]]\n"
+				set x [lindex $fdata [expr {2*$idx}]]
+				set y [lindex $fdata [expr {2*$idx+1}]]
+				lappend output "$x $y"
+				lappend minimaxy $x $y
+			}
+			
+			lappend output "# Maxima:"
+			set maximaxy {}
+			foreach idx $maxima {
+				set x [lindex $fdata [expr {2*$idx}]]
+				set y [lindex $fdata [expr {2*$idx+1}]]
+				lappend output "$x $y"
+				lappend maximaxy $x $y
 			}
 
 		}
-		puts $output
+		puts [join $output \n]
+
+		$BessyHDFViewer::w(Graph) showpoints $minimaxy green filled-hexagon
+		$BessyHDFViewer::w(Graph) showpoints $maximaxy red filled-hexagon
 	}
 }
