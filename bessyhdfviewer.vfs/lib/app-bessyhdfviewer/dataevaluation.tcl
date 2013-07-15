@@ -86,7 +86,7 @@ namespace eval DataEvaluation {
 	}
 
 
-	proc FindPeaks {minmax} {
+	proc FindPeaks {} {
 		
 	}
 }

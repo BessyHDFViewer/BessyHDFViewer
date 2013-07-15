@@ -246,10 +246,17 @@ namespace eval BessyHDFViewer {
 		set w(Graph) [ukaz::box %AUTO% $w(canv)]
 		bind [$w(Graph) getcanv] <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
 		$w(Graph) bind <1> [list ${ns}::UpdatePointerInfo click]
+		
+		# Toolbar: Peak detection button
+		
+		set w(peakbtn) [ttk::button $w(toolbar).peakbtn -text "Peak detection" -image [IconGet peakdetect] \
+						-command DataEvaluation::FindPeaks -style Toolbutton]
 
+		grid $w(peakbtn) -sticky nw
 
 		$w(displayfr) add $w(plotfr) -text "Plot"
 
+		
 
 		# Text display tab
 		# 
