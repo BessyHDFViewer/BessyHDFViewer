@@ -104,15 +104,15 @@ snit::widget ListEditor {
 		grid columnconfigure $avlframe 0 -weight 1
 
 
-		set pbutton [ttk::button $pmbar.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
-		set mbutton [ttk::button $pmbar.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
+		set pbutton [ttk::button $pmbar.pbut -text "+" -image [BessyHDFViewer::IconGet list-add] -command [mymethod Add] -style Toolbutton]
+		set mbutton [ttk::button $pmbar.mbut -text "-" -image [BessyHDFViewer::IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
 
 		pack $pbutton $mbutton -side left
 
 
 
-		set okbut [ttk::button $butframe.ok -text OK -image [IconGet dialog-ok] -command [mymethod OK] -compound left]
-		set cancelbut [ttk::button $butframe.cancel -text Cancel -image [IconGet dialog-cancel] -command [mymethod Cancel] -compound left] 
+		set okbut [ttk::button $butframe.ok -text OK -image [BessyHDFViewer::IconGet dialog-ok] -command [mymethod OK] -compound left]
+		set cancelbut [ttk::button $butframe.cancel -text Cancel -image [BessyHDFViewer::IconGet dialog-cancel] -command [mymethod Cancel] -compound left] 
 
 		pack $okbut $cancelbut -side left -padx 5
 

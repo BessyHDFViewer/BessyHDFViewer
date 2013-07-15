@@ -305,7 +305,7 @@ namespace eval dirViewer {} {
 				if {$type == "file"} {			;# file
 					$tbl cellconfigure $row,0 -image $image
 				} else {						;# directory
-					$tbl cellconfigure $row,0 -image [IconGet closed-folder]
+					$tbl cellconfigure $row,0 -image [BessyHDFViewer::IconGet closed-folder]
 
 					#
 					# Mark the row as collapsed
@@ -391,7 +391,7 @@ namespace eval dirViewer {} {
 		}
 
 		proc classifydefault {type fn} {
-			return [IconGet unknown]
+			return [BessyHDFViewer::IconGet unknown]
 		}
 
 		#------------------------------------------------------------------------------
@@ -408,7 +408,7 @@ namespace eval dirViewer {} {
 			}
 
 			if {[$tbl childcount $row] != 0} {
-				$tbl cellconfigure $row,0 -image [IconGet open-folder]
+				$tbl cellconfigure $row,0 -image [BessyHDFViewer::IconGet open-folder]
 			}
 		}
 
@@ -419,7 +419,7 @@ namespace eval dirViewer {} {
 		# tablelist widget tbl.
 		#------------------------------------------------------------------------------
 		method collapseCmd {ttbl row} {
-			$tbl cellconfigure $row,0 -image [IconGet closed-folder]
+			$tbl cellconfigure $row,0 -image [BessyHDFViewer::IconGet closed-folder]
 		}
 
 		#------------------------------------------------------------------------------

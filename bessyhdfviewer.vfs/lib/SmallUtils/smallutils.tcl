@@ -107,5 +107,31 @@ namespace eval SmallUtils {
 		file join {*}$ancestor
 	}
 
+	proc autovar {var args} {
+		variable ns
+		upvar 1 $var v
+		set v [uplevel 1 $args]
+		trace add variable v unset [list ${ns}::autodestroy $v]
+	}
+
+	proc autodestroy {cmd args} {
+		# puts "RAII destructing $cmd"
+		rename $cmd ""
+	}
+
+	proc autofd {var args} {
+		variable ns
+		upvar 1 $var fd
+		catch {unset fd}
+		set fd [uplevel 1 [list open {*}$args]]
+		trace add variable fd unset [list ${ns}::autoclose $fd]
+	}
+
+	proc autoclose {fd args} {
+		# puts "RAII destructing $cmd"
+		catch {close $fd}
+	}
+
+
 }
 

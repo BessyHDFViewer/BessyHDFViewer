@@ -80,7 +80,7 @@ snit::widget ExportDialog {
 			-variable [myvar singlefile] -value 0 -command [mymethod SwitchSingleFile]]
 
 		install pathentry using ttk::entry $pathframe.pent -textvariable [myvar curpath]
-		set selbtn [ttk::button $pathframe.selbtn -text "Choose..." -image [IconGet document-open-folder] -style Toolbutton -command [mymethod SelectPath]]
+		set selbtn [ttk::button $pathframe.selbtn -text "Choose..." -image [BessyHDFViewer::IconGet document-open-folder] -style Toolbutton -command [mymethod SelectPath]]
 
 		grid $sfbtn $dirbtn x -sticky w
 		grid $pathentry - $selbtn -sticky ew
@@ -135,10 +135,10 @@ snit::widget ExportDialog {
 		install fmtfield using ttk::entry $colfmtframe.fent -textvariable [myvar colformat]
 		install groupfield using ttk::combobox $colfmtframe.gent -textvariable [myvar colgroup] -values $groupsuggestions
 
-		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [IconGet list-add] -command [mymethod Add] -style Toolbutton]
-		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
-		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [IconGet edit-clear] -command [mymethod RemoveAll] -style Toolbutton]
-		set abutton [ttk::button $colfmtframe.abut -text "*" -image [IconGet automatic-fill] -command [mymethod AutomaticFill] -style Toolbutton]
+		set pbutton [ttk::button $colfmtframe.pbut -text "+" -image [BessyHDFViewer::IconGet list-add] -command [mymethod Add] -style Toolbutton]
+		set mbutton [ttk::button $colfmtframe.mbut -text "-" -image [BessyHDFViewer::IconGet list-remove] -command [mymethod Remove] -style Toolbutton]
+		set xbutton [ttk::button $colfmtframe.xbut -text "x" -image [BessyHDFViewer::IconGet edit-clear] -command [mymethod RemoveAll] -style Toolbutton]
+		set abutton [ttk::button $colfmtframe.abut -text "*" -image [BessyHDFViewer::IconGet automatic-fill] -command [mymethod AutomaticFill] -style Toolbutton]
 		
 		set limlabel [ttk::label $colfmtframe.llable -text "Preview row limit"]
 		set limentry [ttk::entry $colfmtframe.lentry -textvariable [myvar previewlimit]]
@@ -153,8 +153,8 @@ snit::widget ExportDialog {
 		AutoComplete $fmtfield
 		set activecolumn {}
 
-		set okbut [ttk::button $butframe.ok -text OK -image [IconGet dialog-ok] -command [mymethod OK] -compound left]
-		set cancelbut [ttk::button $butframe.cancel -text Cancel -image [IconGet dialog-cancel] -command [mymethod Cancel] -compound left] 
+		set okbut [ttk::button $butframe.ok -text OK -image [BessyHDFViewer::IconGet dialog-ok] -command [mymethod OK] -compound left]
+		set cancelbut [ttk::button $butframe.cancel -text Cancel -image [BessyHDFViewer::IconGet dialog-cancel] -command [mymethod Cancel] -compound left] 
 
 		pack $okbut $cancelbut -side left -padx 5
 
