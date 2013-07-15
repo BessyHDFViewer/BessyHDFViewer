@@ -87,6 +87,30 @@ namespace eval DataEvaluation {
 
 
 	proc FindPeaks {} {
-		
+		# run the peak detector on the currently displayed list
+		set output ""
+		foreach {fn data} $BessyHDFViewer::datashown {
+			# filter NaNs from the dataset
+			set fdata {}
+			foreach {x y} $data {
+				if {isnan($x) || isnan($y)} { continue }
+				lappend fdata [list $x $y]
+			}
+			set fdata [lsort -stride 2 -real -uniq $fdata]
+			# now rip off the y-values only
+			set vlist {}
+			foreach {x y} $fdata { lappend vlist $y }
+			# compute minima / maxima
+			set minima [ampd_min $fdata]
+			set maxima [ampd_max $fdata]
+			# generate output
+			append output "# $fn \n"
+			append output "# Minima:"
+			foreach idx $minima {
+				append output "[lindex $fdata [expr {2*$idx}] [expr {2*$idx+1}]]\n"
+			}
+
+		}
+		puts $output
 	}
 }

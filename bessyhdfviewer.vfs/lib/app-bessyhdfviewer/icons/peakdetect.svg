@@ -14,7 +14,10 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
-   sodipodi:docname="Neues Dokument 1">
+   sodipodi:docname="peakdetect.svg"
+   inkscape:export-filename="/home/cgollwit/Programmieren/BessyHDFViewer/bessyhdfviewer.vfs/lib/app-bessyhdfviewer/icons/peakdetect.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
   <defs
      id="defs4">
     <filter
@@ -33,16 +36,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="7.9195959"
-     inkscape:cx="4.9971525"
-     inkscape:cy="12.049294"
+     inkscape:zoom="11.2"
+     inkscape:cx="13.423233"
+     inkscape:cy="13.963474"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
      inkscape:window-width="1174"
      inkscape:window-height="733"
-     inkscape:window-x="343"
-     inkscape:window-y="225"
+     inkscape:window-x="268"
+     inkscape:window-y="262"
      inkscape:window-maximized="0">
     <inkscape:grid
        type="xygrid"
@@ -70,6 +73,14 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(0,-1020.3622)">
+    <rect
+       style="color:#000000;fill:#ffffff;fill-opacity:0.65873015;fill-rule:nonzero;stroke:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3800"
+       width="30"
+       height="30"
+       x="1"
+       y="1"
+       transform="translate(0,1020.3622)" />
     <path
        sodipodi:nodetypes="cssssc"
        inkscape:connector-curvature="0"
@@ -92,6 +103,6 @@
        sodipodi:rx="2"
        sodipodi:ry="2"
        d="M 10,5 A 2,2 0 1 1 6,5 2,2 0 1 1 10,5 z"
-       transform="translate(8,1020.3622)" />
+       transform="matrix(1.25,0,0,1.25,5.5,1018.1122)" />
   </g>
 </svg>
