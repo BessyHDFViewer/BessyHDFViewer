@@ -124,9 +124,47 @@ namespace eval DataEvaluation {
 			}
 
 		}
-		puts [join $output \n]
+		#puts [join $output \n]
 
 		$BessyHDFViewer::w(Graph) showpoints $minimaxy green filled-hexagon
 		$BessyHDFViewer::w(Graph) showpoints $maximaxy red filled-hexagon
+		TextDisplay Show [join $output \n]
 	}
+
+	snit::widget TextDisplay {
+		hulltype toplevel
+		component text
+		component vsb
+		component hsb
+
+		option -text -default {}
+		
+		typevariable instc 0
+
+		typemethod Show {msg args} {
+			set name .textdisplay_$instc
+			incr instc
+			TextDisplay $name -text $msg {*}$args
+		}
+
+
+		constructor {args} {
+			$self configurelist $args
+			install text using text $win.text \
+				-xscrollcommand [list $win.hsb set] \
+				-yscrollcommand [list $win.vsb set]
+
+			install hsb using ttk::scrollbar $win.hsb -orient horizontal -command [list $text xview]
+			install vsb using ttk::scrollbar $win.vsb -orient vertical -command [list $text yview]
+
+			grid $text $vsb -sticky nsew
+			grid $hsb  -    -sticky nsew
+			
+			grid rowconfigure $win 0 -weight 1
+			grid columnconfigure $win 0 -weight 1
+
+			$text insert 1.0 $options(-text)
+		}
+	}
+		
 }
