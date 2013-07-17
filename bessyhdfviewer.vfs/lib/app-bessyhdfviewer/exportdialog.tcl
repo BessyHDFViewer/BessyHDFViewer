@@ -455,7 +455,7 @@ snit::widget ExportDialog {
 				}
 
 				# get data
-				set data [SELECT $options(-format) $options(-files) LIMIT $previewlimit]
+				set data [BessyHDFViewer::SELECT $options(-format) $options(-files) LIMIT $previewlimit]
 				$previewtable insertlist end $data
 			}
 		}
