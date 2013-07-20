@@ -993,8 +993,8 @@ namespace eval BessyHDFViewer {
 
 		variable plotid
 		if {[info exists plotid]} {
-			$w(Graph) clear
 			$w(Graph) reset_dimensioning
+			$w(Graph) clear
 			set plotid {}
 		}
 

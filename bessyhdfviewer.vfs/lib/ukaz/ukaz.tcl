@@ -735,7 +735,11 @@ namespace eval ukaz {
 			list [$self PixTox $x] [$self PixToy $y]
 		}
 
-		proc calcminmax {data args}  {
+		method calcminmax {data args}  {
+			set excludingcondition {!(
+				($logx && islogfinite($x)) || (!$logx && isfinite($x))) ||
+				!(($logy && islogfinite($y)) || (!$logy && isfinite($y)) )}
+
 			if {[llength $args]==2 && [lindex $args 0]=="-initial"} {
 				set initial [lindex $args 1]
 				if {[llength $initial]!=4} { return -code error "Initial list must have 4 entries" }
@@ -745,23 +749,25 @@ namespace eval ukaz {
 					error "Invalid data, <2 items"
 				}
 				
-				set xmin ""
-				set ymin ""
+				set x ""
+				set y ""
 
-				while {![isfinite $xmin] || ![isfinite $ymin]} {
+				while $excludingcondition {
 					if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
-					set data [lassign $data xmin ymin]
+					set data [lassign $data x y]
 				}
 
-				set xmax $xmin
-				set ymax $ymin
+				set xmin $x
+				set ymin $y
+				set xmax $x
+				set ymax $y
 			} else {
 				return -code error "calcminmax data ?-initial {xmin xmax ymin ymax}"
 			}
 
 
 			foreach {x y} $data {
-				if {![isfinite $x] || ![isfinite $y]} { continue }
+				if $excludingcondition { continue }
 				if {$x<$xmin} { set xmin $x}
 				if {$x>$xmax} { set xmax $x}
 				if {$y<$ymin} { set ymin $y}
@@ -789,9 +795,9 @@ namespace eval ukaz {
 
 		method showpoints_autodim {coordlist color shape} {
 			if {$dimensioned} {
-				set range [calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
+				set range [$self calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
 			} else { 
-				set range [calcminmax $coordlist]
+				set range [$self calcminmax $coordlist]
 			}
 			$self autodim {*}$range
 			$self showpoints $coordlist $color $shape
@@ -799,9 +805,9 @@ namespace eval ukaz {
 
 		method connectpoints_autodim {coordlist color args} {
 			if {$dimensioned} {
-				set range [calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
+				set range [$self calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
 			} else {
-				set range [calcminmax $coordlist]
+				set range [$self calcminmax $coordlist]
 			}
 			$self autodim {*}$range
 			$self connectpoints $coordlist $color {*}$args
@@ -837,7 +843,7 @@ namespace eval ukaz {
 			set piece {}
 			set pieces {}
 			foreach {x y} $coordlist {
-				if {![isfinite $x] || ![isfinite $y]} { 
+				if {!isfinite($x) || !isfinite($y)} { 
 					# NaN value, start a new piece
 					if {[llength $piece]>0} { 
 						lappend pieces $piece
@@ -949,7 +955,7 @@ namespace eval ukaz {
 			set itemnr 0
 			foreach {x y} $coordlist {
 
-				if {[isfinite $x] && ($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax)} {
+				if {isfinite($x) && ($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax)} {
 					set deskx [$self xToPix $x]
 					set desky [$self yToPix $y]
 					# simple clipping, sufficient
@@ -1204,7 +1210,7 @@ namespace eval ukaz {
 				if {$prevpos == {}} {
 					# never happens
 					# zoom completely out
-					set totalpos [calcminmax $data]
+					set totalpos [$self calcminmax $data]
 					#puts "Zoom completely out: $totalpos"
 					# $self MouseZoomOut {*}$totalpos
 				} else {
@@ -1227,10 +1233,8 @@ namespace eval ukaz {
 				$self autoresize
 		}
 
-		proc isfinite {x} {
-			# determine, whether x,y is a valid point
-			expr {[string is double -strict $x] && $x < Inf && $x > -Inf}
-		}
+				#interp alias {} ::tcl::mathfunc::isfinite ${ns}::isfinite
+		#interp alias {} ::tcl::mathfunc::islogfinite ${ns}::islogfinite
 
 		proc isnan {x} {
 			# determine, whether x is NaN
@@ -1418,6 +1422,16 @@ namespace eval ukaz {
 			}
 		}
 
+	}
+
+	proc ::tcl::mathfunc::isfinite {x} {
+		# determine, whether x,y is a valid point
+		expr {[string is double -strict $x] && $x < Inf && $x > -Inf}
+	}
+		
+	proc ::tcl::mathfunc::islogfinite {x} {
+		# determine, whether x,y is a valid point on the logscale
+		expr {[string is double -strict $x] && $x < Inf && $x > 0}
 	}
 
 }
