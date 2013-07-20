@@ -225,8 +225,23 @@ namespace eval BessyHDFViewer {
 		
 		set w(xlbl) [ttk::label $w(axebar).xlbl -text "X axis:"]
 		set w(xent) [ttk::combobox $w(axebar).xent -textvariable ${ns}::xformat -exportselection 0]
+		set w(xlog) [ttk::checkbutton $w(axebar).xlog -variable ${ns}::xlog -style Toolbutton \
+			-image [list [IconGet linscale] selected [IconGet logscale]] \
+			-command [list ${ns}::DisplayPlot -explicit true]]
+		variable xlog 0
+
 		set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
 		set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
+		set w(ylog) [ttk::checkbutton $w(axebar).ylog -variable ${ns}::ylog -style Toolbutton \
+			-image [list [IconGet linscale] selected [IconGet logscale]] \
+			-command [list ${ns}::DisplayPlot -explicit true]]
+		variable ylog 0
+
+		set w(gridon) [ttk::checkbutton $w(axebar).grid -variable ${ns}::gridon -style Toolbutton \
+			-image [IconGet grid] \
+			-command [list ${ns}::DisplayPlot -explicit true]]
+		variable gridon 0
+
 		set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
 		variable keepformat false
 		
@@ -238,9 +253,9 @@ namespace eval BessyHDFViewer {
 		bind $w(yent) <Return> [list ${ns}::DisplayPlot -explicit true -focus y]
 		bind $w(xlbl) <1> ${ns}::ConsoleShow
 
-		grid $w(xlbl) $w(xent) $w(ylbl) $w(yent) $w(keepformat) -sticky ew
-		grid columnconfigure $w(axebar) 1 -weight 1
-		grid columnconfigure $w(axebar) 3 -weight 1
+		grid $w(xlbl) $w(xlog) $w(xent) $w(ylbl) $w(ylog) $w(yent) $w(gridon) $w(keepformat) -sticky ew
+		grid columnconfigure $w(axebar) $w(xent) -weight 1
+		grid columnconfigure $w(axebar) $w(yent) -weight 1
 
 		# Graph
 		set w(Graph) [ukaz::box %AUTO% $w(canv)]
@@ -990,6 +1005,14 @@ namespace eval BessyHDFViewer {
 
 		set explicit [dict get $opts -explicit]
 		set focus [dict get $opts -focus]
+
+		variable xlog
+		variable ylog
+		variable gridon
+
+		$w(Graph) setlog x $xlog
+		$w(Graph) setlog y $ylog
+		$w(Graph) setgrid $gridon
 
 		variable plotid
 		if {[info exists plotid]} {
