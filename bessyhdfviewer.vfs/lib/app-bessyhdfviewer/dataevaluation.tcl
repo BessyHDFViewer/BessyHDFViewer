@@ -131,6 +131,43 @@ namespace eval DataEvaluation {
 		TextDisplay Show [join $output \n]
 	}
 
+	proc derive {data} {
+		# compute unregularized finite differences
+		# for x y data
+		set data [lassign $data xold yold]
+		foreach {x y} $data {
+			# prepare for signalling NaNs
+			if {![catch {
+				set xm [expr {($x+$xold)/2.0}]
+				set xd [expr {($x-$xold)/2.0}]
+				set yd [expr {($y-$yold)/2.0}]
+				set deriv [expr {$yd/$xd}]
+			}]} {
+				lappend result $xm $deriv
+			}
+			set xold $x
+			set yold $y
+		}
+		return $result
+	}
+
+	proc ShowDerivative {} {
+		$BessyHDFViewer::w(Graph) reset_dimensioning
+		$BessyHDFViewer::w(Graph) clear
+		foreach {fn data} $BessyHDFViewer::datashown {
+			# filter NaNs from the dataset
+			set fdata {}
+			foreach {x y} $data {
+				if {isnan($x) || isnan($y)} { continue }
+				lappend fdata $x $y
+			}
+			set fdata [lsort -stride 2 -real -uniq $fdata]
+			set deriv [derive $fdata]
+			puts $deriv
+			$BessyHDFViewer::w(Graph) connectpoints_autodim $deriv black
+		}
+	}
+
 	snit::widget TextDisplay {
 		hulltype toplevel
 		component text
