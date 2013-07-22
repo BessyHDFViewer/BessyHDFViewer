@@ -1042,7 +1042,7 @@ namespace eval BessyHDFViewer {
 			variable BessyClass
 			dict_assign $BessyClass class motor detector motors detectors axes
 			if {$class == "MCA"} {
-				set xformatlist {Row}
+				set xformatlist {{$calS*$Row+$calO} Row}
 				set yformatlist {MCA}
 				$w(xent) state !disabled
 				$w(yent) state !disabled
@@ -1600,6 +1600,11 @@ namespace eval BessyHDFViewer {
 		
 		if {[dict exists $hdfdata MCA]} {
 			dict set table MCA [dict get $hdfdata MCA]
+			# put attributes of MCA into global variable space
+			dict for {key value} [dict get $hdfdata MCA attrs] {
+				namespace eval ::SELECT [list set $key $value]
+			}
+
 		}
 
 		if {[dict exists $hdfdata Motor]} {
@@ -2021,6 +2026,12 @@ namespace eval BessyHDFViewer {
 				lappend values [dict get $hdfdata $attrkey $field]
 			}
 		}
+
+		# MCA stores values as an attribute in the main field 
+		if {[dict exists $hdfdata MCA attrs $field]} {
+			lappend values [dict get $hdfdata MCA attrs $field]
+		}
+
 		
 		if {[llength $values] <= 1} {
 			# found nothing or single value - just return that
