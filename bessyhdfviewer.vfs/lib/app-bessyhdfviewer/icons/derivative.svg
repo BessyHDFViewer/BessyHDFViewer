@@ -22,11 +22,11 @@
      id="defs4">
     <filter
        inkscape:collect="always"
-       id="filter3777">
+       id="filter3819">
       <feGaussianBlur
          inkscape:collect="always"
-         stdDeviation="0.12267969"
-         id="feGaussianBlur3779" />
+         stdDeviation="0.63546897"
+         id="feGaussianBlur3821" />
     </filter>
   </defs>
   <sodipodi:namedview
@@ -34,10 +34,10 @@
      pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:zoom="11.2"
-     inkscape:cx="14.753177"
+     inkscape:cx="11.760803"
      inkscape:cy="13.963474"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
@@ -46,7 +46,8 @@
      inkscape:window-height="733"
      inkscape:window-x="268"
      inkscape:window-y="262"
-     inkscape:window-maximized="0">
+     inkscape:window-maximized="0"
+     showborder="false">
     <inkscape:grid
        type="xygrid"
        id="grid2985"
@@ -64,7 +65,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -73,45 +74,73 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(0,-1020.3622)">
-    <rect
-       style="color:#000000;fill:#ffffff;fill-opacity:0.65873015;fill-rule:nonzero;stroke:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-       id="rect3800"
-       width="30"
-       height="30"
-       x="1"
-       y="1"
-       transform="translate(0,1020.3622)" />
     <g
-       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O"
-       id="text2993">
+       id="g3004"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;filter:url(#filter3819);font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O"
+       transform="translate(0.26785713,0.92857159)">
       <path
-         d="m 16.42,1042.9822 c -0.659999,-0.6 -1.420001,-1.02 -2.34,-1.02 -2.619997,0 -4.38,2.22 -4.38,4.46 0,1.92 1.580002,3.14 3.38,3.14 4.159996,0 4.98,-5.8 4.98,-7.88 0,-2.54 -1.120002,-4.66 -3.14,-4.66 -0.999999,0 -1.860001,0.2 -2.46,0.32 -0.639999,0.12 -1.12,0.42 -1.12,0.94 0,0.36 0.24,0.6 0.62,0.6 0.42,0 0.860001,-0.58 1.42,-0.9 0.2,-0.12 0.560001,-0.3 1.24,-0.3 1.339999,0 1.86,1.88 1.86,3.88 0,0.38 0,0.86 -0.06,1.42 m -0.08,0.76 c -0.28,2.3 -1.060002,5.16 -2.96,5.16 -1.359999,0 -2.06,-1.16 -2.06,-2.62 0,-1.78 0.920002,-3.56 2.52,-3.56 0.919999,0 1.760001,0.44 2.5,1.02"
-         style=""
-         id="path3008" />
+         inkscape:connector-curvature="0"
+         id="path3006"
+         style="fill:#ffffff;fill-opacity:1"
+         d="m 16.42,1042.9822 c -0.659999,-0.6 -1.420001,-1.02 -2.34,-1.02 -2.619997,0 -4.38,2.22 -4.38,4.46 0,1.92 1.580002,3.14 3.38,3.14 4.159996,0 4.98,-5.8 4.98,-7.88 0,-2.54 -1.120002,-4.66 -3.14,-4.66 -0.999999,0 -1.860001,0.2 -2.46,0.32 -0.639999,0.12 -1.12,0.42 -1.12,0.94 0,0.36 0.24,0.6 0.62,0.6 0.42,0 0.860001,-0.58 1.42,-0.9 0.2,-0.12 0.560001,-0.3 1.24,-0.3 1.339999,0 1.86,1.88 1.86,3.88 0,0.38 0,0.86 -0.06,1.42 m -0.08,0.76 c -0.28,2.3 -1.060002,5.16 -2.96,5.16 -1.359999,0 -2.06,-1.16 -2.06,-2.62 0,-1.78 0.920002,-3.56 2.52,-3.56 0.919999,0 1.760001,0.44 2.5,1.02" />
       <path
-         d="m 21.964064,1043.1822 0.7,1.98 -1.86,2.74 c -0.219999,0.32 -0.42,0.38 -0.56,0.38 -0.159999,0 -0.38,-0.04 -0.54,-0.12 -0.179999,-0.08 -0.38,-0.12 -0.58,-0.12 -0.439999,0 -0.76,0.32 -0.76,0.76 0,0.52 0.700001,0.76 1.16,0.76 0.68,0 1.160001,-0.3 2.04,-1.56 l 1.38,-1.98 0.78,2.42 c 0.24,0.8 0.460001,1.12 1.14,1.12 0.7,0 1.580001,-0.38 2.2,-1.42 -0.08,-0.18 -0.26,-0.34 -0.479999,-0.38 -0.52,0.66 -0.780001,0.82 -1,0.82 -0.18,0 -0.320001,-0.24 -0.480001,-0.74 l -1.08,-3.22 1.520001,-2.24 c 0.299999,-0.46 0.8,-0.54 0.939999,-0.54 0.16,0 0.420001,0.06 0.600001,0.2 0.139999,0.12 0.46,0.2 0.659999,0.2 0.28,0 0.64,-0.4 0.64,-0.86 0,-0.5 -0.54,-0.8 -1,-0.8 -0.999999,0 -1.66,0.36 -2.64,1.76 l -1,1.44 -0.56,-1.76 c -0.339999,-1.04 -0.56,-1.44 -1.06,-1.44 -0.479999,0 -1.94,0.84 -2.64,1.36 0.02,0.22 0.100001,0.46 0.26,0.62 0.24,-0.12 0.900001,-0.44 1.3,-0.44 0.26,0 0.460001,0.06 0.560001,0.22 0.1,0.16 0.22,0.5 0.359999,0.84"
-         style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic"
-         id="path3010"
-         inkscape:connector-curvature="0" />
+         inkscape:connector-curvature="0"
+         id="path3009"
+         style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic"
+         d="m 21.964064,1043.1822 0.7,1.98 -1.86,2.74 c -0.219999,0.32 -0.42,0.38 -0.56,0.38 -0.159999,0 -0.38,-0.04 -0.54,-0.12 -0.179999,-0.08 -0.38,-0.12 -0.58,-0.12 -0.439999,0 -0.76,0.32 -0.76,0.76 0,0.52 0.700001,0.76 1.16,0.76 0.68,0 1.160001,-0.3 2.04,-1.56 l 1.38,-1.98 0.78,2.42 c 0.24,0.8 0.460001,1.12 1.14,1.12 0.7,0 1.580001,-0.38 2.2,-1.42 -0.08,-0.18 -0.26,-0.34 -0.479999,-0.38 -0.52,0.66 -0.780001,0.82 -1,0.82 -0.18,0 -0.320001,-0.24 -0.480001,-0.74 l -1.08,-3.22 1.520001,-2.24 c 0.299999,-0.46 0.8,-0.54 0.939999,-0.54 0.16,0 0.420001,0.06 0.600001,0.2 0.139999,0.12 0.46,0.2 0.659999,0.2 0.28,0 0.64,-0.4 0.64,-0.86 0,-0.5 -0.54,-0.8 -1,-0.8 -0.999999,0 -1.66,0.36 -2.64,1.76 l -1,1.44 -0.56,-1.76 c -0.339999,-1.04 -0.56,-1.44 -1.06,-1.44 -0.479999,0 -1.94,0.84 -2.64,1.36 0.02,0.22 0.100001,0.46 0.26,0.62 0.24,-0.12 0.900001,-0.44 1.3,-0.44 0.26,0 0.460001,0.06 0.560001,0.22 0.1,0.16 0.22,0.5 0.359999,0.84" />
     </g>
     <text
-       sodipodi:linespacing="125%"
-       id="text3001"
-       y="1034.3622"
-       x="4"
-       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O"
-       xml:space="preserve"><tspan
-         y="1034.3622"
-         x="4"
-         id="tspan3003"
-         sodipodi:role="line">∂<tspan
-   id="tspan3005"
-   style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic" /></tspan></text>
+       xml:space="preserve"
+       style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;filter:url(#filter3819);font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O"
+       x="4.2678571"
+       y="1035.2908"
+       id="text3011"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3013"
+         x="4.2678571"
+         y="1035.2908">∂<tspan
+   style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic"
+   id="tspan3015" /></tspan></text>
     <path
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
-       d="M 2,21 26,6"
-       id="path3012"
        inkscape:connector-curvature="0"
-       transform="translate(0,1020.3622)" />
+       id="path3017"
+       d="m 2.2678571,1042.2908 23.9999999,-15"
+       style="fill-opacity:1;stroke:#ffffff;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter3819);fill:none" />
+    <g
+       id="g2993">
+      <g
+         id="text2993"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O">
+        <path
+           id="path3008"
+           d="m 16.42,1042.9822 c -0.659999,-0.6 -1.420001,-1.02 -2.34,-1.02 -2.619997,0 -4.38,2.22 -4.38,4.46 0,1.92 1.580002,3.14 3.38,3.14 4.159996,0 4.98,-5.8 4.98,-7.88 0,-2.54 -1.120002,-4.66 -3.14,-4.66 -0.999999,0 -1.860001,0.2 -2.46,0.32 -0.639999,0.12 -1.12,0.42 -1.12,0.94 0,0.36 0.24,0.6 0.62,0.6 0.42,0 0.860001,-0.58 1.42,-0.9 0.2,-0.12 0.560001,-0.3 1.24,-0.3 1.339999,0 1.86,1.88 1.86,3.88 0,0.38 0,0.86 -0.06,1.42 m -0.08,0.76 c -0.28,2.3 -1.060002,5.16 -2.96,5.16 -1.359999,0 -2.06,-1.16 -2.06,-2.62 0,-1.78 0.920002,-3.56 2.52,-3.56 0.919999,0 1.760001,0.44 2.5,1.02"
+           style="" />
+        <path
+           inkscape:connector-curvature="0"
+           id="path3010"
+           style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic"
+           d="m 21.964064,1043.1822 0.7,1.98 -1.86,2.74 c -0.219999,0.32 -0.42,0.38 -0.56,0.38 -0.159999,0 -0.38,-0.04 -0.54,-0.12 -0.179999,-0.08 -0.38,-0.12 -0.58,-0.12 -0.439999,0 -0.76,0.32 -0.76,0.76 0,0.52 0.700001,0.76 1.16,0.76 0.68,0 1.160001,-0.3 2.04,-1.56 l 1.38,-1.98 0.78,2.42 c 0.24,0.8 0.460001,1.12 1.14,1.12 0.7,0 1.580001,-0.38 2.2,-1.42 -0.08,-0.18 -0.26,-0.34 -0.479999,-0.38 -0.52,0.66 -0.780001,0.82 -1,0.82 -0.18,0 -0.320001,-0.24 -0.480001,-0.74 l -1.08,-3.22 1.520001,-2.24 c 0.299999,-0.46 0.8,-0.54 0.939999,-0.54 0.16,0 0.420001,0.06 0.600001,0.2 0.139999,0.12 0.46,0.2 0.659999,0.2 0.28,0 0.64,-0.4 0.64,-0.86 0,-0.5 -0.54,-0.8 -1,-0.8 -0.999999,0 -1.66,0.36 -2.64,1.76 l -1,1.44 -0.56,-1.76 c -0.339999,-1.04 -0.56,-1.44 -1.06,-1.44 -0.479999,0 -1.94,0.84 -2.64,1.36 0.02,0.22 0.100001,0.46 0.26,0.62 0.24,-0.12 0.900001,-0.44 1.3,-0.44 0.26,0 0.460001,0.06 0.560001,0.22 0.1,0.16 0.22,0.5 0.359999,0.84" />
+      </g>
+      <text
+         xml:space="preserve"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O"
+         x="4"
+         y="1034.3622"
+         id="text3001"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan3003"
+           x="4"
+           y="1034.3622">∂<tspan
+   style="font-size:20px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:justify;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Linux Libertine O;-inkscape-font-specification:Linux Libertine O Italic"
+   id="tspan3005" /></tspan></text>
+      <path
+         transform="translate(0,1020.3622)"
+         inkscape:connector-curvature="0"
+         id="path3012"
+         d="M 2,21 26,6"
+         style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none" />
+    </g>
   </g>
 </svg>
