@@ -4,6 +4,7 @@ package provide app-bessyhdfviewer 1.0
 package require hdfpp
 package require ukaz
 package require Tk
+package require tooltip
 package require tablelist_tile 5.9
 
 if {[tk windowingsystem]=="x11"} {
@@ -157,6 +158,7 @@ namespace eval BessyHDFViewer {
 
 		set w(coleditbut) [ttk::button $w(listfr).coleditbut -text "Configure columns" \
 			-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
+		tooltip::tooltip $w(coleditbut) "Edit displayed columns in browser"
 
 		ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
 
@@ -229,6 +231,7 @@ namespace eval BessyHDFViewer {
 			-image [list [IconGet linscale] selected [IconGet logscale]] \
 			-command [list ${ns}::DisplayPlot -explicit true]]
 		variable xlog 0
+		tooltip::tooltip $w(xlog) "Switch logscale for x-axis"
 
 		set w(ylbl) [ttk::label $w(axebar).ylbl -text "Y axis:"]
 		set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
@@ -236,14 +239,18 @@ namespace eval BessyHDFViewer {
 			-image [list [IconGet linscale] selected [IconGet logscale]] \
 			-command [list ${ns}::DisplayPlot -explicit true]]
 		variable ylog 0
+		tooltip::tooltip $w(ylog) "Switch logscale for y-axis"
 
 		set w(gridon) [ttk::checkbutton $w(axebar).grid -variable ${ns}::gridon -style Toolbutton \
 			-image [IconGet grid] \
 			-command [list ${ns}::DisplayPlot -explicit true]]
 		variable gridon 0
+		tooltip::tooltip $w(gridon) "Switch grid in plot window"
 
 		set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
 		variable keepformat false
+		tooltip::tooltip $w(keepformat) "Check to keep the plot format when switching files"
+
 		
 		bind $w(xent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
@@ -262,12 +269,16 @@ namespace eval BessyHDFViewer {
 		bind [$w(Graph) getcanv] <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
 		$w(Graph) bind <1> [list ${ns}::UpdatePointerInfo click]
 		
-		# Toolbar: Peak detection button
+		# Toolbar: Command buttons from dataevaluation namespace
 		
-		set w(peakbtn) [ttk::button $w(toolbar).peakbtn -text "Peak detection" -image [IconGet peakdetect] \
-						-command DataEvaluation::FindPeaks -style Toolbutton]
-
-		grid $w(peakbtn) -sticky nw
+		set cmdnr 0
+		foreach {cmd icon description} $DataEvaluation::commands {
+			set btn [ttk::button $w(toolbar).cmdbtn$cmdnr -text $description -image [IconGet $icon] \
+			         -command DataEvaluation::$cmd -style Toolbutton]
+			grid $btn -row 0 -column $cmdnr -sticky nw
+			tooltip::tooltip $btn $description
+			incr cmdnr
+		}
 
 		$w(displayfr) add $w(plotfr) -text "Plot"
 

@@ -1,5 +1,14 @@
 namespace eval DataEvaluation {
 	# built-in methods for general data evaluation
+
+	# list of available commands, to be evaluated by the main program
+	# function, icon, description
+
+	set commands {
+		FindPeaks	peakdetect	"Find peaks by Scholkmann's method"
+		ShowDerivative derivative "Compute derivative"
+	}
+
 	# peak-locating using the AMPD method
 	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
 	#
@@ -166,7 +175,7 @@ namespace eval DataEvaluation {
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
 			set deriv [derive $fdata]
-			if {[llength $deriv]<2]} { continue }
+			if {[llength $deriv]<2} { continue }
 			# plot derivative with the style used in the orginal data
 			if {[catch {set style [dict get $BessyHDFViewer::plotstylecache $fn]}]} {
 				# no style in the cache (?) - default to black with red points
