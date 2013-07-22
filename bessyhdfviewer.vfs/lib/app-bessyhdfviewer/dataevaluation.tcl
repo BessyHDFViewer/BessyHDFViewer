@@ -134,6 +134,7 @@ namespace eval DataEvaluation {
 	proc derive {data} {
 		# compute unregularized finite differences
 		# for x y data
+		set result {}
 		set data [lassign $data xold yold]
 		foreach {x y} $data {
 			# prepare for signalling NaNs
@@ -154,6 +155,8 @@ namespace eval DataEvaluation {
 	proc ShowDerivative {} {
 		$BessyHDFViewer::w(Graph) reset_dimensioning
 		$BessyHDFViewer::w(Graph) clear
+
+		set plotid {}
 		foreach {fn data} $BessyHDFViewer::datashown {
 			# filter NaNs from the dataset
 			set fdata {}
@@ -163,8 +166,18 @@ namespace eval DataEvaluation {
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
 			set deriv [derive $fdata]
-			puts $deriv
-			$BessyHDFViewer::w(Graph) connectpoints_autodim $deriv black
+			if {[llength $deriv]<2]} { continue }
+			# plot derivative with the style used in the orginal data
+			if {[catch {set style [dict get $BessyHDFViewer::plotstylecache $fn]}]} {
+				# no style in the cache (?) - default to black with red points
+				set style  {line { black } point { red circle }}
+			}
+			lappend plotid [$BessyHDFViewer::w(Graph) connectpoints_autodim $deriv {*}[dict get $style line]]
+			lappend plotid [$BessyHDFViewer::w(Graph) showpoints_autodim $deriv {*}[dict get $style point]]
+		}
+
+		if {$plotid != {}} {
+			$BessyHDFViewer::w(Graph) autoresize
 		}
 	}
 

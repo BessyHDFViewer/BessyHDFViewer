@@ -1181,7 +1181,7 @@ namespace eval BessyHDFViewer {
 
 			if {[llength $data] >= 2} {
 				lappend plotid [$w(Graph) connectpoints_autodim $data {*}[dict get $style line]]
-				lappend plotid [$w(Graph) showpoints_autodim $data {*}[dict get $style point]]
+				lappend plotid [$w(Graph) showpoints $data {*}[dict get $style point]]
 			}
 			
 			lappend datashown $fn $data
@@ -1192,7 +1192,7 @@ namespace eval BessyHDFViewer {
 
 		set plotstylecache $styles
 
-		if {$plotid != {}} {
+		if {[llength $plotid] > 2} {
 			$w(Graph) autoresize
 		}
 		
