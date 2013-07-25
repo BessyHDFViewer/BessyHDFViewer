@@ -102,8 +102,6 @@ namespace eval BessyHDFViewer {
 			
 		set IconClassMap [dict map {class icon} $IconClassMap {IconGet $icon}]
 		
-		variable filterexpression {1}
-
 		ReadPreferences
 		InitCache
 		InitGUI
@@ -145,8 +143,9 @@ namespace eval BessyHDFViewer {
 		#  Dir entry
 		#  Table
 		#  Navigation buttons
-		#  Progress bar 
-		set w(pathent) [ttk::entry $w(listfr).pathent -textvariable ${ns}::browsepath]
+		#  Progress bar
+		set w(pathfr) [ttk::frame $w(listfr).pathfr]
+		set w(pathent) [ttk::entry $w(pathfr).pathent -textvariable ${ns}::browsepath]
 		
 		variable browsepath [PreferenceGet HomeDir {/messung/}]
 		if {![file isdirectory $browsepath]} {
@@ -155,6 +154,28 @@ namespace eval BessyHDFViewer {
 
 		bind $w(pathent) <FocusOut> ${ns}::DirUpdate
 		bind $w(pathent) <Key-Return> ${ns}::DirUpdate
+
+		set w(filterbut) [ttk::checkbutton $w(pathfr).filterbut -text "Filter" -style Toolbutton \
+			-variable ${ns}::filterenabled \
+			-command [list ${ns}::SwitchFilterState -refresh]]
+		variable filterenabled [PreferenceGet FilterEnabled 0]
+		ClearFilterErrors
+		
+		set w(filterent) [ttk::combobox $w(pathfr).filter -textvariable ${ns}::filterexpression \
+			-width 20 -values [PreferenceGet FilterHistory {{$class != "MCA"} {$class == "MULTIPLE_IMG"}}] ]
+		AutoComplete $w(filterent) -aclist {class Motor Detector Energy NRows}
+		
+		variable filterexpression [PreferenceGet FilterExpression {}]
+		
+		bind $w(filterent) <Key-Return> ${ns}::FilterUpdate
+		bind $w(filterent) <<ComboboxSelected>> ${ns}::FilterUpdate
+
+		set w(coleditbut) [ttk::button $w(pathfr).coleditbut -text "Configure columns" \
+			-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
+		tooltip::tooltip $w(coleditbut) "Edit displayed columns in browser"
+
+		grid $w(pathent) $w(filterbut) $w(filterent) $w(coleditbut) -sticky ew
+		grid columnconfigure $w(pathfr) $w(pathent) -weight 1
 
 		set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
 			-classifycommand ${ns}::ClassifyHDF \
@@ -169,13 +190,9 @@ namespace eval BessyHDFViewer {
 		bind $w(filelist) <<Progress>> [list ${ns}::OpenProgress %d]
 		bind $w(filelist) <<ProgressFinished>> ${ns}::OpenFinished
 
-		set w(coleditbut) [ttk::button $w(listfr).coleditbut -text "Configure columns" \
-			-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
-		tooltip::tooltip $w(coleditbut) "Edit displayed columns in browser"
-
 		ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
+		SwitchFilterState
 
-		
 		# Create navigation buttons
 		#
 		set w(bbar) [ttk::frame $w(listfr).bbar]
@@ -185,17 +202,19 @@ namespace eval BessyHDFViewer {
 		set w(bcollapse) [ttk::button $w(bbar).coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [list $w(filelist) collapseCurrent]]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 
-		pack $w(bhome) $w(bupwards) $w(bcollapse) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
+		set w(foldbut) [ttk::button $w(bbar).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
+		tooltip::tooltip $w(foldbut) "Fold away data display"
 
-		
-		set w(foldbut) [ttk::button $w(listfr).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
 		variable PlotFolded false
+		
+		pack $w(bhome) $w(bupwards) $w(bcollapse) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
+		pack $w(foldbut) -side left -expand yes -fill none -anchor e
 
 		set w(progbar) [ttk::progressbar $w(listfr).progbar]
-		grid $w(pathent) $w(coleditbut) -sticky ew 
-		grid $w(filelist)    -          -sticky nsew
-		grid $w(bbar)		 $w(foldbut) -sticky nsew
-		grid $w(progbar)     -          -sticky nsew
+		grid $w(pathfr)	    -sticky nsew 
+		grid $w(filelist)   -sticky nsew
+		grid $w(bbar)		-sticky nsew
+		grid $w(progbar)    -sticky nsew
 
 		grid rowconfigure $w(listfr) $w(filelist) -weight 1
 		grid columnconfigure $w(listfr) 0 -weight 1
@@ -509,6 +528,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		$w(filelist) configure -columns $columns -columnoptions $columnopts
+		$w(filterent) configure -aclist $columns
 
 	}
 
@@ -528,6 +548,42 @@ namespace eval BessyHDFViewer {
 			PreferenceSet Columns $columns 
 		}
 	}
+	
+	proc ClearFilterErrors {} {
+		variable w
+		variable filtererror {}
+		$w(filterbut) configure -image [list [IconGet hopper] selected [IconGet hopper-blue]]
+		tooltip::tooltip $w(filterbut) "Set filter"
+	}
+
+	proc FilterError {err} {
+		variable w
+		variable filtererror
+		
+		if {[llength $filtererror]==0} {
+			# first error. make button red
+			$w(filterbut) configure -image [IconGet hopper-red]
+		}
+		lappend filtererror $err
+	}
+
+	proc FilterFinish {} {
+		variable w
+		variable filtererror
+		if {[llength $filtererror]==0} { return }
+
+		set maxerr 10
+		# maximum number of errors to display 
+
+		set msg "Errors during filtering:\n"
+		if {[llength $filtererror] <= $maxerr} {
+			append msg [join $filtererror \n]
+		} else {
+			append msg [join [lrange $filtererror 0 $maxerr-1] \n]
+			append msg "\n ( [expr {[llength $filtererror]-$maxerr-1}] more errors )"
+		}
+		tooltip::tooltip $w(filterbut) $msg
+	}
 
 	proc ClassifyHDF {type fn} {
 		variable w
@@ -535,6 +591,7 @@ namespace eval BessyHDFViewer {
 		variable ActiveColumns
 		variable IconClassMap
 		variable filterexpression
+		variable filterenabled
 		
 		if {[catch {file mtime $fn} mtime]} {
 			# could not get mtime - something is wrong
@@ -631,7 +688,16 @@ namespace eval BessyHDFViewer {
 
 		# last column is always the icon for the class
 		set classicon [dict get $IconClassMap $class]
-		if {![dict_expr $HDFCache $fn $filterexpression]} { set classicon SKIP }
+		if {$filterenabled && [string trim $filterexpression]!= ""} {
+			if {[catch {dict_expr $HDFCache $fn $filterexpression} filterres]} {
+				# an error occured during filtering
+				FilterError $filterres
+			} else {
+				if {!$filterres} { 
+					set classicon SKIP
+				}
+			}
+		}
 		lappend result $classicon
 		return $result
 	}
@@ -1425,6 +1491,36 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	proc SwitchFilterState {{refresh {}}} {
+		variable w
+		variable filterenabled
+		if {$filterenabled} {
+			grid $w(filterent)
+		} else {
+			grid remove $w(filterent)
+		}
+		
+		PreferenceSet FilterEnabled $filterenabled
+		
+		if {$refresh =="-refresh"} {
+			$w(filelist) refreshView
+		}
+	}
+
+	proc FilterUpdate {} {
+		# filter was changed manually
+		variable w
+		variable filterexpression
+		set hist [$w(filterent) cget -values]
+		if {($filterexpression ni $hist) && ([string trim $filterexpression] != "")} {
+			set hist [lrange [linsert $hist 0 $filterexpression] 0 15]
+			PreferenceSet FilterHistory $hist
+			$w(filterent) configure -values $hist
+		}
+		PreferenceSet FilterExpression $filterexpression
+		$w(filelist) refreshView
+	}
+
 	proc OpenArgument {files} {
 		variable w
 		# take a number of absolute file names
@@ -1443,6 +1539,7 @@ namespace eval BessyHDFViewer {
 		variable w
 		variable ProgressClock [clock milliseconds]
 		variable ProgressDelay 100 ;# only after 100ms one feels a delay
+		ClearFilterErrors
 		$w(progbar) configure -maximum $max
 		tk_busy hold .
 	}
@@ -1466,6 +1563,7 @@ namespace eval BessyHDFViewer {
 		$w(progbar) configure -value 0
 		tk_busy forget .
 		SaveCache
+		FilterFinish
 	}
 
 	proc ::formatDate {date} {
@@ -2169,7 +2267,9 @@ namespace eval BessyHDFViewer {
 		}
 
 		if {[catch {namespace eval ::DICT_EXPR [list expr $expr]} result]} {
-			# ignore errors for now
+			# delete vars and rethrow error
+			namespace delete ::DICT_EXPR
+			return -code error $result
 		}
 		namespace delete ::DICT_EXPR
 		return $result
