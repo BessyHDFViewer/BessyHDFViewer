@@ -90,7 +90,20 @@ namespace eval BessyHDFViewer {
 				FormatString %.5g
 			}
 		}
+
+		# initialize iconlist
+		variable IconClassMap {
+			MCA  mca
+			MULTIPLE_IMG image-multiple
+			SINGLE_IMG image-x-generic
+			PLOT graph
+			UNKNOWN unknown
+		}
+			
+		set IconClassMap [dict map {class icon} $IconClassMap {IconGet $icon}]
 		
+		variable filterexpression {1}
+
 		ReadPreferences
 		InitCache
 		InitGUI
@@ -520,6 +533,8 @@ namespace eval BessyHDFViewer {
 		variable w
 		variable HDFCache
 		variable ActiveColumns
+		variable IconClassMap
+		variable filterexpression
 		
 		if {[catch {file mtime $fn} mtime]} {
 			# could not get mtime - something is wrong
@@ -615,33 +630,9 @@ namespace eval BessyHDFViewer {
 		
 
 		# last column is always the icon for the class
-		switch $class {
-			MCA {
-				lappend result [IconGet mca]
-			}
-
-			MULTIPLE_IMG {
-				lappend result [IconGet image-multiple]
-			}
-
-			SINGLE_IMG {
-				lappend result [IconGet image-x-generic]
-			}
-
-			PLOT {
-				lappend result [IconGet graph]
-			}
-
-			UNKNOWN {
-				lappend result [IconGet unknown]
-			}
-			
-			default {
-				variable HDFCacheFile
-				error "Unknown file class '$class'. Should not happen - maybe delete your cache file \n $HDFCacheFile\n and restart."
-			}
-		}
-
+		set classicon [dict get $IconClassMap $class]
+		if {![dict_expr $HDFCache $fn $filterexpression]} { set classicon SKIP }
+		lappend result $classicon
 		return $result
 	}
 
@@ -2160,6 +2151,28 @@ namespace eval BessyHDFViewer {
 				unset v
 			}
 		}
+	}
+
+	proc dict_expr {dictvalue args} {
+		# evaluate an expression by dict with
+		# wrapping in a proc ensures that 
+		# the variables do not clutter 
+	
+		# NOTE: Could be implemented by dict with
+		# but that is 10x slower in case of big dicts
+		namespace eval ::DICT_EXPR {}
+		set expr [lindex $args end]
+		set keys [lrange $args 0 end-1]
+		set vardict [dict get $dictvalue {*}$keys]
+		dict for {var val} $vardict {
+			set ::DICT_EXPR::$var $val
+		}
+
+		if {[catch {namespace eval ::DICT_EXPR [list expr $expr]} result]} {
+			# ignore errors for now
+		}
+		namespace delete ::DICT_EXPR
+		return $result
 	}
 
 	variable iconcache {}

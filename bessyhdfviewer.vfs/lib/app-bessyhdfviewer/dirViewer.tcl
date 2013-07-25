@@ -278,10 +278,11 @@ namespace eval dirViewer {} {
 				} else {
 					set class [$self classifydefault [list file $fullname]]
 				}
-
-				set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
-				lappend itemList [list [list file $tail] {*}$class $fullname]
-
+				
+				# if the classification is SKIP, don't show this file
+				if {[lindex $class end] != "SKIP"} {
+					lappend itemList [list [list file $tail] {*}$class $fullname]
+				}
 				incr progress
 				event generate $win <<Progress>> -data $progress
 
