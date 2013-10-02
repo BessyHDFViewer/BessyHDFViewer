@@ -1254,14 +1254,23 @@ namespace eval BessyHDFViewer {
 			# reduce to flat list
 			set data [concat {*}$data]
 
+			set title [file tail $fn]
+
 			if {[llength $data] >= 2} {
-				lappend plotid [$w(Graph) plot $data with {*}$style]
+				lappend plotid [$w(Graph) plot $data with {*}$style title $title]
 			}
 			
 			lappend datashown $fn $data
 
 			# build up autocomplete list
 			lappend aclist {*}[bessy_get_keys $hdfdata]
+		}
+
+		# only show key for more than 1 file
+		if {$nfiles > 1} {
+			$w(Graph) set key on
+		} else {
+			$w(Graph) set key off
 		}
 
 		set plotstylecache $styles		
