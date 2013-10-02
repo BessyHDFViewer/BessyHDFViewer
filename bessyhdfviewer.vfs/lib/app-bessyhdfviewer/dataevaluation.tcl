@@ -135,8 +135,8 @@ namespace eval DataEvaluation {
 		}
 		#puts [join $output \n]
 
-		$BessyHDFViewer::w(Graph) showpoints $minimaxy green filled-hexagon
-		$BessyHDFViewer::w(Graph) showpoints $maximaxy red filled-hexagon
+		$BessyHDFViewer::w(Graph) plot $minimaxy with points color green pt filled-hexagons
+		$BessyHDFViewer::w(Graph) plot $maximaxy with points color red pt filled-hexagons
 		TextDisplay Show [join $output \n]
 	}
 
@@ -162,8 +162,8 @@ namespace eval DataEvaluation {
 	}
 
 	proc ShowDerivative {} {
-		$BessyHDFViewer::w(Graph) reset_dimensioning
 		$BessyHDFViewer::w(Graph) clear
+		$BessyHDFViewer::w(Graph) set auto y
 
 		set plotid {}
 		foreach {fn data} $BessyHDFViewer::datashown {
@@ -179,15 +179,11 @@ namespace eval DataEvaluation {
 			# plot derivative with the style used in the orginal data
 			if {[catch {set style [dict get $BessyHDFViewer::plotstylecache $fn]}]} {
 				# no style in the cache (?) - default to black with red points
-				set style  {line { black } point { red circle }}
+				set style  {linespoints color black pt squares}
 			}
-			lappend plotid [$BessyHDFViewer::w(Graph) connectpoints_autodim $deriv {*}[dict get $style line]]
-			lappend plotid [$BessyHDFViewer::w(Graph) showpoints_autodim $deriv {*}[dict get $style point]]
+			lappend plotid [$BessyHDFViewer::w(Graph) plot $deriv with {*}$style]
 		}
 
-		if {$plotid != {}} {
-			$BessyHDFViewer::w(Graph) autoresize
-		}
 	}
 
 	snit::widget TextDisplay {

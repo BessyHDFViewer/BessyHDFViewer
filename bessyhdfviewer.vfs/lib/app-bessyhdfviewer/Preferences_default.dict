@@ -1,3 +1,5 @@
+Version 2
+
 Columns {
 	Motor
 	Detector
@@ -488,13 +490,13 @@ AutoCompleteList {
 
 PlotStyles {
 
-	{line { black } point { black circle }}
-	{line { blue } point { blue triangle }}
-	{line { red } point { red square }}
-	{line { green } point { green uptriangle }}
-	{line { black -dash -} point { black filled-circle }}
-	{line { blue -dash -} point { blue filled-triangle }}
-	{line { red -dash -} point { red filled-square }}
-	{line { green -dash -} point { green filled-uptriangle }}
+	{linespoints color black pt circles }
+	{linespoints color blue  pt triangles }
+	{linespoints color red  pt squares }
+	{linespoints color green pt uptriangles }
+	{linespoints color black dash - pt filled-circles }
+	{linespoints color blue dash - pt filled-triangles }
+	{linespoints color red dash - pt  filled-squares }
+	{linespoints color green dash - pt filled-uptriangles }
 
 }

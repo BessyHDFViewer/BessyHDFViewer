@@ -2,7 +2,7 @@ package provide app-bessyhdfviewer 1.0
 
 
 package require hdfpp
-package require ukaz
+package require ukaz 2.0
 package require Tk
 package require tooltip
 package require tablelist_tile 5.9
@@ -232,16 +232,20 @@ namespace eval BessyHDFViewer {
 		set w(axebar) [ttk::frame $w(plotfr).axebar]
 		set w(toolbar) [ttk::frame $w(plotfr).toolbar]
 
-		set w(canv) [canvas $w(plotfr).c -background white]
+		# Graph
+		set w(Graph) [ukaz::graph $w(plotfr).graph -background white]
+		bind $w(Graph) <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
+		bind $w(Graph) <<Click>> [list ${ns}::UpdatePointerInfo click %x %y]
+		
 		set w(legend) [ttk::label $w(plotfr).frame]
 		
 
 		grid $w(axebar) -sticky nsew
 		grid $w(toolbar) -sticky nsew
-		grid $w(canv) -sticky nsew
+		grid $w(Graph) -sticky nsew
 		grid $w(legend) -sticky nsew
 		grid columnconfigure $w(plotfr) 0 -weight 1
-		grid rowconfigure $w(plotfr) $w(canv) -weight 1
+		grid rowconfigure $w(plotfr) $w(Graph) -weight 1
 
 		# pointer info. Series of labels
 
@@ -296,11 +300,6 @@ namespace eval BessyHDFViewer {
 		grid columnconfigure $w(axebar) $w(xent) -weight 1
 		grid columnconfigure $w(axebar) $w(yent) -weight 1
 
-		# Graph
-		set w(Graph) [ukaz::box %AUTO% $w(canv)]
-		bind [$w(Graph) getcanv] <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
-		$w(Graph) bind <1> [list ${ns}::UpdatePointerInfo click]
-		
 		# Toolbar: Command buttons from dataevaluation namespace
 		
 		set cmdnr 0
@@ -408,6 +407,8 @@ namespace eval BessyHDFViewer {
 		set fd [open [file join $basedir Preferences_default.dict] r]
 		set Preferences [read $fd]
 		close $fd
+
+		set PrefVersion [dict get $Preferences Version]
 		
 		# read from profile dir
 		if {$profiledir == {}} {
@@ -418,8 +419,15 @@ namespace eval BessyHDFViewer {
 				set PrefFileName [file join $profiledir Preferences.dict]
 				set fd [open $PrefFileName r]
 				fconfigure $fd -translation binary -encoding binary
-				set Preferences [dict merge $Preferences [read $fd]]
+				set UserPreferences [read $fd] 
 				close $fd
+				
+				# hopefully this is a valid dict
+				if {[dict get $UserPreferences Version] == $PrefVersion} {
+					# throws for invalid dict and non-existent version
+					set Preferences [dict merge $Preferences $UserPreferences]
+				}
+
 			}]} {
 				# error - maybe cleanup fd
 				# cache file remains valid - maybe simply didn't exist
@@ -1031,15 +1039,15 @@ namespace eval BessyHDFViewer {
 			}
 
 			click {
-				lassign $args nr tag
-				set coords [$w(Graph) getpointfromtag $tag $nr]
-				set pointerinfo(cnr) $nr
-				if {[llength $coords] == 2} {
-					lassign $coords x y
-					set pointerinfo(clickx) $x
-					set pointerinfo(clicky) $y
-					set pointerinfo(cx) [format %8.5g $x]
-					set pointerinfo(cy) [format %8.5g $y]
+				lassign $args x y
+				lassign [$w(Graph) pickpoint $x $y] id dpnr xd yd
+				
+				set pointerinfo(cnr) $dpnr
+				if {$id != {}} {
+					set pointerinfo(clickx) $xd
+					set pointerinfo(clicky) $yd
+					set pointerinfo(cx) [format %8.5g $xd]
+					set pointerinfo(cy) [format %8.5g $yd]
 				} else {
 					set pointerinfo(cx) ""
 					set pointerinfo(cy) ""
@@ -1078,13 +1086,12 @@ namespace eval BessyHDFViewer {
 		variable ylog
 		variable gridon
 
-		$w(Graph) setlog x $xlog
-		$w(Graph) setlog y $ylog
-		$w(Graph) setgrid $gridon
+		$w(Graph) set log x $xlog
+		$w(Graph) set log y $ylog
+		$w(Graph) set grid $gridon
 
 		variable plotid
 		if {[info exists plotid]} {
-			$w(Graph) reset_dimensioning
 			$w(Graph) clear
 			set plotid {}
 		}
@@ -1180,15 +1187,15 @@ namespace eval BessyHDFViewer {
 
 		# get units / axis labels for the current plot
 		if {[catch {dict get $plotdata $xformat attrs Unit} xunit]} {
-			$w(Graph) configure -xlabel "$xformat"
+			$w(Graph) set xlabel "$xformat"
 		} else {
-			$w(Graph) configure -xlabel "$xformat ($xunit)"
+			$w(Graph) set xlabel "$xformat ($xunit)"
 		}
 		
 		if {[catch {dict get $plotdata $yformat attrs Unit} yunit]} {
-			$w(Graph) configure -ylabel "$yformat"
+			$w(Graph) set ylabel "$yformat"
 		} else {
-			$w(Graph) configure -ylabel "$yformat ($yunit)"
+			$w(Graph) set ylabel "$yformat ($yunit)"
 		}
 
 
@@ -1197,7 +1204,7 @@ namespace eval BessyHDFViewer {
 		# determine plot styles for the data sets
 
 		# transform available styles into dictionary
-		foreach style [PreferenceGet PlotStyles { {line { black } point { red circle }} }] {
+		foreach style [PreferenceGet PlotStyles { {linespoints color black pt circle } }] {
 			dict set plotstylesfree $style 1
 		}
 
@@ -1248,8 +1255,7 @@ namespace eval BessyHDFViewer {
 			set data [concat {*}$data]
 
 			if {[llength $data] >= 2} {
-				lappend plotid [$w(Graph) connectpoints_autodim $data {*}[dict get $style line]]
-				lappend plotid [$w(Graph) showpoints $data {*}[dict get $style point]]
+				lappend plotid [$w(Graph) plot $data with {*}$style]
 			}
 			
 			lappend datashown $fn $data
@@ -1258,12 +1264,7 @@ namespace eval BessyHDFViewer {
 			lappend aclist {*}[bessy_get_keys $hdfdata]
 		}
 
-		set plotstylecache $styles
-
-		if {[llength $plotid] > 2} {
-			$w(Graph) autoresize
-		}
-		
+		set plotstylecache $styles		
 
 		# configure the autocompletion list
 		set aclist [lsort -uniq -dictionary $aclist]

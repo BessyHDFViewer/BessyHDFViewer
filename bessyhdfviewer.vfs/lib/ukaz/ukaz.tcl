@@ -1,17 +1,20 @@
 package require snit
-package require uevent
-package provide ukaz 1.0
+package require Tk 8.6
+package provide ukaz 2.0a1
 
 namespace eval ukaz {
+	
+	variable ns [namespace current]
 
+	##### Functions for geometric operations (clipping) ############
 	namespace eval geometry {
 
-		proc polylineclip {cdata xmin_ xmax_ ymin_ ymax_} {
+		proc polylineclip {cdata range} {
 
-			variable xmin $xmin_
-			variable xmax $xmax_
-			variable ymin $ymin_
-			variable ymax $ymax_
+			variable xmin [dict get $range xmin]
+			variable xmax [dict get $range xmax]
+			variable ymin [dict get $range ymin]
+			variable ymax [dict get $range ymax]
 
 			if {$xmin > $xmax} { lassign [list $xmin $xmax] xmax xmin }
 			if {$ymin > $ymax} { lassign [list $ymin $ymax] ymax ymin }
@@ -208,495 +211,1064 @@ namespace eval ukaz {
 		proc indefinite {x y} {
 			expr {abs($x) == Inf && abs($y) == Inf}
 		}
+
+		proc pointclip {cdata range} {
+			# remove all points which are NaN or outside 
+			# the clip region
+			set xmin [dict get $range xmin]
+			set xmax [dict get $range xmax]
+			set ymin [dict get $range ymin]
+			set ymax [dict get $range ymax]
+			set result {}
+			set clipinfo {}
+			set clipid 0
+			foreach {x y} $cdata {
+				if {$x!=$x || $y!=$y || $x<$xmin || $x>$xmax || $y<$ymin || $y>$ymax} {
+					dict incr clipinfo $clipid
+					continue
+				}
+				lappend result $x $y
+				incr clipid
+			}
+			list $result $clipinfo
+		}
 	}
 
-	snit::type box {
-
-		variable can
-		variable deskxmin
-		variable deskxmax
-		variable deskymin
-		variable deskymax
-
-		variable dimensioned 0
-
-		variable logx 0
-		variable logy 0
-		variable grid 0
-
-		variable xmin
-		variable xmax
-		variable ymin
-		variable ymax
-		variable xtics
-		variable ytics
-
-		variable xticmin
-		variable xticmax
-		variable yticmin
-		variable yticmax
-
-		variable xmul
-		variable xadd
-		variable ymul
-		variable yadd
-
-		variable xaxisformat %g
-		variable yaxisformat %g
-
-		variable defaultfont fixed
-		variable axisfont
-		variable ticklength 5
-		variable lineheight
-		variable pttagnr
-
-		variable autosize
-		variable zoomstack
-
-		variable linedata {}
-		variable pointdata {}
-
-		# global counter datasetnr
-		variable datasetnr 0
-
-		# click handler
-		variable pointclickhandler {}
-		variable rightclickhandler {}
-
-		option -font -default "" -configuremethod setoption
-		option -xlabel -default ""
-		option -ylabel -default ""
-
-		variable zooming
-		variable zoomstartpos
+	############## Functions for deferred execution ############################
+	variable Requests {}
+	proc defer {cmd} {
+		# defer cmd to idle time. Multiple requests are merged
+		variable ns
+		variable Requests
+		if {[dict size $Requests] == 0} {
+			after idle ${ns}::doRequests
+		}
 		
-		constructor {canv args} {
-			set can $canv
-			set defaultfont [font create -family Helvetica -size -14]
-			$self configure -font ""
+		dict set Requests $cmd 1
+	}
 
-			::bind $can <Destroy> [mymethod destroy]
-			# Bindings for zooming
-			::bind $can <ButtonPress-1> [mymethod zoomstart %x %y]
-			::bind $can <Button1-Motion> [mymethod zoommove %x %y]
-			::bind $can <ButtonRelease-1> [mymethod zoomend %x %y]
-			::bind $can <Motion> [mymethod motionevent %x %y]
-			if {[tk windowingsystem]=="aqua"} {
-				set rb <Button-2>
+	proc doRequests {} {
+		variable Requests
+
+		# first clear Requests, so that new requests are only recorded
+		# during execution and do not interfere with the execution
+		set ReqCopy $Requests
+		set Requests {}
+		dict for {cmd val} $ReqCopy {
+			uplevel #0 $cmd
+		}
+	}
+
+	########## Functions for math on data ##############################
+	proc parsedata_using {fdata args} {
+		# read column data 
+		# analogous to "using" in gnuplot
+		# the elements of formatlist are interpreted as expr-String with embedded $0, $1, ...
+		# return as flat a list
+		set ncomments 0
+		set nblanks 0
+		set ndata 0
+		set skip 0
+
+		variable parseerrors {}
+		set 0 0
+		set lno 0
+		set result {}
+		# $0 contains the linenumber, initially it's 0
+		foreach line [split $fdata \n] {
+			# make list
+			incr lno
+			set cols [regexp -all -inline {[^[:space:]]+} $line]
+			# puts "$0: $cols"
+			if {[regexp {^[[:space:]]*#} $line]} {
+				# it is a comment starting with "#"
+				#puts "Comment $line"
+				incr ncomments
+				continue
+			}
+
+			if {[llength $cols]==0} {
+				# blank line
+				#puts "Blank line"
+				incr nblanks
+				continue
+			}
+			# puts $line
+			# extract the columns and put them as double into $ind
+			# if possible
+			namespace eval formula [list set 0 $0]
+			namespace eval formula [list set lno $lno]
+			for {set ind 1} {$ind<=[llength $line]} {incr ind} {
+				set indtext [lindex $line [expr {$ind - 1}]]
+				if {[string is double -strict $indtext]} {
+					namespace eval formula [list set $ind $indtext]
+				}
+			}
+
+			set thisline {}
+			set err {}
+			foreach fmt $args {
+				if {[catch {namespace eval formula [list expr $fmt]} datum]} {
+					set err $datum
+					break
+				}
+				lappend thisline $datum
+			}
+			
+			namespace delete formula
+
+			if {$err != {}} {
+				lappend parseerrors "Line $lno: $err"
+				incr skip
 			} else {
-				set rb <Button-3>
+				lappend result $thisline
+				incr 0
+				incr ndata
 			}
-			::bind $can $rb [mymethod zoomout %x %y]
-			switch [llength $args] {
-				4 {
-					lassign $args deskxmin deskymax deskxmax deskymin
-					set autosize 0
-				}
+			
+		}
 
-				0 { set xmin 0
-					set xmax 1.0
-					set ymin 0
-					set ymax 1
-					$self compute_autosize
-					::bind $can <Configure> [mymethod autoresize]
-					set autosize 1
-					$can configure -highlightthickness 0
+		variable parseinfo [list $ndata $ncomments $nblanks $skip]
+		# return as a list of lists
+		return $result
+	}
+
+
+	proc transformdata_using {data using} {
+		# read file the same way as gnuplot does
+		lassign [split $using :] xformat yformat
+		if {[string is integer -strict $xformat] && $xformat >=0} {
+			set xformat "\$$xformat"
+		}
+		if {[string is integer -strict $yformat] && $yformat >=0} {
+			set yformat "\$$yformat"
+		}
+		set fd [open $data r]
+		set fdata [read $fd]
+		close $fd
+		concat {*}[parsedata_using $fdata $xformat $yformat]
+	}
+	
+	############## Functions for intervals ##################
+	proc calcdatarange {data}  {
+		# compute min/max and corresponding log min/max
+		# for dataset
+		# unfortunately, four cases for log on/off must be considered
+		# indexes into list are logx & logy
+		set xmin {{+Inf +Inf} {+Inf +Inf}}
+		set xmax {{-Inf -Inf} {-Inf -Inf}}
+		set ymin {{+Inf +Inf} {+Inf +Inf}}
+		set ymax {{-Inf -Inf} {-Inf -Inf}}
+		foreach {x y} $data {
+			set xfin [list [expr {isfinite($x)}]  [expr {islogfinite($x)}]]
+			set yfin [list [expr {isfinite($y)}]  [expr {islogfinite($y)}]]
+			
+			foreach logx {0 1} {
+				foreach logy {0 1} {
+					if {[lindex $xfin $logx] && [lindex $yfin $logy]} {
+						if {$x<[lindex $xmin $logx $logy]} { lset xmin $logx $logy $x}
+						if {$x>[lindex $xmax $logx $logy]} { lset xmax $logx $logy $x}
+						if {$y<[lindex $ymin $logx $logy]} { lset ymin $logx $logy $y}
+						if {$y>[lindex $ymax $logx $logy]} { lset ymax $logx $logy $y}
+					}
 				}
-				default {
-					error "box <canvas> {xmin ymin xmax ymax}"
+			}
+		}
+		dict create xmin $xmin ymin $ymin xmax $xmax ymax $ymax	
+	}
+
+	proc combine_range {range1 range2} {
+		if {$range1 == {}} { return $range2 }
+		if {$range2 == {}} { return $range1 }
+		set result {}
+		foreach key {xmin ymin} {
+			set l1 [dict get $range1 $key]
+			set l2 [dict get $range2 $key]
+			foreach logx {0 1} lx1 $l1 lx2 $l2 {
+				foreach logy {0 1} v1 $lx1 v2 $lx2 {
+					lset l1 $logx $logy [expr {min($v1, $v2)}]
+				}
+			}
+			dict set result $key $l1
+		}
+		foreach key {xmax ymax} {
+			set l1 [dict get $range1 $key]
+			set l2 [dict get $range2 $key]
+			foreach logx {0 1} lx1 $l1 lx2 $l2 {
+				foreach logy {0 1} v1 $lx1 v2 $lx2 {
+					lset l1 $logx $logy [expr {max($v1, $v2)}]
+				}
+			}
+			dict set result $key $l1
+		}
+		return $result
+	}
+
+	proc compute_rangetransform {r1min r1max r2min r2max} {
+		set mul [expr {($r2max - $r2min)/($r1max -$r1min)}]
+		set add [expr {$r2min-$r1min*$mul}]
+		list $mul $add
+	}
+
+	############ Function for automatic axis scaling ##########
+	proc compute_ticlist {min max tics log widen format} {
+		# automatically compute sensible values
+		# for the tics position, if not requested otherwise
+		lassign $tics ticrequest spec
+		switch $ticrequest {
+			off {
+				return [list {} $min $max]
+			}
+
+			list {
+				# take the tics as they are
+				# list must be text, number,...
+				# don't widen
+				return [list $spec $min $max]
+			}
+
+			every {
+				# put a tic mark at integer multiples of spec
+				set ticbase $spec
+			}
+
+			auto {
+				# automatic placement. In log case,
+				# put a mark at every power of ten
+				# and subdivide for small span
+				if {$log} {
+					set decades [expr {log10($max)-log10($min)}]
+					
+					if {$decades<=2} {
+						set minor {1 2 3 4 5}
+					} elseif {$decades<=3} {
+						set minor {1 2 5}
+					} elseif {$decades<=5} {
+						set minor {1 5}
+					} else {
+						set minor {1}
+					}
+
+					set expmin [expr {int(floor(log10($min)))}]
+					set expmax [expr {int(floor(log10($max)))}]
+					
+					# the range is between 10^expmin and 10^(expmax+1)
+					
+					# if widening downwards, look for the largest
+					# tic that is smaller or equal to the required minimum
+					if {[dict get $widen min]} {
+						foreach mantisse $minor {
+							set tic [expr {$mantisse*10.0**$expmin}]
+							if {$tic <= $min} {
+								set wmin $tic
+							}
+						}
+						set min $wmin
+					}
+			
+					set ticlist {}
+
+					for {set exp $expmin} {$exp <= $expmax} {incr exp} {
+						set base [expr {10.0**$exp}]
+						foreach mantisse $minor {
+							set tic [expr {$mantisse*$base}]
+							if {$tic >= $min && $tic <=$max} {
+								lappend ticlist [format $format $tic] $tic
+							}
+						}
+					}
+
+					# if widening upwards, look for a tic >= the requested max
+					# unles it has been reached before
+					if {[dict get $widen max] && [lindex $ticlist end]<$max} {
+						lappend minor 10
+						foreach mantisse $minor {
+							set tic [expr {$mantisse*10.0**$expmax}]
+							if {$tic >= $max} {
+								set max $tic
+								lappend ticlist [format $format $tic] $tic
+								break
+							}
+						}
+					}
+			
+					return [list $ticlist $min $max]
+				} else {
+					# automatic placement. In linear case,
+					# compute value as a multiple
+					# of 1, 2 or 5 times a power of ten
+					set exp [expr {log10(abs($max - $min))}]
+					set base [expr {pow(10, floor($exp)-1)}]
+
+					set xfrac [expr {fmod($exp, 1.0)}]
+					if {$xfrac < 0 } {set xfrac [expr {$xfrac+1.0}]}
+					# Exponent und Bruchteil des Zehnerlogarithmus
+					set xb 10
+					if {$xfrac <= 0.70} { set xb 5}
+					if {$xfrac <= 0.31} { set xb 2}
+					
+					set ticbase [expr {$xb*$base}]
 				}
 			}
 
-			set xmul 1
-			set xadd 0
-			set ymul 1
-			set yadd 0
+			default {
+				error "Unknown tic mode $ticrequest"
+			}
+		}
 
-			set pttagnr 0
+		# if we are here, place marks at regular intervals
+		# at integer multiples of ticbase
+		# if we should widen, update min & max
+		if {[dict get $widen min] && !$log} {
+			set start [expr {int(floor(double($min)/double($ticbase)))}]
+			set min [expr {$ticbase*$start}]
+		} else {
+			set start [expr {int(ceil(double($min)/double($ticbase)))}]
+		}
+		
+		if {[dict get $widen max]} {
+			set stop [expr {int(ceil(double($max)/double($ticbase)))}]
+			set max [expr {$ticbase*$stop}]
+		} else {
+			set stop [expr {int(floor(double($max)/double($ticbase)))}]
+		}
 
-			set zooming false
-			set zoomstack {}
+		set ticlist {}
+		for {set i $start} {$i<=$stop} {incr i} {
+			set v [expr {$i*$ticbase}]
+			# if {$log && $v<=0} { continue }
+			lappend ticlist [format $format $v] $v
+		}
+		return [list $ticlist $min $max]		
+	}
+
+	######### Functions for parsing gnuplot style commands ###########
+	proc parsearg {option default} {
+		# read argument from args, set to default
+		# if unset in args. option can have alternative
+		# names
+		upvar 1 args procargs
+		set optname [lindex $option 0]
+		upvar 1 $optname resvar
+		set success false
+		foreach name $option {
+			if {[dict exists $procargs $name]} {
+				set resvar [dict get $procargs $name]
+				dict unset procargs $name
+				set success true
+			}
+		}
+		if {!$success} { set resvar $default }
+	}
+
+	########### Functions for drawing marks on a canvas ##############
+	proc shape-circles {can coord color size tag} {
+		set r [expr {5.0*$size}]
+		set ids {}
+		foreach {x y} $coord {
+			lappend ids [$can create oval \
+				[expr {$x-$r}] [expr {$y-$r}] \
+				[expr {$x+$r}] [expr {$y+$r}] \
+				-outline $color -fill "" -tag $tag]
+		}
+		return $ids
+	}
+	
+	proc shape-filled-circles {can coord color size tag} {
+		set r [expr {5.0*$size}]
+		set ids {}
+		foreach {x y} $coord {
+			lappend ids [$can create oval \
+				[expr {$x-$r}] [expr {$y-$r}] \
+				[expr {$x+$r}] [expr {$y+$r}] \
+				-outline "" -fill $color -tag $tag]
+		}
+		return $ids
+	}
+
+	proc shape-squares {can coord color size tag} {
+		set s [expr {5.0*$size}]
+		set ids {}
+		foreach {x y} $coord {
+		lappend ids [$can create rectangle  \
+				[expr {$x-$s}] [expr {$y-$s}] [expr {$x+$s}] [expr {$y+$s}] \
+				-outline $color -fill "" -tag $tag]
+		}
+		return $ids
+	}
+	
+	proc shape-filled-squares {can coord color size tag} {
+		set s [expr {5.0*$size}]
+		set ids {}
+		foreach {x y} $coord {
+		lappend ids [$can create rectangle  \
+				[expr {$x-$s}] [expr {$y-$s}] [expr {$x+$s}] [expr {$y+$s}] \
+				-outline "" -fill $color -tag $tag]
+		}
+		return $ids
+	}
+
+
+	proc shape-hexagons {can coord color size tag} {
+		set s [expr {5.0*$size}]
+		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline $color -fill "" -tag $tag]
+		}
+		return $ids
+	}
+	
+	proc shape-filled-hexagons {can coord color size tag} {
+		set s [expr {5.0*$size}]
+		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline "" -fill $color -tag $tag]
+		}
+		return $ids
+	}
+
+	proc shape-triangles {can coord color size tag} {
+		set s [expr {8.0*$size}]
+		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline $color -fill "" -tag $tag]
+		}
+		return $ids
+	}
+	
+	proc shape-filled-triangles {can coord color size tag} {
+		set s [expr {8.0*$size}]
+		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline "" -fill $color -tag $tag]
+		}
+		return $ids
+	}
+
+	proc shape-uptriangles {can coord color size tag} {
+		set s [expr {8.0*$size}]
+		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline $color -fill "" -tag $tag]
+		}
+		return $ids
+	}
+	
+	proc shape-filled-uptriangles {can coord color size tag} {
+		set s [expr {8.0*$size}]
+		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
+		set ids {}
+		foreach {x y} $coord {
+			set hc {}
+			foreach {xc yc} $clist {
+				lappend hc [expr {$xc*$s+$x}]
+				lappend hc [expr {$yc*$s+$y}]
+			}
+			lappend ids [$can create polygon $hc \
+				-outline "" -fill $color -tag $tag]
+		}
+		return $ids
+	}
+
+	snit::widgetadaptor graph {
+		delegate option -width to hull
+		delegate option -height to hull
+		delegate option -background to hull
+
+		option -xrange -default {* *} -configuremethod rangeset
+		option -yrange -default {* *} -configuremethod rangeset
+		option -logx -default 0 -configuremethod opset
+		option -logy -default 0 -configuremethod opset
+		option -grid -default false -configuremethod opset
+		option -xtics -default auto -configuremethod opset
+		option -ytics -default auto -configuremethod opset
+		option -xlabel -default {} -configuremethod opset
+		option -ylabel -default {} -configuremethod opset
+		option -xformat -default %g -configuremethod opset
+		option -yformat -default %g -configuremethod opset
+		option -font -default {} -configuremethod fontset
+		option -ticlength -default 5
+		option -samplelength -default 20
+		option -samplesize -default 1.0
+		option -key -default {vertical top horizontal right disabled false}
+		option -keyspacing -default 1.0
+
+		option -enhanced -default false -configuremethod unimplemented
+		option -redraw -default 0 -readonly yes
+
+		# backing store for plot data
+		variable plotdata {}
+		variable datasetnr 0
+		variable zstack {}
+
+		# computed list of tics and displayrange
+		variable xticlist
+		variable yticlist
+		variable displayrange
+		variable displaysize
+		
+		# store the history of ranges 
+		# by zooming with the mouse
+		variable zoomstack {}
+
+		# state during mouse action (dragging or clicking)
+		variable dragdata {dragging false clicking false}
+		
+		# identity transform 
+		variable transform {1.0 0.0 1.0 0.0}
+
+		variable axisfont default
+
+		# store for the interactive elements (=controls)
+		variable controls {}
+
+		constructor {args} {
+			installhull using canvas
+			$self configurelist $args
+			bind $win <Configure> [mymethod RedrawRequest]
+			
+			# bindings for dragging & clicking
+			bind $win <ButtonPress-1> [mymethod drag start %x %y]
+			bind $win <Button1-Motion> [mymethod drag move %x %y]
+			bind $win <ButtonRelease-1> [mymethod drag end %x %y]
+			bind $win <ButtonRelease-2> [mymethod zoomout]
+			bind $win <ButtonRelease-3> [mymethod zoomout]
+			bind $win <Motion> [mymethod motionevent %x %y]
+			
 		}
 
 		destructor {
-			if [winfo exists $can] {
-				$self empty
-				# delete all graphics from this box
-				# we are destroyed because the canvas vanished
-				# restore bindings
-				::bind $can <Configure> {}
-				::bind $can <Destroy> {}
-			}
-			uevent::generate $self Destroy
-		}
-
-		method setoption { name value } {
-			set options($name) $value
-			switch -- $name {
-				-font {
-					if { $value == "" } {
-						set axisfont $defaultfont
-					} else {
-						set axisfont $value
-					}
-					set lineheight [font metrics $axisfont -linespace]
-				}
+			foreach c $controls {
+				# release all embedded controls
+				catch {$c Parent {} {}}
 			}
 		}
 
-		method getaxisfont {} {
-			return $axisfont
+		method unimplemented {op value} {
+			return -code error "Option $op not implemented"
 		}
 
-		method setgrid { flag } { set grid $flag }
+		method opset {op value} {
+			set options($op) $value
+			$self RedrawRequest
+		}
 
-		method setlog {how {what 1}} {
-			switch $how {
-				x {
-					set logx $what
+		method RedrawRequest {} {
+			defer [mymethod Redraw]
+			return {}
+		}
+		
+		#################### gnuplot style interface functions###########
+		method plot {data args} {
+			# main plot command
+			# simulate gnuplot
+			# syntax plot <data> 
+			#	?using usingspec? 
+			#	?with lines/points/linespoints?
+			#	?color colorspec?
+			#	?pointtype ...?
+			#	?pointsize ...?
+			#	?linewidth ...?
+			#	?dash ...?
+			#	?title ...?
+
+			parsearg {using u} {} 
+			parsearg {with w} points
+			parsearg {color lc} auto
+			parsearg {pointtype pt} circles
+			parsearg {pointsize ps} 1.0
+			parsearg {linewidth lw} 1.0
+			parsearg {dash} ""
+			parsearg {title t} ""
+		
+			#puts "Plot config: $using $with $color $pointtype $pointsize $linewidth"
+			if {$using != {}} {
+				set data [transformdata_using $data $using]
+			}
+
+			if {$color == "auto"} {
+				set colors {red green blue black}
+				set ncolors [llength $color]
+				set color [lindex $colors [expr {$datasetnr%$ncolors}]]
+			}
+			
+			set datarange [calcdatarange $data]
+
+			set id $datasetnr
+			switch $with {
+				p -
+				points {
+					dict set plotdata $id type points 1
+					dict set plotdata $id data $data
+					dict set plotdata $id datarange $datarange
+					dict set plotdata $id color $color
+					dict set plotdata $id pointtype $pointtype
+					dict set plotdata $id pointsize $pointsize
+					dict set plotdata $id title $title
 				}
-				y {
-					set logy $what
+				l -
+				lines {
+					dict set plotdata $id type lines 1
+					dict set plotdata $id data $data
+					dict set plotdata $id datarange $datarange
+					dict set plotdata $id color $color
+					dict set plotdata $id linewidth $linewidth
+					dict set plotdata $id dash $dash
+					dict set plotdata $id title $title
 				}
-				xy {
-					set logx $what
-					set logy $what
+
+				lp -
+				linespoints {
+					dict set plotdata $id type points 1
+					dict set plotdata $id type lines 1
+					dict set plotdata $id data $data
+					dict set plotdata $id datarange $datarange
+					dict set plotdata $id color $color
+					dict set plotdata $id pointtype $pointtype
+					dict set plotdata $id pointsize $pointsize
+					dict set plotdata $id title $title
+					#
+					dict set plotdata $id linewidth $linewidth
+					dict set plotdata $id dash $dash
 				}
 
 				default {
-					set logx 0
-					set logy 0
+					return -code error "with must be: points, lines or linespoints"
+				}
+			}
+			
+			lappend zstack $id
+			$self RedrawRequest
+			incr datasetnr
+			return $id
+		}
+
+		method remove {id} {
+			set oldzstacklen [llength $zstack]
+			dict unset plotdata $id
+			set zstack [lremove $zstack $id]
+			if {$oldzstacklen != [llength $zstack]} {
+				# redraw only if we actually deleted something
+				$self RedrawRequest
+			}
+		}
+		
+		method {set log} {{what xy} {how on}} {
+			# cast boolean how into canonical form 0,1
+			if {![string is boolean -strict $how]} { 
+				return -code error "Expected boolean value instead of $how"
+			}
+			
+			if {$how} {
+				set how 1
+			} else {
+				set how 0
+			}
+
+			switch $what {
+				x { $self configure -logx $how }
+				y { $self configure -logy $how }
+				xy {
+					$self configure -logx $how
+					$self configure -logy $how
+				}
+				default { 
+					return -code error "Unknown axis for log setting $what"
+				}
+			}
+		}
+		
+		method {unset log} {{what {}}} {
+			$self set log $what off
+		}
+
+
+		# helper function to parse gnuplot-style ranges
+		proc rangeparse {arglist} {
+			if {[llength $arglist]==1} {
+				# single string in gnuplot form - decompose at :
+				# after removal of [] (potentially)
+				set rangestring [lindex $arglist 0] ;# unpack
+				
+				if {[string trim $rangestring]=="auto"} { return [list * *] }
+
+				set arglist [split [string trim $rangestring {[]} ] :]
+			}
+		
+			if {[llength $arglist]==2} {
+				# argument is a Tcl list min max
+				lassign $arglist min max
+				
+				set min [string trim $min]
+				set max [string trim $max]
+				
+				if {$min == ""} { set min * }
+				if {$max == ""} { set max * }
+				
+				if {(!isfinite($min) && $min!="*") || (!isfinite($max) && $max !="*")} {
+					return -code error -level 2 "Range limits must be floats or *; got $min:$max"
+				}
+			} else {
+				return -code error -level 2 "Range must consist of two limits min:max"
+			}
+
+			list $min $max
+		}	
+		
+		method {set xrange} {args} {
+			set options(-xrange) [rangeparse $args]
+			$self RedrawRequest
+		}
+		
+		method {set yrange} {args} {
+			set options(-yrange) [rangeparse $args]
+			$self RedrawRequest
+		}
+
+		method {set auto x} {} {
+			$self set xrange *:*
+		}
+
+		method {set auto y} {} {
+			$self set yrange *:*
+		}
+
+		method {set grid} {{how on}} {
+			if {$how} {
+				set options(-grid) on
+			} else {
+				set options(-grid) off
+			}
+			$self RedrawRequest
+		}
+
+		method {unset grid} {} {
+			$self set grid off
+		}
+
+		proc parsetics {arglist} {
+			if {[llength $arglist]==1} {
+				# unpack
+				set val [lindex $arglist 0]
+				set sval [string trim $val]
+				# either auto or double value
+				if {$sval=="auto" || $sval == "off"} {
+					return $sval
+				} else {
+					# try to parse as float
+					if {isfinite($val) && $val > 0} {
+						return [list every $val]
+					} else {
+						return -code error -level 2 "Tics must be float or \"auto\" or \"off\""
+					}
 				}
 			}
 
+			if {[llength $arglist]%2==1} {
+				return -code error -level 2 "Tic list must be label pos ?label pos ...?"
+			}
+			
+			# check for float value at every odd pos
+			foreach {text pos} $arglist {
+				if {!isfinite($pos)} {
+					return -code error -level 2 "All tics must be at finite position: \"$text\", $pos"
+				}
+			}
+
+			list list $arglist
 		}
 
-		method resize {x1 y1 x2 y2} {
-			set deskxmin $x1
-			set deskxmax $x2
-			set deskymin $y2
-			set deskymax $y1
+		method {set xtics} {args} {
+			set options(-xtics) [parsetics $args]
+			$self RedrawRequest
 		}
 
-		method compute_autosize {} {
-			set w [winfo width $can]
-			set h [winfo height $can]
-			set lwidth1 [font measure $axisfont [format $yaxisformat $ymin]]
-			set lwidth2 [font measure $axisfont [format $yaxisformat $ymax]]
-			set xmaxwidth [font measure $axisfont [format $xaxisformat $xmax]]
+		method {set ytics} {args} {
+			set options(-ytics) [parsetics $args]
+			$self RedrawRequest
+		}
 
-			set lwidth [expr {max($lwidth1,$lwidth2)}]
+		method {set xlabel} {text} {
+			set options(-xlabel) $text
+			$self RedrawRequest
+		}
+
+		method {set ylabel} {text} {
+			set options(-ylabel) $text
+			$self RedrawRequest
+		}
+
+		method {set key} {args} {
+			# no argument - just enable legend
+			if {[llength $args]==0} {
+				dict set options(-key) disabled false
+				$self RedrawRequest
+				return
+			}
+			# otherwise process args
+			foreach arg $args {
+				switch $arg {
+					top   - 
+					bottom { dict set options(-key) vertical $arg }
+					right -
+					left  { dict set options(-key) horizontal $arg }
+					on  { dict set options(-key) disabled false }
+					off  { dict set options(-key) disabled true }
+					default { return -code error "Unknown option for set key: $arg" }
+				}
+			}
+			$self RedrawRequest
+		}
+
+		method getdata {id args} {
+			if {[dict exists $plotdata $id]} {
+				return [dict get $plotdata $id {*}$args]
+			}
+		}
+
+		method calcranges {} {
+			# compute ranges spanned by data
+			set datarange {}
+			dict for {id data} $plotdata {
+				set datarange [combine_range $datarange [dict get $data datarange]]
+			}
+			
+			set dxmin [lindex [dict get $datarange xmin] $options(-logx) $options(-logy)]
+			set dxmax [lindex [dict get $datarange xmax] $options(-logx) $options(-logy)]
+			set dymin [lindex [dict get $datarange ymin] $options(-logx) $options(-logy)]
+			set dymax [lindex [dict get $datarange ymax] $options(-logx) $options(-logy)]
+			
+			# now compute range from request & data
+			set xwiden {min false max false}
+			set ywiden {min false max false}
+			lassign $options(-xrange) xmin xmax
+			lassign $options(-yrange) ymin ymax 
+			if {$xmin =="*" || ($options(-logx) && !islogfinite($xmin))} {
+				set xmin $dxmin
+				dict set xwiden min true
+			}
+			if {$ymin =="*" || ($options(-logy) && !islogfinite($ymin))} {
+				set ymin $dymin
+				dict set ywiden min true
+			}
+			if {$xmax =="*" || ($options(-logx) && !islogfinite($xmax))} {
+				set xmax $dxmax
+				dict set xwiden max true
+			}
+			if {$ymax =="*" || ($options(-logy) && !islogfinite($ymax))} {
+				set ymax $dymax
+				dict set ywiden max true
+			}
+
+			# now, we could still have an unusable range in case the data
+			# doesn't provide us with a sensible range; then fake it
+
+			if {$xmin > $xmax} {
+				# not a single valid point
+				lassign {1.0 2.0} xmin xmax
+			}
+
+			if {$xmin == $xmax} {
+				# only one value
+				if {$options(-logx)} {
+					set xm $xmin
+					set xmin [expr {$xm*0.999}]
+					set xmax [expr {$xm*1.001}]
+				} else {
+					set xm $xmin
+					set xmin [expr {$xm-0.001}]
+					set xmax [expr {$xm+0.001}]
+				}
+			}
+		
+			if {$ymin > $ymax} {
+				# not a single valid point
+				lassign {1.0 2.0} ymin ymax
+			}
+
+			if {$ymin == $ymax} {
+				# only one value
+				if {$options(-logx)} {
+					set ym $ymin
+					set ymin [expr {$ym*0.999}]
+					set ymax [expr {$ym*1.001}]
+				} else {
+					set ym $ymin
+					set ymin [expr {$ym-0.001}]
+					set ymax [expr {$ym+0.001}]
+				}
+			}
+
+			# now we have the tight range in xmin,xmax, ymin, ymax
+			# compute ticlists and round for data determined values
+			lassign [compute_ticlist $xmin $xmax $options(-xtics) \
+				$options(-logx) $xwiden $options(-xformat)] xticlist xmin xmax
+			
+			lassign [compute_ticlist $ymin $ymax $options(-ytics) \
+				$options(-logy) $ywiden $options(-yformat)] yticlist ymin ymax
+
+			set displayrange [dict create xmin $xmin xmax $xmax ymin $ymin ymax $ymax]
+			
+		}
+		
+		method calcsize {} {
+			# compute size of the plot area in pixels
+			# such that it fits with all labels etc. into the canvas
+			set w [winfo width $win]
+			set h [winfo height $win]
+			# width of xtic labels to the left and right
+			set xmaxwidth [font measure $axisfont [lindex $xticlist end-1]]
+			set xminwidth [font measure $axisfont [lindex $xticlist 0]]
+
+			# maximum width of the ytic labels
+			set lwidth 0
+			foreach {text tic} $yticlist {
+				set nw [font measure $axisfont $text]
+				set lwidth [expr {max($lwidth, $nw)}]
+			}
+
 			set lascent [font metrics $axisfont -ascent]
 			set ldescent [font metrics $axisfont -descent]
+			set lineheight [font metrics $axisfont -linespace]
 
-			set margin [expr {0.05*$w}]
+			set margin [expr {0.03*$w}]
 
-			set deskxmin [expr {($lwidth+2*$ticklength)+$margin}]
-			if { $options(-ylabel) != "" } { set deskxmin [expr {$deskxmin + 1.2 * $lineheight}] }
-			set deskxmax [expr {$w-0.5*$xmaxwidth}]
-			set deskymax [expr {max($ticklength,$lascent)+0.05*$margin}]
-			set deskymin [expr {($h-$ticklength-$lineheight-$ldescent)-0.05*$margin}]
-			if { $options(-xlabel) != "" } { set deskymin [expr {$deskymin - 1.2 * $lineheight}] }
-
-			#puts "$w x $h, font $lascent $ldescent $lineheight $xmaxwidth"
-			#puts "$xmaxwidth $lwidth1 $lwidth2"
-			#puts "$deskxmax $deskxmin"
-			#puts "$deskymax $deskymin"
-			#puts "Plot area: $xmin, $xmax, $ymin, $ymax"
-		}
-
-		method autoresize {} {
-			$self compute_autosize
-			# Redraw
-			if {$dimensioned} {
-				$self dim_internal $xmin $xmax $ymin $ymax $xtics $ytics
-
-				dict for {pt data} $pointdata {
-					lassign $data coords color shape cid
-					$self showpoints_nosave $coords $color $shape $cid
-					#puts "$selfns: Redraw pointset $pt"
-				}
-
-				dict for {pt data} $linedata {
-					lassign $data coords color extraargs cid
-					$self connectpoints_nosave $coords $color $extraargs $cid
-					#puts "$selfns: Redraw line $pt color $color coords $coords"
-				}
-
-			}
-		}
-
-		method getsize {} {
-			list $deskxmin $deskymin $deskxmax $deskymax
-		}
-
-		method getdim {} {
-			list $xmin $xmax $ymin $ymax
-		}
-
-		method getcanv {} {
-			return $can
-		}
-		
-		method dim {args} {
-			set zoomstack [list $args]
-			$self dim_internal {*}$args
-		}
-
-		method dim_internal {x1 x2 y1 y2 xt yt} {
-			#puts "Dimensioning $x1 $x2 $y1 $y2 $xt $yt"
-
-			set xmin [expr {double($x1)}]
-			set xmax [expr {double($x2)}]
-			set ymin [expr {double($y1)}]
-			set ymax [expr {double($y2)}]
-
-			set xtics [expr {double($xt)}]
-			set ytics [expr {double($yt)}]
-			# force floating point for all arguments
-			if {$logx} {
-				# logarithmic scale -- xticmin is the power of 10
-				lassign [$self log_widen $xmin $xmax] xmin xmax
-				set xticmin [expr {log10($xmin)}]
-				set xticmax [expr {log10($xmax)}]
-
-			} else {
-				# linear scale
-				set xticmin [expr {int(floor($xmin/$xtics))}]
-				set xticmax [expr {int(ceil($xmax/$xtics))}]
-				set xmin [expr {$xticmin*$xtics}]
-				set xmax [expr {$xticmax*$xtics}]
-			}
-
-			if {$logy} {
-				# logarithmic scale -- yticmin is the power of 10
-				lassign [$self log_widen $ymin $ymax] ymin ymax
-				set yticmin [expr {log10($ymin)}]
-				set yticmax [expr {log10($ymax)}]
-
-			} else {
-				# linear scale
-				set yticmin [expr {int(floor($ymin/$ytics))}]
-				set yticmax [expr {int(ceil($ymax/$ytics))}]
-				set ymin [expr {$yticmin*$ytics}]
-				set ymax [expr {$yticmax*$ytics}]
-			}
-			set dimensioned 1
-
-			$self calcaddmul
-			# calculate linear transform parameters
-			$self empty
-			$self drawcoordsys
-
-			# Notify other elements about the redraw
-			event generate $can <<BoxResize>> -when tail
-		}
-		
-		method autodim {args} {
-			# if called from outside, reset zoom stack
-			set zoomstack [list $args]
-			$self autodim_internal {*}$args
-		}
-		
-		method autodim_internal {x1 x2 y1 y2} {
-			# automagically calculate good values
-			# for the tics increment
-
-			if {$logx && ($x1<=0 || $x2<=0)} { error "x-range must be positive for logscale"}
-			if {$logy && ($y1<=0 || $y2<=0)} { error "y-range must be positive for logscale"}
-			
-			if {0} {
-				if {$x2==$x1} { error "Zero x-range" }
-				if {$y2==$y1} { error "Zero y-range" }
-			} else {
-				# instead of erroring out, widen zero ranges
-				if {$x2==$x1} {
-					if {$logx} {
-						set xm $x1
-						set x1 [expr {$xm*0.999}]
-						set x2 [expr {$xm*1.001}]
-					} else {
-						set xm $x1
-						set x1 [expr {$xm-0.001}]
-						set x2 [expr {$xm+0.001}]
-					}
-				}
-
-				if {$y2==$y1} {
-					if {$logy} {
-						set ym $y1
-						set y1 [expr {$ym*0.999}]
-						set y2 [expr {$ym*1.001}]
-					} else {
-						set ym $y1
-						set y1 [expr {$ym-0.001}]
-						set y2 [expr {$ym+0.001}]
-					}
-				}
-						
-			}
-
-			set xd [expr {log($x2 - $x1)/log(10)}]
-			set yd [expr {log($y2 - $y1)/log(10)}]
-			set xe [expr {pow(10, floor($xd)-1)}]
-			set ye [expr {pow(10, floor($yd)-1)}]
-
-			set xfrac [expr {fmod($xd, 1.0)}]
-			set yfrac [expr {fmod($yd, 1.0)}]
-			if {$xfrac < 0 } {set xfrac [expr {$xfrac+1.0}]}
-			if {$yfrac < 0 } {set yfrac [expr {$yfrac+1.0}]}
-			# Exponent und Bruchteil des Zehnerlogarithmus
-			set xb 10
-			if {$xfrac <= 0.70} { set xb 5}
-			if {$xfrac <= 0.31} { set xb 2}
-
-			set yb 10
-			if {$yfrac <= 0.70} { set yb 5}
-			if {$yfrac <= 0.31} { set yb 2}
-
-			# gerundeter Tick-Wert = xb*xe, yb*ye
-			$self dim_internal $x1 $x2 $y1 $y2 [expr {$xb*$xe}] [expr {$yb*$ye}]
-
-		}
-
-		method calcaddmul {} {
-			if {$logx} {
-				set xmul [expr ($deskxmax - $deskxmin)/(log($xmax) -log($xmin))]
-				set xadd [expr $deskxmin-log($xmin)*$xmul]
-			} else {
-				set xmul [expr ($deskxmax - $deskxmin)/($xmax -$xmin)]
-				set xadd [expr $deskxmin-$xmin*$xmul]
-			}
-
-			if {$logy} {
-				set ymul [expr ($deskymax - $deskymin)/(log($ymax) -log($ymin))]
-				set yadd [expr $deskymin-log($ymin)*$ymul]
-			} else {
-				set ymul [expr ($deskymax - $deskymin)/($ymax -$ymin)]
-				set yadd [expr $deskymin-$ymin*$ymul]
-			}
-		}
-
-		method drawxtic {xval} {
-			set deskx [$self xToPix $xval]
-			if {$xval<$xmin || $xval>$xmax} return
-			if { $grid } { $can create line $deskx $deskymin $deskx $deskymax -fill gray -tag $selfns }
-			$can create line $deskx $deskymin  $deskx [expr {$deskymin+$ticklength}] -tag $selfns
-			$can create text $deskx [expr {$deskymin+$ticklength}] -anchor n -justify center -text [format $xaxisformat $xval] -font $axisfont -tag $selfns
-		}
-
-		method drawytic {yval} {
-			set desky [$self yToPix $yval]
-			if {$yval<$ymin || $yval>$ymax} return
-			if { $grid } { $can create line $deskxmin $desky $deskxmax $desky -fill gray -tag $selfns }
-			$can create line $deskxmin $desky  [expr {$deskxmin-$ticklength}] $desky -tag $selfns
-			$can create text  [expr {$deskxmin-$ticklength}] $desky -anchor e -text [format $yaxisformat $yval] -font $axisfont -tag $selfns
-		}
-
-		method logticlist {min max} {
-			# return a list of tics for logarithmic plotting
-			# min & max are powers of ten
-			set ticlevel [expr {$max-$min}]
-			if {$ticlevel<=2} {
-				return {1 2 3 4 5}
-			}
-			if {$ticlevel<=4} {
-				return {1 2 5}
-			}
-			if {$ticlevel<=6} {
-				return {1 5}
-			}
-			return 1
-		}
-
-		method log_widen {min max } {
-		#	puts "log_widen $min $max"
-			set tics [$self logticlist [expr {log10($min)}] [expr {log10($max)}]]
-			set minexp [expr {pow(10, int(floor(log10($min))))}]
-			set maxexp [expr {pow(10, int(floor(log10($max))))}]
-
-			set wmin $minexp
-			set wmax $maxexp
-			
-		#	puts "$wmin $wmax , increment $tics"
-			foreach tic $tics {
-				if {$minexp*$tic < $min} {
-					set wmin [expr {$minexp*$tic}]
-				}
-			}
-			
-			lappend tics 10
-			foreach tic $tics {
-				if {$maxexp*$tic >= $max} {
-					set wmax [expr {$maxexp*$tic}]
-					break
-				}
-			}
-
-			return [list $wmin $wmax]
-		}
-	
-		method widen {min max} {
-			set minv [expr {int(floor($min))}]
-			set maxv [expr {int(ceil($max))}]
-			return [list $minv $maxv]
-		}
-
-	
-		method drawcoordsys {} {
-
-			if {$logx} {
-				# logarithmic scale
-				# draw only 1, 2, 5 * 10^ticmark
-				set xticlist [$self logticlist $xticmin $xticmax]
-				lassign [$self widen $xticmin $xticmax] pmin pmax
-				for {set xtic $pmin} {$xtic<=$pmax} {incr xtic} {
-					set power [expr {pow(10,$xtic)}]
-					foreach multiplier $xticlist {
-						$self drawxtic [expr {$multiplier*$power}]
-					}
-				}
-			} else {
-				for {set xtic $xticmin} { $xtic <= $xticmax} { incr xtic } {
-					$self drawxtic [expr {$xtics*$xtic}]
-					# puts "$deskx $deskymin $xval"
-				}
-			}
-
-			if {$logy} {
-				# logarithmic scale
-				# draw only 1, 2, 5 * 10^ticmark
-				set yticlist [$self logticlist $yticmin $yticmax]
-				lassign [$self widen $yticmin $yticmax] pmin pmax
-				for {set ytic $pmin} {$ytic<=$pmax} {incr ytic} {
-					set power [expr {pow(10,$ytic)}]
-					foreach multiplier $yticlist {
-						$self drawytic [expr {$multiplier*$power}]
-					}
-				}
-			} else {
-				for {set ytic $yticmin} { $ytic <= $yticmax} { incr ytic } {
-					$self drawytic [expr $ytics*$ytic]
-					# puts "$deskxmin $desky $yval"
-				}
-			}
-
-			$can create rectangle $deskxmin $deskymin $deskxmax $deskymax -tag $selfns
-
-			if { $options(-xlabel) != "" } {
-				$can create text [expr {($deskxmin + $deskxmax) / 2}] [expr {$deskymin + $ticklength + 1.2 * $lineheight}] \
-					-anchor n -text $options(-xlabel) -font $axisfont -tag $selfns
-			}
-			
+			# set left margin to have room for ytic labels + ylabel
+			set deskxmin [expr {($lwidth+$options(-ticlength))+$margin}]
 			if { $options(-ylabel) != "" } {
-				$can create text 0 [expr {($deskymin + $deskymax)/2}] \
-					-anchor n -angle 90 -text $options(-ylabel) -font $axisfont -tag $selfns
+				set ylabelx [expr {$margin/2}]
+				set deskxmin [expr {$deskxmin + 1.2 * $lineheight}] 
+			} else {
+				set ylabelx 0
+			}
+			# if necessary, make space for first xtic
+			set deskxmin [expr {max($deskxmin, 0.5*$xminwidth)}]
+
+			set deskxmax [expr {$w-0.5*$xmaxwidth-$margin}]
+			set deskymax [expr {max($options(-ticlength),$lascent)+$margin}]
+			set deskymin [expr {($h-$options(-ticlength)-$lineheight-$ldescent)-$margin}]
+			if { $options(-xlabel) != "" } {
+				set xlabely [expr {$deskymin+$margin/2}]
+				set deskymin [expr {$deskymin - 1.2 * $lineheight}] 
+			} else {
+				set xlabely $deskymin
 			}
 
+
+			set displaysize [dict create xmin $deskxmin xmax $deskxmax ymin $deskymin ymax $deskymax \
+				margin $margin xlabely $xlabely ylabelx $ylabelx]
 		}
 
+		# compute the transform from graph coordinates
+		# to pixels
+		method calctransform {} {
+			set xmin [dict get $displayrange xmin]
+			set xmax [dict get $displayrange xmax]
+			set ymin [dict get $displayrange ymin]
+			set ymax [dict get $displayrange ymax]
+
+			set dxmin [dict get $displaysize xmin]
+			set dxmax [dict get $displaysize xmax]
+			set dymin [dict get $displaysize ymin]
+			set dymax [dict get $displaysize ymax]
+
+			if {$options(-logx)} {
+				set xmin [expr {log($xmin)}]
+				set xmax [expr {log($xmax)}]
+			}
+			
+			lassign [compute_rangetransform \
+					$xmin $xmax $dxmin $dxmax] xmul xadd
+			
+			if {$options(-logy)} {
+				set ymin [expr {log($ymin)}]
+				set ymax [expr {log($ymax)}]
+			}
+			
+			lassign [compute_rangetransform \
+					$ymin $ymax $dymin $dymax] ymul yadd
+			
+			set transform [list $xmul $xadd $ymul $yadd]
+		}
+	
+		method graph2pix {coords} {
+			# transform a list of coordinates to pixels
+			lassign $transform xmul xadd ymul yadd
+			set result {}
+			
+			set logcode {}
+			if {$options(-logx)} { append logcode x }
+			if {$options(-logy)} { append logcode y }
+			switch $logcode {
+				{} {
+					foreach {x y} $coords {
+						lappend result [expr {$x*$xmul+$xadd}] [expr {$y*$ymul+$yadd}]
+					}
+				}
+
+				x {
+					foreach {x y} $coords {
+						lappend result [expr {($x<=0)? -Inf*$xmul : log($x)*$xmul+$xadd}] \
+						[expr {$y*$ymul+$yadd}]
+					}
+				}
+
+				y {
+					foreach {x y} $coords {
+						lappend result [expr {$x*$xmul+$xadd}] \
+						[expr {($y<=0)? -Inf*$ymul : log($y)*$ymul+$yadd}]
+					}
+				}
+
+				xy {
+					foreach {x y} $coords {
+						lappend result [expr {($x<=0)? -Inf*$xmul : log($x)*$xmul+$xadd}] \
+						[expr {($y<=0)? -Inf*$ymul : log($y)*$ymul+$yadd}]
+					}
+				}
+			}
+			return $result
+		}
+		
+		# convert a single value to/from graph coordinates
 		method xToPix {x} {
-			if {$logx} {
+			lassign $transform xmul xadd ymul yadd
+			if {$options(-logx)} {
 				expr {($x<=0)? -Inf*$xmul : log($x)*$xmul+$xadd}
 			} else {
 				expr {$x*$xmul+$xadd}
@@ -704,145 +1276,71 @@ namespace eval ukaz {
 		}
 
 		method yToPix {y} {
-			if {$logy} {
+			lassign $transform xmul xadd ymul yadd
+			if {$options(-logy)} {
 				expr {($y<=0) ? -Inf*$ymul : log($y)*$ymul+$yadd}
 			} else {
 				expr {$y*$ymul+$yadd}
 			}
 		}
 
-		method PixTox {x} {
-			if {$logx}  {
+		method pixToX {x} {
+			lassign $transform xmul xadd ymul yadd
+			if {$options(-logx)}  {
 				expr {exp(($x-$xadd)/$xmul)}
 			} else {
 				expr {($x-$xadd)/$xmul}
 			}
 		}
 
-		method PixToy {y} {
-			if {$logy}  {
+		method pixToY {y} {
+			lassign $transform xmul xadd ymul yadd
+			if {$options(-logy)}  {
 				expr {exp(($y-$yadd)/$ymul)}
 			} else {
 				expr {($y-$yadd)/$ymul}
 			}
 		}
 
-		method coordsToPixel {x y} {
-			list [$self xToPix $x] [$self yToPix $y]
-		}
-
-		method pixelToCoords {x y} {
-			list [$self PixTox $x] [$self PixToy $y]
-		}
-
-		method calcminmax {data args}  {
-			set excludingcondition {!(
-				($logx && islogfinite($x)) || (!$logx && isfinite($x))) ||
-				!(($logy && islogfinite($y)) || (!$logy && isfinite($y)) )}
-
-			if {[llength $args]==2 && [lindex $args 0]=="-initial"} {
-				set initial [lindex $args 1]
-				if {[llength $initial]!=4} { return -code error "Initial list must have 4 entries" }
-				lassign $initial xmin xmax ymin ymax
-			} elseif {[llength $args]==0} {
-				if {[llength $data]<2} {
-					error "Invalid data, <2 items"
-				}
-				
-				set x ""
-				set y ""
-
-				while $excludingcondition {
-					if {[llength $data]<2} { return [list 1.0 2.0 1.0 2.0] }
-					set data [lassign $data x y]
-				}
-
-				set xmin $x
-				set ymin $y
-				set xmax $x
-				set ymax $y
-			} else {
-				return -code error "calcminmax data ?-initial {xmin xmax ymin ymax}"
-			}
-
-
-			foreach {x y} $data {
-				if $excludingcondition { continue }
-				if {$x<$xmin} { set xmin $x}
-				if {$x>$xmax} { set xmax $x}
-				if {$y<$ymin} { set ymin $y}
-				if {$y>$ymax} { set ymax $y}
-			}
-
-			list $xmin $xmax $ymin $ymax
-		}
-
-		method connectpoints {coordlist color args} {
-			# save this data for redraw purposes
-			set cid [$self connectpoints_nosave $coordlist $color $args]
-			incr datasetnr
-			dict set linedata $datasetnr [list $coordlist $color $args $cid]
-			return $datasetnr
-		}
-
-		method showpoints {coordlist color shape} {
-			# save this data for redraw purposes
-			set cid [$self showpoints_nosave $coordlist $color $shape]
-			incr datasetnr
-			dict set pointdata $datasetnr [list $coordlist $color $shape $cid]
-			return $datasetnr
-		}
-
-		method showpoints_autodim {coordlist color shape} {
-			if {$dimensioned} {
-				set range [$self calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
-			} else { 
-				set range [$self calcminmax $coordlist]
-			}
-			$self autodim {*}$range
-			$self showpoints $coordlist $color $shape
-		}
-
-		method connectpoints_autodim {coordlist color args} {
-			if {$dimensioned} {
-				set range [$self calcminmax $coordlist -initial [list $xmin $xmax $ymin $ymax]]
-			} else {
-				set range [$self calcminmax $coordlist]
-			}
-			$self autodim {*}$range
-			$self connectpoints $coordlist $color {*}$args
-		}
-
-		method reset_dimensioning {} {
-			set dimensioned 0
-		}
-
-		method getpointfromtag {tag point} {
-			dict for {pt data} $pointdata {
-				lassign $data coords color shape cid
-				if {$tag eq $cid} {
-					set ind [expr {$point*2}]
-					return [lrange $coords $ind $ind+1]
+		method drawdata {} {
+			foreach id $zstack {
+				# draw in correct order, dispatch between 
+				# lines and points
+				if {[dict exists $plotdata $id type points]} {
+					$self drawpoints $id
+				} 
+				if {[dict exists $plotdata $id type lines]} {
+					$self drawlines $id
 				}
 			}
-			return {}
 		}
 
-		method connectpoints_nosave {coordlist color extraargs {prefix {}} } {
-			if {$prefix == {}} {
-				incr pttagnr
-				set prefix [format "l%d_" $pttagnr]
-			}
-			set ltag "$prefix$selfns"
-			
-			set dxmin [$self xToPix $xmin]
-			set dxmax [$self xToPix $xmax]
-			set dymin [$self yToPix $ymin]
-			set dymax [$self yToPix $ymax]
+		method drawpoints {id} {
+			set data [dict get $plotdata $id data]
+			lassign [geometry::pointclip $data $displayrange] clipdata clipinfo
+			# store away the clipped & transformed data
+			# together with the info of the clipping
+			# needed for picking points
+			dict set plotdata $id clipinfo $clipinfo
+			set transdata [$self graph2pix $clipdata]
+			dict set plotdata $id transdata $transdata
 
+			set shapeproc shape-[dict get $plotdata $id pointtype]
+			$shapeproc $hull $transdata \
+				[dict get $plotdata $id color] \
+				[dict get $plotdata $id pointsize]	\
+				$selfns
+		}
+	
+		method drawlines {id} {
+			set data [dict get $plotdata $id data]
+			set color [dict get $plotdata $id color]
+			set width [dict get $plotdata $id linewidth]
+			set dash [dict get $plotdata $id dash]
+		
 			set piece {}
 			set pieces {}
-			foreach {x y} $coordlist {
+			foreach {x y} $data {
 				if {!isfinite($x) || !isfinite($y)} { 
 					# NaN value, start a new piece
 					if {[llength $piece]>0} { 
@@ -852,395 +1350,396 @@ namespace eval ukaz {
 					continue
 				}
 
-				set x [$self xToPix $x]
-				set y [$self yToPix $y]
 				lappend piece $x $y
 			}
 
 
-			lappend pieces $piece
+			lappend pieces [$self graph2pix $piece]
 
+			set ids {}
 			foreach piece $pieces {
 				if {[llength $piece]>=4} {
-					set clipped [geometry::polylineclip $piece $dxmin $dxmax $dymin $dymax]
+					set clipped [geometry::polylineclip $piece $displaysize]
 					foreach coord $clipped {
 						if {[llength $coord]<4} {
 							# error
 							puts "Input coords: "
 							puts "set piece [list $piece]"
-							puts "ukaz::geometry::polylineclip {$piece} $dxmin $dxmax $dymin $dymax"
+							puts "ukaz::geometry::polylineclip {$piece} $displaysize"
 							error "polyline did wrong, look in console"
 						}
-						$can create line $coord {*}$extraargs -fill $color -tag [list $selfns $ltag]
+						lappend ids [$hull create line $coord \
+							-fill $color -width $width -tag $selfns -dash $dash]
+					}
+				}
+			}
+			return $ids
+		}
+	
+		method drawlegend {} {
+			# check if legend is enabled
+			if {[dict get $options(-key) disabled]} { 
+				return
+			}
+			# draw the titles and a sample
+			set lineheight [expr {[font metrics $axisfont -linespace]*$options(-keyspacing)}]
+
+			# create list of all ids that have titles
+			# in correct zstack order
+			set titleids {}
+			foreach id $zstack {
+				if {[dict exists $plotdata $id title]} {
+					set title [dict get $plotdata $id title]
+					if {$title != ""} { lappend titleids $id }
+				}
+			}
+			# compute size needed for legend
+			
+			set dxmin [dict get $displaysize xmin]
+			set dymin [dict get $displaysize ymin]
+			set dxmax [dict get $displaysize xmax]
+			set dymax [dict get $displaysize ymax]
+			
+			set totalheight [expr {[llength $titleids]*$lineheight}]
+			set yoffset $lineheight ;# one line distance from border
+			set xoffset [expr {$options(-samplelength)/4}] ;# 1/4 length distance from border
+			
+			# y position of top sample
+			if {[dict get $options(-key) vertical]=="top"} {
+				set y0 [expr {$dymax+$yoffset}]
+			} else {
+				# bottom
+				set y0 [expr {$dymin-$totalheight}]
+			}
+
+			# x coordinates of line, sample and text anchor
+			if {[dict get $options(-key) horizontal]=="left"} {
+				set x0 [expr {$dxmin+$xoffset}]
+				set x1 [expr {$dxmin+$xoffset+$options(-samplelength)}]
+				set sx [expr {($x0+$x1)/2}]
+				set tx [expr {$x1+$xoffset}]
+				set anchor w
+			} else {
+				# right
+				set x0 [expr {$dxmax-$xoffset-$options(-samplelength)}]
+				set x1 [expr {$dxmax-$xoffset}]
+				set sx [expr {($x0+$x1)/2}]
+				set tx [expr {$x0-$xoffset}]
+				set anchor e
+			}
+
+			# draw !
+			set ycur $y0
+			foreach id $titleids {
+				set title [dict get $plotdata $id title]
+				if {[dict exists $plotdata $id type points]} {
+					set shapeproc shape-[dict get $plotdata $id pointtype]
+					$shapeproc $hull [list $sx $ycur] \
+						[dict get $plotdata $id color] \
+						[dict get $plotdata $id pointsize]	\
+						$selfns
+				}
+
+				if {[dict exists $plotdata $id type lines]} {
+					$hull create line [list $x0 $ycur $x1 $ycur] \
+							-fill [dict get $plotdata $id color] \
+							-width [dict get $plotdata $id linewidth] \
+							-dash [dict get $plotdata $id dash] -tag $selfns
+				}
+				
+				$hull create text $tx $ycur \
+					-anchor $anchor  \
+					-text $title -font $axisfont -tag $selfns
+				# advance
+				set ycur [expr {$y0+$lineheight}]
+			}
+
+		}
+
+		method drawcoordsys {} {
+			set dxmin [dict get $displaysize xmin]
+			set dymin [dict get $displaysize ymin]
+			set dxmax [dict get $displaysize xmax]
+			set dymax [dict get $displaysize ymax]
+			# draw border
+			$hull create rectangle $dxmin $dymin $dxmax $dymax -tag $selfns
+			# draw xtics
+			foreach {text xval} $xticlist {
+				set deskx [$self xToPix $xval]
+				if { $options(-grid) } { 
+					$hull create line $deskx $dymin $deskx $dymax -fill gray -tag $selfns	
+				}
+				$hull create line $deskx $dymin  $deskx [expr {$dymin+$options(-ticlength)}] -tag $selfns
+				$hull create text $deskx [expr {$dymin+$options(-ticlength)}] \
+					-anchor n -justify center \
+					-text $text -font $axisfont -tag $selfns
+			}
+			
+			# draw ytics
+			foreach {text yval} $yticlist {
+				set desky [$self yToPix $yval]
+				if { $options(-grid) } { 
+					$hull create line $dxmin $desky $dxmax $desky -fill gray -tag $selfns
+				}
+				$hull create line $dxmin $desky  [expr {$dxmin-$options(-ticlength)}] $desky -tag $selfns
+				$hull create text  [expr {$dxmin-$options(-ticlength)}] $desky \
+					-anchor e -justify right \
+					-text $text -font $axisfont -tag $selfns
+			}
+		
+			# draw xlabel and ylabel
+			if {$options(-xlabel) != {}} {
+					set xcenter [expr {($dxmin + $dxmax) / 2}]
+					set ypos [dict get $displaysize xlabely]
+					$hull create text $xcenter $ypos -anchor n \
+						-text $options(-xlabel) -font $axisfont -tag $selfns
+			}
+
+			if {$options(-ylabel) != {}} {
+				set ycenter [expr {($dymin + $dymax) / 2}]
+				set xpos [dict get $displaysize ylabelx]
+				$hull create text $xpos  $ycenter -anchor n \
+					-angle 90 -text $options(-ylabel) -font $axisfont -tag $selfns
+			}
+
+		}
+
+		method canv {args} {
+			$hull {*}$args
+		}
+
+		method Redraw {} {
+			$hull delete $selfns
+			# puts "Now drawing [$self configure]"
+			if {[dict size $plotdata] == 0} { return }
+			$self calcranges
+			$self calcsize
+			$self calctransform
+			$self drawcoordsys
+			$self drawdata
+			$self drawlegend
+			incr options(-redraw)
+			# notify embedded controls
+			set errors {}
+			foreach c $controls {
+				if {[catch {$c Configure $displaysize} err]} {
+					lappend errors $err
+				}
+			}
+			if {[llength $errors] > 0} {
+				# rethrow errors
+				return -code error [join $errors \n]
+
+			}
+		}
+		
+		method clear {} {
+			$hull delete $selfns
+			set plotdata {}
+			set zstack {}
+			$self RedrawRequest
+		}
+
+		method fontset {option value} {
+			# when -font is set, create the font
+			# possibly delete the old one
+
+			# let error propagate from here, before accepting the setting
+			set newfont [font create {*}$value]
+
+			if {$options(-font) != {}} {
+				font delete $axisfont
+			}
+			set axisfont $newfont
+			set options(-font) $value
+			$self RedrawRequest
+		}
+
+		method rangeset {option value} {
+			# configuremethod for -xrange, -yrange
+			# first check validity
+			lassign $value from to
+			if {(isfinite($from) || $from == "*") &&
+				(isfinite($to) || $to == "*")} {
+				set options($option) [list $from $to]
+				set zoomstack {}
+				$self RedrawRequest
+			} else {
+				return -code error "Range limits must be either a float or *"
+			}
+		}
+
+		method zoomin {range} {
+			# store current range in zoomstack
+			lappend zoomstack [list $options(-xrange) $options(-yrange)]
+			# apply zoom range
+			lassign $range xmin xmax ymin ymax
+			set options(-xrange) [list $xmin $xmax]
+			set options(-yrange) [list $ymin $ymax]
+			$self RedrawRequest
+			event generate $win <<Zoom>> -data $range
+		}
+
+		method zoomout {} {
+			if {[llength $zoomstack] > 0} {
+				set range [lindex $zoomstack end]
+				set zoomstack [lrange $zoomstack 0 end-1]
+				lassign $range options(-xrange) options(-yrange)
+				$self RedrawRequest
+				event generate $win <<Zoom>> -data [concat $range]
+			}
+		}
+
+		#### Methods for dragging rectangles (for zooming) #####
+		method {drag start} {x y} {
+			# try to see if this is our object
+			set cid [$hull find withtag current]
+			# only for empty result or an object tagged with
+			# $selfns, start action
+			if {$cid == {} || $selfns in [$hull gettags $cid]} {
+				dict set dragdata clicking true
+				dict set dragdata dragging false
+				dict set dragdata x0 $x
+				dict set dragdata y0 $y
+			}
+		}
+
+		method {drag move} {x y} {
+			if {[dict get $dragdata dragging]} {
+				$hull coords dragrect \
+					[dict get $dragdata x0] [dict get $dragdata y0] $x $y
+			}
+
+			if {[dict get $dragdata clicking]} {
+				# user has moved mouse - it's dragging now
+				# not clicking
+				$hull create rectangle $x $y $x $y -fill "" -outline red -tag dragrect
+				dict set dragdata clicking false
+				dict set dragdata dragging true
+			}
+			# if nothing is set in dragdata, it's not our business
+		}
+
+		method {drag end} {x y} {
+			# user has released mouse button
+			# check if it was a click or a drag (zoom)
+			if {[dict get $dragdata clicking]} {
+				# inverse transform this point
+				set xgraph [$self pixToX $x]
+				set ygraph [$self pixToY $y]
+				event generate $win <<Click>> -x $x -y $y -data [list $xgraph $ygraph]
+			}
+
+			if {[dict get $dragdata dragging]} {
+				# inverse transform both coordinates
+				set x1 [$self pixToX $x]
+				set y1 [$self pixToY $y]
+				set x0 [$self pixToX [dict get $dragdata x0]]
+				set y0 [$self pixToY [dict get $dragdata y0]]
+				# remove drag rectangle
+				$hull delete dragrect
+				# check for correct ordering
+				if {$x1 < $x0} { lassign [list $x0 $x1] x1 x0 }
+				if {$y1 < $y0} { lassign [list $y0 $y1] y1 y0 }
+				
+				if {$x0 != $x1 && $y0 != $y1} {
+					# zoom in!
+					$self zoomin [list $x0 $x1 $y0 $y1]
+				}
+			}
+			dict set dragdata dragging false 
+			dict set dragdata clicking false
+		}
+
+		method motionevent {x y} {
+			# inverse transform this point
+			set xgraph [$self pixToX $x]
+			set ygraph [$self pixToY $y]
+			event generate $win <<MotionEvent>> -x $x -y $y -data [list $xgraph $ygraph]
+		}
+		
+		method pickpoint {x y {maxdist 5}} {
+			# identify point in dataset given by *screen coordinates* x,y
+			# maximum distance from center maxdist
+			# return the topmost datapoint nearer than maxdist
+			set maxdistsq [expr {$maxdist**2}]
+			foreach id [lreverse $zstack] {
+				if {[dict exists $plotdata $id transdata]} {
+					# the transformed data is only available after drawing
+					set transdata [dict get $plotdata $id transdata]
+					set clipinfo [dict get $plotdata $id clipinfo]
+					set mindistsq Inf
+					set nr 0
+					foreach {xp yp} $transdata {
+						set distsq [expr {($xp-$x)**2+($yp-$y)**2}]
+						if {$distsq<$mindistsq} {
+							set mindistsq $distsq
+							set minnr $nr
+						}
+						incr nr
+					}
+					
+					if {$mindistsq < $maxdistsq} {
+						# now compute the real datapointnr after clipping
+						set dpnr $minnr
+						foreach {clipnr cliplength} $clipinfo {
+							if {$clipnr <= $minnr} {
+								incr dpnr $cliplength
+							}
+						}
+						# get the original data
+						set data [dict get $plotdata $id data]
+						set xd [lindex $data [expr {$dpnr*2}]]
+						set yd [lindex $data [expr {$dpnr*2+1}]]
+
+						# short circuiting ensures the 1st, topmost point is returned 
+						return [list $id $dpnr $xd $yd]
 					}
 				}
 			}
 
-			return $prefix
+			return {}
 		}
 
-		method showpoints_nosave {coordlist color shape {prefix {}}} {
-			switch $shape {
-				circle { 
-					set shapeproc circle
-					set filled false
-				}
 
-				filled-circle {
-					set shapeproc filled-circle
-					set filled true
-				}
-
-				square {
-					set shapeproc square
-					set filled false
-				}
-
-				filled-square {
-					set shapeproc filled-square
-					set filled true
-				}
-
-				triangle {
-					set shapeproc triangle
-					set filled false
-				}
-
-				filled-triangle {
-					set shapeproc filled-triangle
-					set filled true
-				}
-
-				uptriangle {
-					set shapeproc uptriangle
-					set filled false
-				}
-
-				filled-uptriangle {
-					set shapeproc filled-uptriangle
-					set filled true
-				}
-
-				hex     -
-				hexagon {
-					set shapeproc hexagon
-					set filled false
-				}
-
-				filled-hexagon {
-					set shapeproc filled-hexagon
-					set filled true
-				}
-
-				default {
-
-					error "Shape must be either square, circle, hex(agon), triangle, uptriangle, got  '$shape'"
-					return
-				}
-			}
-
-			if {$prefix == {} } {
-				incr pttagnr
-				set prefix [format "o%d_" $pttagnr]
-			}
-
-			# on Mac OS X, right&middle buttons are swapped
-			# X11/Mac does it right, though
-			if {[tk windowingsystem]== "aqua"} {
-				set secondclick <2>
-			} else {
-				set secondclick <3>
-			}
-
-			set itemnr 0
-			foreach {x y} $coordlist {
-
-				if {isfinite($x) && ($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax)} {
-					set deskx [$self xToPix $x]
-					set desky [$self yToPix $y]
-					# simple clipping, sufficient
-					$self $shapeproc $deskx $desky $color [list "$prefix$itemnr$selfns" "$prefix$selfns" $selfns]
-					$can bind "$prefix$itemnr$selfns" <1> [mymethod pointclick $itemnr $prefix]
-					$can bind "$prefix$itemnr$selfns" $secondclick [mymethod pointrightclick $itemnr $prefix]
-				}
-
-				incr itemnr
-			}
-			return $prefix
-		}
-
-		method circle {x y color tag} {
-			# additional fully transparent circle to make interior selectable
-			$can create oval [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline "" -tag $tag
-			$can create oval [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline $color -tag $tag
-			# puts $tag
-		}
-
-		method square {x y color tag} {
-			$can create rectangle  [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline $color -tag $tag
-		}
-
-		method hexagon {x y color tag} {
-			set size 5
-			set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline $color -fill "" -tag $tag
-		}
-		
-		method filled-circle {x y color tag} {
-			$can create oval [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline "" -fill $color -tag $tag
-		}
-
-		method filled-square {x y color tag} {
-			$can create rectangle  [expr {$x-5}] [expr {$y-5}] [expr {$x+5}] [expr {$y+5}] -outline "" -fill $color -tag $tag
-		}
-
-		method filled-hexagon {x y color tag} {
-			set size 5
-			set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline "" -fill $color -tag $tag
-		}
-		
-		method filled-uptriangle {x y color tag} {
-			set size 8
-			set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline "" -fill $color -tag $tag
-		}
-		
-		method uptriangle {x y color tag} {
-			set size 8
-			set clist {0.0 1.0 0.5 -0.5 -0.5 -0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline $color -fill "" -tag $tag
-		}
-
-		method filled-triangle {x y color tag} {
-			set size 8
-			set clist {0.0 1.0 0.5 -0.5 -0.5 -0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline "" -fill $color -tag $tag
-		}
-		
-		method triangle {x y color tag} {
-			set size 8
-			set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
-			foreach {xc yc} $clist {
-				lappend coord [expr {$xc*$size+$x}]
-				lappend coord [expr {$yc*$size+$y}]
-			}
-			$can create polygon $coord -outline $color -fill "" -tag $tag
-		}
-
-		method remove {itemlist} {
-			foreach item $itemlist {
-				if [dict exists $pointdata $item] {
-					set ctag [lindex [dict get $pointdata $item] 3]
-					$can delete "$ctag$selfns"
-					dict unset pointdata $item
-				}
-
-				if [dict exists $linedata $item] {
-					set ctag [lindex [dict get $linedata $item] 3]
-					$can delete "$ctag$selfns"
-					dict unset linedata $item
-				}
-			}
-
-		}
-
-		method highlight {tag nr color} {
-			set ctag "$tag$nr$selfns"
-			switch [string index $tag 0] {
-				o {$can itemconf $ctag -outline $color -fill $color}
-				f {$can itemconf $ctag -fill $color}
-				default { return [error "Invalid pointset identifier"] }
-			}
-			$can raise $ctag
-		}
-
-		method unhighlight {tag nr color} {
-			set ctag "$tag$nr$selfns"
-			switch [string index $tag 0] {
-				o {$can itemconf $ctag -outline $color -fill "" }
-				f {$can itemconf $ctag -fill $color}
-				default { return [error "Invalid pointset identifier"] }
-			}
-		}
-
-		method clear {} {
-			$self empty
-			set linedata {}
-			set pointdata {}
-			set pttagnr 0
-
-			if {$dimensioned} {
-				# box has been dimensioned
-				$self drawcoordsys
-			}
-		}
-
-		method empty {} {
-			$can delete $selfns
-		}
-
-		method bind {event handler} {
-			variable pointclickhandler
-			variable rightclickhandler
-			# arrange for handle to be called, when a point is clicked
-			switch $event {
-				<1>  {
-					set pointclickhandler $handler
-				}
-				<3>  {
-					set rightclickhandler $handler
-				}
-				default {
-					error "Event must be <1> or <3>"
-				}
-			}
-		}
-
-		method pointclick {nr tag} {
-			variable pointclickhandler
-			puts "Click on point $nr, tag $tag in $selfns"
-			if {$pointclickhandler != {}} {
-				uplevel #0 [list {*}$pointclickhandler $nr $tag $selfns]
-			}
-		}
-
-		method pointrightclick {nr tag} {
-			puts "Right click on point $nr, tag $tag in $selfns"
-			if {$rightclickhandler != {}} {
-				uplevel #0 [list {*}$rightclickhandler $nr $tag $selfns]
-			}
-		}
-
-#		method CreateImage {} { return [image create photo -format window -data $can] }
-
-		method MakePDF {fn} {
-			set size [list [winfo width $can] [winfo height $can]]
+		method saveAsPDF {fn} {
+			package require pdf4tcl
+			set size [list [winfo width $hull] [winfo height $hull]]
 			set pdf [pdf4tcl::new %AUTO% -paper $size -compress false]
-			$pdf canvas $can
+			$pdf canvas $hull
 			$pdf write -file $fn
 			$pdf destroy
 		}
 
-		method motionevent {x y} {
-			event generate $can <<MotionEvent>> -data [$self pixelToCoords $x $y]
+		method addcontrol {c} {
+			# add the control object c to the list of managed
+			# objects. First send a Parent command to notify it
+			$c Parent $self $hull
+			lappend controls $c
+			# get notification if this thing is deleted
+			trace add command $c delete [mymethod controldeleted $c]
+			# during Redraw it'll get a Configure request
+			$self RedrawRequest
 		}
 
-		method zoomstart {x y} {
-			# check if we hit the background
-			if {[$can find withtag current]=={}} {
-				# test whether we are inside the plotting area
-				if {$x > $deskxmin && $x < $deskxmax && $y > $deskymax && $y < $deskymin} {
-					set zooming true
-					$can create rectangle [list $x $y $x $y] -outline red -tag zoomrect
-					set zoomstartpos [list $x $y]
-				}
+		method removecontrol {c} {
+			if {[lsearch -exact $controls $c]>=0} {
+				set controls [lremove $controls $c]
+				# remove the delete trace
+				trace remove command $c delete [mymethod controldeleted $c]
+				$c Parent {} {}
 			}
 		}
 
-		method zoommove {x y} {
-			if {$zooming} {
-				$can coords zoomrect [concat $zoomstartpos [list $x $y]]
+		method controldeleted {c args} {
+			# the control was deleted from outside. Remove
+			# from our list without executing anything
+			if {[lsearch -exact $controls $c]>=0} {
+				set controls [lremove $controls $c]
 			}
-		}
-
-		method zoomend {x y} {
-			if {$zooming} {
-				set zooming false
-				$can delete zoomrect
-				lassign [$self pixelToCoords {*}$zoomstartpos] x1 y1
-				set x2 [$self PixTox $x]
-				set y2 [$self PixToy $y]
-
-				if {$x1==$x2 || $y1==$y2} {
-					# if zoomregion is empty, do nothing
-					return
-				}
-				# exchange if needed
-				if {$x1>$x2} {
-					lassign [list $x1 $x2] x2 x1
-				}
-				
-				if {$y1>$y2} {
-					lassign [list $y1 $y2] y2 y1
-				}
-
-				lappend zoomstack [list $x1 $x2 $y1 $y2]
-				$self MouseZoom $x1 $x2 $y1 $y2
-			}
-
-		}
-
-		method zoomout {x y} {
-			# check if we hit the background
-			if {[$can find withtag current]=={}} {
-				# determine size for all saved datapoints
-				set data {}
-				dict for  {ind d} $linedata {
-					lappend data {*}[lindex $d 0]
-				}
-				dict for  {ind d} $pointdata {
-					lappend data {*}[lindex $d 0]
-				}
-
-				if {[llength $zoomstack]>1} {
-					set zoomstack [lrange $zoomstack 0 end-1]
-				}
-				set prevpos [lindex $zoomstack end]
-				if {$prevpos == {}} {
-					# never happens
-					# zoom completely out
-					set totalpos [$self calcminmax $data]
-					#puts "Zoom completely out: $totalpos"
-					# $self MouseZoomOut {*}$totalpos
-				} else {
-					#puts "Zoom back: {*}$prevpos"
-					$self MouseZoomOut {*}$prevpos
-				}
-
-			}
-		}
-
-
-		# override these two for computed data
-		method MouseZoom {x1 x2 y1 y2} {
-				$self autodim_internal $x1 $x2 $y1 $y2
-				$self autoresize
-		}
-		
-		method MouseZoomOut {x1 x2 y1 y2} {
-				$self autodim_internal $x1 $x2 $y1 $y2
-				$self autoresize
-		}
-
-				#interp alias {} ::tcl::mathfunc::isfinite ${ns}::isfinite
-		#interp alias {} ::tcl::mathfunc::islogfinite ${ns}::islogfinite
-
-		proc isnan {x} {
-			# determine, whether x is NaN
-			expr {$x != $x}
 		}
 	}
+
 
 	snit::type dragline {
 		variable dragging
@@ -1248,58 +1747,83 @@ namespace eval ukaz {
 		option -command -default {}
 		option -orient -default horizontal -configuremethod SetOrientation
 		option -variable -default {} -configuremethod SetVariable
+		option -color -default {gray}
 		
 		variable pos
-		variable canv
-		variable plotbox
-		variable itemnr
-		variable x1
-		variable x2
-		variable y1
-		variable y2
+		variable canv {}
+		variable graph {}
+		variable xmin
+		variable xmax
+		variable ymin
+		variable ymax
 
-		variable loopescape
-		variable commandescape
-		constructor {box color args} {
-			set loopescape false
-			set plotbox $box
-			set canv [$box getcanv]
-
-			uevent::bind $plotbox Destroy [mymethod BoxDestroy]
-
-			lassign [$box getsize] x1 y1 x2 y2
-			set itemnr [$canv create line [list $x1 $y1 $x2 $y2] -fill $color -dash .]
-
+		variable loopescape false
+		variable commandescape false
+		
+		constructor {args} {
 			$self configurelist $args
-
-			set posx [expr {($x1+$x2)/2}]
-			set posy [expr {($y1+$y2)/2}]
-			set commandescape true
-			$self GotoPixel $posx $posy
-			
-			# Bindings for dragging
-			$canv bind $itemnr <ButtonPress-1> [mymethod dragstart %x %y]
-			$canv bind $itemnr <Motion> [mymethod dragmove %x %y]
-			$canv bind $itemnr <ButtonRelease-1> [mymethod dragend %x %y]
-			# Bindings for hovering - change cursor
-			$canv bind $itemnr <Enter> [mymethod dragenter]
-			$canv bind $itemnr <Leave> [mymethod dragleave]
-			# Bindings for changing of the size
-			bind $canv <<BoxResize>> +[mymethod resize]
-			set dragging 0
 		}
-
+		
 		destructor {
 			$self untrace
-			uevent::unbind [uevent::bind $plotbox Destroy [mymethod BoxDestroy]]
-			if { [winfo exists $canv] && [info exists itemnr]} { $canv delete $itemnr }
+			if { [info commands $canv] != {} } { $canv delete $selfns }
+		}
+
+
+		method Parent {parent canvas} {
+			if {$parent != {}} {
+				# this control is now managed
+				if {$graph != {}} {
+					return -code error "$self: Already managed by $graph"
+				}
+
+				if {[info commands $canvas] == {}} {
+					return -code error "$self: No drawing canvas: $canv"
+				}
+
+				set graph $parent
+				set canv $canvas
+				
+				$canv create line {-1 -1 -1 -1} -fill $options(-color) -dash . -tag $selfns
+				# Bindings for dragging
+				$canv bind $selfns <ButtonPress-1> [mymethod dragstart %x %y]
+				$canv bind $selfns <Motion> [mymethod dragmove %x %y]
+				$canv bind $selfns <ButtonRelease-1> [mymethod dragend %x %y]
+				
+				# Bindings for hovering - change cursor
+				$canv bind $selfns <Enter> [mymethod dragenter]
+				$canv bind $selfns <Leave> [mymethod dragleave]
+				
+				set dragging 0
+			
+			} else {
+				# this control was unmanaged. Remove our line
+				if {$canv != {} && [info commands $canv] != {}} {
+					$canv delete $selfns
+				}
+				set graph {}
+				set canv {}
+			}
+		}
+
+		method Configure {range} {
+			# the plot range has changed
+			set loopescape false
+
+			set xmin [dict get $range xmin]
+			set xmax [dict get $range xmax]
+			set ymin [dict get $range ymin]
+			set ymax [dict get $range ymax]
+
+			set loopescape false
+			set commandescape true
+			$self SetValue
 		}
 
 		method SetVariable {option varname} {
 			$self untrace
 			if {$varname != {}} {
 				upvar #0 $varname v
-				#if {![info exists v]} { set $v 1.0 }
 				trace add variable v write [mymethod SetValue]
 				set options(-variable) $varname
 				$self SetValue
@@ -1322,7 +1846,8 @@ namespace eval ukaz {
 			set loopescape true
 			upvar #0 $options(-variable) v
 			if {[info exists v]} {
-				$self gotoCoords $v $v
+				catch {$self gotoCoords $v $v}
+				# ignore any errors if the graph is incomplete
 			}
 		}
 
@@ -1358,8 +1883,6 @@ namespace eval ukaz {
 			}
 		}
 					
-		method BoxDestroy { args } { $self destroy }
-
 		method dragenter {} {
 			if {!$dragging} {
 				$canv configure -cursor hand2
@@ -1387,41 +1910,33 @@ namespace eval ukaz {
 		}
 
 		method GotoPixel {x y} {
-			lassign [$plotbox pixelToCoords $x $y] rx ry
+			if {$graph=={}} { return }
+			set rx [$graph pixToX $x]
+			set ry [$graph pixToY $y]
 			if {$options(-orient)=="horizontal"} {
 				set pos $ry
-				$canv coords $itemnr [list $x1 $y $x2 $y]
+				$canv coords $selfns [list $xmin $y $xmax $y]
 			} else {
 				set pos $rx
-				$canv coords $itemnr [list $x $y1 $x $y2]
+				$canv coords $selfns [list $x $ymin $x $ymax]
 			}
 			$self DoTraces
 		}
 
 		method gotoCoords {x y} {
-			lassign [$plotbox coordsToPixel $x $y] nx ny
+			if {$graph=={}} { return }
+			
+			lassign [$graph graph2pix [list $x $y]] nx ny
 			if {$options(-orient)=="horizontal"} {
 				set pos $y
-				$canv coords $itemnr [list $x1 $ny $x2 $ny]
+				$canv coords $selfns [list $xmin $ny $xmax $ny]
 			} else {
 				set pos $x
-				$canv coords $itemnr [list $nx $y1 $nx $y2]
+				$canv coords $selfns [list $nx $ymin $nx $ymax]
 			}
-			$canv raise $itemnr
+			$canv raise $selfns
 			$self DoTraces
 		}
-
-		method resize {} {
-			# Binding invoked, when the underlying box changes its dimensions
-			lassign [$plotbox getsize] x1 y1 x2 y2
-			lassign [$plotbox coordsToPixel $pos $pos] px py
-			if {$options(-orient)=="horizontal"} {
-				$canv coords $itemnr [list $x1 $py $x2 $py]
-			} else {
-				$canv coords $itemnr [list $px $y1 $px $y2]
-			}
-		}
-
 	}
 
 	proc ::tcl::mathfunc::isfinite {x} {
