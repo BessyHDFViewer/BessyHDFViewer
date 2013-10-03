@@ -1451,7 +1451,7 @@ namespace eval ukaz {
 					-anchor $anchor  \
 					-text $title -font $axisfont -tag $selfns
 				# advance
-				set ycur [expr {$y0+$lineheight}]
+				set ycur [expr {$ycur+$lineheight}]
 			}
 
 		}
