@@ -1065,7 +1065,6 @@ namespace eval BessyHDFViewer {
 
 
 	variable plotstylecache {}
-	variable formathistory [dict create x {} y {}] ; # 
 	proc DisplayPlot {args} {
 		variable w
 		variable plotdata
@@ -1077,7 +1076,6 @@ namespace eval BessyHDFViewer {
 		variable keepzoom
 
 		variable plotstylecache
-		variable formathistory
 		
 		# parse arg
 		set defaults [dict create -explicit false -focus {}]
@@ -1149,6 +1147,7 @@ namespace eval BessyHDFViewer {
 
 		# append history to format entries
 		# if the value in xformat or yformat is no standard axis, add to dropdown list
+		set formathistory [PreferenceGet FormatHistory {x {} y {}}] 
 		if {$explicit && $xformat ne {} && $yformat ne {}} {
 			if {$xformat ni $xformatlist} {
 				dict unset formathistory x $xformat
@@ -1173,7 +1172,9 @@ namespace eval BessyHDFViewer {
 			}
 
 		}
-		
+
+		PreferenceSet FormatHistory $formathistory
+
 		lappend xformatlist  {*}[lreverse [dict keys [dict get $formathistory x]]]
 		lappend yformatlist {*}[lreverse [dict keys [dict get $formathistory y]]]
 
