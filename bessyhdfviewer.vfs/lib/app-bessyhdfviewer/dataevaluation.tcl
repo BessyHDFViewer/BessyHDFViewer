@@ -8,6 +8,7 @@ namespace eval DataEvaluation {
 		FindPeaks	peakdetect	"Find peaks by Scholkmann's method"
 		FindCenter	peakcenter	"Compute peak and center like measurement program"
 		ShowDerivative derivative "Compute derivative"
+		RefDivide  refdivide "Divide by first dataset"
 	}
 
 	# peak-locating using the AMPD method
@@ -297,6 +298,73 @@ namespace eval DataEvaluation {
 		}
 		# replace y axis title
 		$BessyHDFViewer::w(Graph) set ylabel "d/dx ([$BessyHDFViewer::w(Graph) cget -ylabel])"
+	}
+
+	proc mkspline {data} {
+		set sdata [lsort -stride 2 -real -uniq $data]
+		# repack this into a list of lists
+		set spline {}
+		foreach {x y} $sdata {
+			lappend spline [list $x $y]
+		}
+		return $spline
+	}
+
+	proc evalspline {spline xval} {
+		# locate position
+		set index [lsearch -bisect -real -index 0 $spline $xval]
+		if {$index == -1} { 
+			# left of 1st point
+			return [lindex $spline 0 1]
+		}
+		
+		if {$index == [llength $spline]-1} { 
+			# right of last point
+			return [lindex $spline end 1]
+		}
+
+		# we are in between index and index+1
+		lassign [lindex $spline $index] x0 y0
+		lassign [lindex $spline $index+1] x1 y1
+
+		# compute linear interpolation
+		expr {$y0+double($y1-$y0)*double($xval-$x0)/double($x1-$x0)}
+	}
+
+	proc RefDivide {} {
+		# divide all datasets by the first one
+		# shorten if necessary
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		if {[llength $plotids] < 2} {
+			return -code error "Need at least two datasets"
+		}
+
+		set start true
+
+		foreach id $plotids {
+			# filter NaNs from the dataset
+			set data [$BessyHDFViewer::w(Graph) getdata $id data]
+			set title [$BessyHDFViewer::w(Graph) getdata $id title]
+			set fdata {}
+			foreach {x y} $data {
+				if {isnan($x) || isnan($y)} { continue }
+				lappend fdata $x $y
+			}
+			
+			if {$start} {
+				set refdata [mkspline $fdata]
+				set rtitle $title
+				$BessyHDFViewer::w(Graph) remove $id
+				set start false
+			} else {
+				set divdata {}
+				foreach {x y} $fdata {
+					set rval [evalspline $refdata $x]
+					lappend divdata $x [expr {$y/$rval}]
+				}
+				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
+			}
+		}
 	}
 
 	snit::widget TextDisplay {

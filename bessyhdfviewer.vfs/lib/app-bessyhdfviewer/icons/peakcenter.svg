@@ -44,8 +44,8 @@
      showgrid="true"
      inkscape:window-width="1174"
      inkscape:window-height="733"
-     inkscape:window-x="11"
-     inkscape:window-y="377"
+     inkscape:window-x="618"
+     inkscape:window-y="284"
      inkscape:window-maximized="0">
     <inkscape:grid
        type="xygrid"
@@ -123,7 +123,9 @@
        inkscape:connector-curvature="0"
        id="path3768"
        d="m 1.0535713,1036.6658 30.9999997,0"
-       style="fill:none;stroke:#ffffff;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+       style="fill:none;stroke:#ffffff;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2,2;stroke-dashoffset:0"
        d="m 32.053571,1036.6658 -30.9999996,0"
