@@ -82,7 +82,7 @@ snit::widgetadaptor AutoComplete {
 				set output $suggestion
 			} else {
 				# formula - $ and brace suggestion
-				if {[regexp {^[[:alpha:]][[:alnum:]]*$} $suggestion]} {
+				if {[regexp {^[[:alpha:]_][[:alnum:]_]*$} $suggestion]} {
 					# only alphanumeric - don't use braces
 					append output "\$$suggestion"
 				} else {
@@ -95,9 +95,11 @@ snit::widgetadaptor AutoComplete {
 			
 			# insert text and 
 			# move cursor to end of inserted text
+			# scroll to the last bit
 			$hull delete 0 end
 			$hull insert 0 $output
 			$hull icursor $insertpos
+			after idle [list $hull xview moveto 1.0] ;# length is computed on idle
 			
 			# cycle through suggestions
 			incr suggind

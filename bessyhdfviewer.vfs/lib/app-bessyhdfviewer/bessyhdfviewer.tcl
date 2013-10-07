@@ -283,9 +283,13 @@ namespace eval BessyHDFViewer {
 		variable gridon 0
 		tooltip::tooltip $w(gridon) "Switch grid in plot window"
 
-		set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "Keep format"]
+		set w(keep) [ttk::label $w(axebar).keeplbl -text "Keep"]
+		set w(keepformat) [ttk::checkbutton $w(axebar).keepformat -variable ${ns}::keepformat -text "format"]
+		set w(keepzoom) [ttk::checkbutton $w(axebar).keepzoom -variable ${ns}::keepzoom -text "zoom"]
 		variable keepformat false
+		variable keepzoom false
 		tooltip::tooltip $w(keepformat) "Check to keep the plot format when switching files"
+		tooltip::tooltip $w(keepzoom) "Check to keep the plot range when switching files"
 
 		
 		bind $w(xent) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
@@ -296,7 +300,9 @@ namespace eval BessyHDFViewer {
 		bind $w(yent) <Return> [list ${ns}::DisplayPlot -explicit true -focus y]
 		bind $w(xlbl) <1> ${ns}::ConsoleShow
 
-		grid $w(xlbl) $w(xlog) $w(xent) $w(ylbl) $w(ylog) $w(yent) $w(gridon) $w(keepformat) -sticky ew
+		grid $w(xlbl) $w(xlog) $w(xent) $w(ylbl) $w(ylog) $w(yent) $w(gridon) \
+			$w(keep) $w(keepformat) $w(keepzoom) -sticky ew
+
 		grid columnconfigure $w(axebar) $w(xent) -weight 1
 		grid columnconfigure $w(axebar) $w(yent) -weight 1
 
@@ -1233,6 +1239,11 @@ namespace eval BessyHDFViewer {
 
 		}
 
+		# reset plot range if not requested otherwise
+		if {!$keepzoom} {
+			$w(Graph) set auto x
+			$w(Graph) set auto y
+		}
 
 		
 		# plot the data

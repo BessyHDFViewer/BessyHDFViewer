@@ -123,7 +123,7 @@ namespace eval DataEvaluation {
 			foreach idx $minima {
 				set x [lindex $fdata [expr {2*$idx}]]
 				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "$x $y"
+				lappend output "[format %.15g $x] [format %.15g $y]"
 				lappend minimaxy $x $y
 			}
 			
@@ -132,7 +132,7 @@ namespace eval DataEvaluation {
 			foreach idx $maxima {
 				set x [lindex $fdata [expr {2*$idx}]]
 				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "$x $y"
+				lappend output "[format %.15g $x] [format %.15g $y]"
 				lappend maximaxy $x $y
 			}
 
