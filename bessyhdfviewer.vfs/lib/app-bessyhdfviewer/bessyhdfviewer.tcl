@@ -1068,6 +1068,7 @@ namespace eval BessyHDFViewer {
 		variable xformat
 		variable yformat
 		variable keepformat
+		variable keepzoom
 
 		variable plotstylecache
 		variable formathistory

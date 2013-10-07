@@ -98,7 +98,11 @@ namespace eval DataEvaluation {
 	proc FindPeaks {} {
 		# run the peak detector on the currently displayed list
 		set output ""
-		foreach {fn data} $BessyHDFViewer::datashown {
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		foreach id $plotids {
+			# filter NaNs from the dataset
+			set data [$BessyHDFViewer::w(Graph) getdata $id data]
+			set title [$BessyHDFViewer::w(Graph) getdata $id title]
 			# filter NaNs from the dataset
 			set fdata {}
 			foreach {x y} $data {
@@ -113,7 +117,7 @@ namespace eval DataEvaluation {
 			set minima [ampd_min $vlist]
 			set maxima [ampd_max $vlist]
 			# generate output
-			lappend output "# $fn"
+			lappend output "# $title"
 			lappend output "# Minima:"
 			set minimaxy {}
 			foreach idx $minima {
@@ -132,11 +136,12 @@ namespace eval DataEvaluation {
 				lappend maximaxy $x $y
 			}
 
+			$BessyHDFViewer::w(Graph) plot $minimaxy with points color green pt filled-hexagons
+			$BessyHDFViewer::w(Graph) plot $maximaxy with points color red pt filled-hexagons
+
 		}
 		#puts [join $output \n]
 
-		$BessyHDFViewer::w(Graph) plot $minimaxy with points color green pt filled-hexagons
-		$BessyHDFViewer::w(Graph) plot $maximaxy with points color red pt filled-hexagons
 		TextDisplay Show [join $output \n]
 	}
 
@@ -162,12 +167,12 @@ namespace eval DataEvaluation {
 	}
 
 	proc ShowDerivative {} {
-		$BessyHDFViewer::w(Graph) clear
 		$BessyHDFViewer::w(Graph) set auto y
 
-		set plotid {}
-		foreach {fn data} $BessyHDFViewer::datashown {
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		foreach id $plotids {
 			# filter NaNs from the dataset
+			set data [$BessyHDFViewer::w(Graph) getdata $id data]
 			set fdata {}
 			foreach {x y} $data {
 				if {isnan($x) || isnan($y)} { continue }
@@ -175,15 +180,16 @@ namespace eval DataEvaluation {
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
 			set deriv [derive $fdata]
-			if {[llength $deriv]<2} { continue }
-			# plot derivative with the style used in the orginal data
-			if {[catch {set style [dict get $BessyHDFViewer::plotstylecache $fn]}]} {
-				# no style in the cache (?) - default to black with red points
-				set style  {linespoints color black pt squares}
+			if {[llength $deriv]<2} { 
+				# no derivative - delete this dataset
+				$BessyHDFViewer::w(Graph) remove $id
+			} else {
+				# replace this dataset by it's derivative
+				$BessyHDFViewer::w(Graph) update $id data $deriv
 			}
-			lappend plotid [$BessyHDFViewer::w(Graph) plot $deriv with {*}$style]
 		}
-
+		# replace y axis title
+		$BessyHDFViewer::w(Graph) set ylabel "d/dx ([$BessyHDFViewer::w(Graph) cget -ylabel])"
 	}
 
 	snit::widget TextDisplay {
