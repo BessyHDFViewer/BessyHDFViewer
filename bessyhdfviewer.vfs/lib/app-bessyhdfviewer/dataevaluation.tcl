@@ -6,6 +6,7 @@ namespace eval DataEvaluation {
 
 	set commands {
 		FindPeaks	peakdetect	"Find peaks by Scholkmann's method"
+		FindCenter	peakcenter	"Compute peak and center like measurement program"
 		ShowDerivative derivative "Compute derivative"
 	}
 
@@ -140,7 +141,113 @@ namespace eval DataEvaluation {
 			$BessyHDFViewer::w(Graph) plot $maximaxy with points color red pt filled-hexagons
 
 		}
-		#puts [join $output \n]
+
+		TextDisplay Show [join $output \n]
+	}
+	
+	proc FindCenter {{thresh 0.5}} {
+		# simplistic peak & center detector as in measurement program
+		set output ""
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		foreach id $plotids {
+			# filter NaNs from the dataset
+			set data [$BessyHDFViewer::w(Graph) getdata $id data]
+			set title [$BessyHDFViewer::w(Graph) getdata $id title]
+			# filter NaNs from the dataset
+			set fdata {}
+			foreach {x y} $data {
+				if {isnan($x) || isnan($y)} { continue }
+				lappend fdata $x $y
+			}
+			set fdata [lsort -stride 2 -real -uniq $fdata]
+
+			if {[llength $fdata] < 3} { continue }
+
+			# compute min/max position 
+			set maxx 0; set maxy -Inf; set miny +Inf; set ind 0
+			foreach {x y} $fdata {
+				if {$y > $maxy} { 
+					set maxy $y
+					set maxx $x
+					set maxi $ind
+				}
+				if {$y < $miny} {
+					set miny $y
+				}
+				incr ind
+			}
+			
+			set indmax $ind
+
+			# go from max position to the left and right
+			# until we hit the threshold
+			set rightx {}
+			set leftx {}
+			set ythresh [expr {$miny*$thresh + $maxy*(1.0-$thresh)}]
+			set xold $maxx; set yold $maxy
+
+			for {set ind $maxi} {$ind < $indmax} {incr ind 1} {
+				set xcur [lindex $fdata [expr {2*$ind}]]
+				set ycur [lindex $fdata [expr {2*$ind+1}]]
+				if {$ycur < $ythresh} {
+					# interpolate for position 
+					set rightx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+					break
+				}
+				set xold $xcur
+				set yold $ycur
+			}
+			
+			set xold $maxx; set yold $maxy
+			for {set ind $maxi} {$ind >= 0} {incr ind -1} {
+				set xcur [lindex $fdata [expr {2*$ind}]]
+				set ycur [lindex $fdata [expr {2*$ind+1}]]
+				if {$ycur < $ythresh} {
+					# interpolate for position 
+					set leftx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+					break
+				}
+				set xold $xcur
+				set yold $ycur
+			}
+
+			if {$leftx != {} && $rightx != {}} {
+				set width [expr {$rightx-$leftx}]
+				set cx [expr {($leftx+$rightx)/2}]
+			}
+
+			# generate output
+			lappend output "# $title"
+			lappend output "# Peak:"
+			lappend output "[format %.15g $maxx] [format %.15g $maxy]"
+			if {$leftx != {} && $rightx != {}} {
+				lappend output "# Center:"
+				lappend output "[format %.15g $cx]"
+				lappend output "# Width:"
+				lappend output "[format %.15g $width]"
+			}
+
+			lappend output "# Bounds:"
+			lappend output "$leftx $rightx"
+			
+			# visualize
+			$BessyHDFViewer::w(Graph) plot [list -Inf $ythresh +Inf $ythresh] with lines color black dash -
+
+			if {$leftx != {}} {
+				$BessyHDFViewer::w(Graph) plot [list $leftx -Inf $leftx +Inf] with lines color black dash .
+			}
+
+			if {$rightx != {}} {
+				$BessyHDFViewer::w(Graph) plot [list $rightx -Inf $rightx +Inf] with lines color black dash .
+			}
+
+			if {$leftx != {} && $rightx != {}} {
+				$BessyHDFViewer::w(Graph) plot [list $cx -Inf $cx +Inf] with lines color black dash -
+			}
+
+			$BessyHDFViewer::w(Graph) plot [list $maxx $maxy] with points color red pt filled-hexagons
+
+		}
 
 		TextDisplay Show [join $output \n]
 	}
