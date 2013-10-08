@@ -377,14 +377,18 @@ namespace eval DataEvaluation {
 		
 		set idx 0
 		set output {}
+		lappend output "# ASCII export from BessyHDFViewer"
+		lappend output "# xlabel: [$BessyHDFViewer::w(Graph) cget -xlabel]"
+		lappend output "# ylabel: [$BessyHDFViewer::w(Graph) cget -ylabel]"
 		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
 		foreach id $plotids {
 			set data [$BessyHDFViewer::w(Graph) getdata $id data]
 			set title [$BessyHDFViewer::w(Graph) getdata $id title]
 			
-			lappend output "# ASCII export from BessyHDFViewer"
 			lappend output "# Dataset $idx"
 			lappend output "# $title"
+			lappend output "# format x: $BessyHDFViewer::xformat"
+			lappend output "# format x: $BessyHDFViewer::yformat"
 			foreach {x y} $data {
 				lappend output "$x $y"
 			}
