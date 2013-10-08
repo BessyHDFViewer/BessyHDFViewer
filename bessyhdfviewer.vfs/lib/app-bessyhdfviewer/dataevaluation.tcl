@@ -9,13 +9,14 @@ namespace eval DataEvaluation {
 		FindCenter	peakcenter	"Compute peak and center like measurement program"
 		ShowDerivative derivative "Compute derivative"
 		RefDivide  refdivide "Divide by first dataset"
+		SaveData   document-save-as "Save plot as ASCII data"
 	}
 
 	# peak-locating using the AMPD method
 	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
 	#
 	# NOTE: Scholkmann's algorithm description is a bit confusing
-	# using random numbers and standrad deviations
+	# using random numbers and standard deviations
 	# This implementation tries to follow the original idea,
 	# but in a deterministic way 
 	proc ampd_max {v} {
@@ -365,6 +366,35 @@ namespace eval DataEvaluation {
 				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
 			}
 		}
+	}
+
+	proc SaveData {} {
+		# prompt for file name and save 
+		# ASCII data of the plot
+		set filename [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
+			-defaultextension .dat \
+			-title "Select ASCII file for export"]
+		
+		set idx 0
+		set output {}
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		foreach id $plotids {
+			set data [$BessyHDFViewer::w(Graph) getdata $id data]
+			set title [$BessyHDFViewer::w(Graph) getdata $id title]
+			
+			lappend output "# ASCII export from BessyHDFViewer"
+			lappend output "# Dataset $idx"
+			lappend output "# $title"
+			foreach {x y} $data {
+				lappend output "$x $y"
+			}
+			lappend output "" ""
+			incr idx
+		}
+
+		set fd [open $filename w]
+		puts $fd [join $output \n]
+		close $fd
 	}
 
 	snit::widget TextDisplay {
