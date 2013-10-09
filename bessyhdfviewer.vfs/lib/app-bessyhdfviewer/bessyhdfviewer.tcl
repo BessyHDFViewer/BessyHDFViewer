@@ -265,7 +265,7 @@ namespace eval BessyHDFViewer {
 		set w(xent) [ttk::combobox $w(axebar).xent -textvariable ${ns}::xformat -exportselection 0]
 		set w(xlog) [ttk::checkbutton $w(axebar).xlog -variable ${ns}::xlog -style Toolbutton \
 			-image [list [IconGet linscale] selected [IconGet logscale]] \
-			-command [list ${ns}::DisplayPlot -explicit true]]
+			-command [list ${ns}::PlotProperties]]
 		variable xlog 0
 		tooltip::tooltip $w(xlog) "Switch logscale for x-axis"
 
@@ -273,13 +273,13 @@ namespace eval BessyHDFViewer {
 		set w(yent) [ttk::combobox $w(axebar).yent -textvariable ${ns}::yformat -exportselection 0]
 		set w(ylog) [ttk::checkbutton $w(axebar).ylog -variable ${ns}::ylog -style Toolbutton \
 			-image [list [IconGet linscale] selected [IconGet logscale]] \
-			-command [list ${ns}::DisplayPlot -explicit true]]
+			-command [list ${ns}::PlotProperties]]
 		variable ylog 0
 		tooltip::tooltip $w(ylog) "Switch logscale for y-axis"
 
 		set w(gridon) [ttk::checkbutton $w(axebar).grid -variable ${ns}::gridon -style Toolbutton \
 			-image [IconGet grid] \
-			-command [list ${ns}::DisplayPlot -explicit true]]
+			-command [list ${ns}::PlotProperties]]
 		variable gridon 0
 		tooltip::tooltip $w(gridon) "Switch grid in plot window"
 
@@ -1062,6 +1062,16 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	proc PlotProperties {} {
+		variable xlog
+		variable ylog
+		variable gridon
+		variable w
+
+		$w(Graph) set log x $xlog
+		$w(Graph) set log y $ylog
+		$w(Graph) set grid $gridon
+	}
 
 
 	variable plotstylecache {}
@@ -1086,14 +1096,6 @@ namespace eval BessyHDFViewer {
 
 		set explicit [dict get $opts -explicit]
 		set focus [dict get $opts -focus]
-
-		variable xlog
-		variable ylog
-		variable gridon
-
-		$w(Graph) set log x $xlog
-		$w(Graph) set log y $ylog
-		$w(Graph) set grid $gridon
 
 		variable plotid
 		if {[info exists plotid]} {
