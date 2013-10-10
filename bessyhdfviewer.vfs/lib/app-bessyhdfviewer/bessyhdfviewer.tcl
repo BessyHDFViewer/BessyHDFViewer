@@ -1788,6 +1788,26 @@ namespace eval BessyHDFViewer {
 
 			proc mean {list} { expr {[sum $list]/[count $list]} }
 
+			proc truncmean {quant list} {
+				# compute a truncated mean
+				# which discards quant amount of the data
+				# at the low and high end and computes the mean
+				# of the remaining data
+				
+				set count [llength $list]
+				
+				# can't work for less than 3 items. 
+				# For 3 should give median value
+				if {$count < 3} { return [mean $list] }
+
+				set slist [lsort -real $list]
+				# leave at least 1 sample in the center
+				# remove at least 1 from each side
+				set trlength [expr {min(int(ceil($quant*$count)), ($count-1)/2)}]
+
+				return [mean [lrange $slist $trlength end-$trlength]]
+			}
+
 			proc sum {list} {
 				set result 0
 				foreach v $list {

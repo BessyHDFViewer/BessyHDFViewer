@@ -10,6 +10,7 @@ namespace eval DataEvaluation {
 		ShowDerivative derivative "Compute derivative"
 		RefDivide  refdivide "Divide by first dataset"
 		SaveData   document-save-as "Save plot as ASCII data"
+		SavePDF    save-pdf  "Save plot as PDF"
 	}
 
 	# peak-locating using the AMPD method
@@ -375,6 +376,8 @@ namespace eval DataEvaluation {
 			-defaultextension .dat \
 			-title "Select ASCII file for export"]
 		
+		if {$filename eq ""} { return }
+
 		set idx 0
 		set output {}
 		lappend output "# ASCII export from BessyHDFViewer"
@@ -399,6 +402,16 @@ namespace eval DataEvaluation {
 		set fd [open $filename w]
 		puts $fd [join $output \n]
 		close $fd
+	}
+
+	proc SavePDF {} {
+		set filename [tk_getSaveFile -filetypes { {{PDF files} {.pdf}} {{All files} {*}}} \
+			-defaultextension .pdf \
+			-title "Select PDF file for export"]
+
+		if {$filename eq ""} { return }
+
+		$BessyHDFViewer::w(Graph) saveAsPDF $filename
 	}
 
 	snit::widget TextDisplay {
