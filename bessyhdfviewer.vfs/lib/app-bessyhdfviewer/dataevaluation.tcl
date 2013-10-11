@@ -362,7 +362,9 @@ namespace eval DataEvaluation {
 				set divdata {}
 				foreach {x y} $fdata {
 					set rval [evalspline $refdata $x]
-					lappend divdata $x [expr {$y/$rval}]
+					if {![catch {expr {$y/$rval}} val]} {
+						lappend divdata $x $val
+					}
 				}
 				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
 			}
