@@ -74,6 +74,7 @@ namespace eval dirViewer {} {
 
 		variable RebuildPending false
 		variable PendingState [dict create]
+		typevariable haveinotify
 
 		option -globpattern -default {*}
 		option -columns -default {} -configuremethod ChangeColumns
@@ -82,6 +83,31 @@ namespace eval dirViewer {} {
 		option -selectcommand -default {}
 		option -hasparent -default 1 -readonly 1
 		delegate option -selectmode to tbl
+	
+		proc globmatch {flist patterns} {
+			# perform matching similar to glob 
+			# and reduce flist to names that match the pattern
+			set result {}
+			foreach f $flist {
+				set match false
+				foreach p $patterns {
+					if {[string match $p $f]} {
+						lappend result $f
+						break
+					}
+				}
+			}
+			return $result
+		}
+
+
+		typeconstructor {
+			if {[catch {package require inotify}]} {
+				set haveinotify false
+			} else {
+				set haveinotify true
+			}
+		}
 
 		#------------------------------------------------------------------------------
 		# Constructor
@@ -216,9 +242,6 @@ namespace eval dirViewer {} {
 
 			if {[string compare $nodeIdx "root"] == 0} {
 				$tbl delete 0 end
-				set row 0
-			} else {
-				set row [expr {$nodeIdx + 1}]
 			}
 
 			# create list of directories and files. If $dir == ""
@@ -293,12 +316,12 @@ namespace eval dirViewer {} {
 			# tbl as list of children of the row identified by nodeIdx
 			#
 			set itemList [$tbl applysorting $itemList]
-			$tbl insertchildlist $nodeIdx end $itemList
+			set fullkeys [$tbl insertchildlist $nodeIdx end $itemList]
 
 			#
 			# Insert an image into the first cell of each newly inserted row
 			#
-			foreach item $itemList {
+			foreach item $itemList row $fullkeys {
 				set fullname [lindex $item end]
 				set image [lindex $item end-1]
 				set type [lindex $item 0 0]
@@ -315,8 +338,6 @@ namespace eval dirViewer {} {
 
 				# store the full absolute path in this node
 				$tbl rowattrib $row pathName $fullname 
-
-				incr row
 			}
 
 
