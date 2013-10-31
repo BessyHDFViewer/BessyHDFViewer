@@ -387,6 +387,15 @@ namespace eval dirViewer {} {
 			return $fullkeys
 		}
 
+		method removeItem {node fullpath} {
+			foreach key [$tbl childkeys $node] {
+				if {[$tbl rowattrib $key pathName] eq $fullpath} {
+					$tbl delete [list $key]
+				}
+			}
+		}
+
+
 		method inotifyhandler {wid} {
 			if {[catch {
 				while {[$watch queue]} {
@@ -406,7 +415,11 @@ namespace eval dirViewer {} {
 
 								# check if this file is in the filterlist
 								if {[globmatch $fn $options(-globpattern)]} {
-									set newnode [$self putItems $node [list [file join $path $fn]] {}]
+									set fullpath [file join $path $fn]
+									# remove this file, if it is already there
+									
+									$self removeItem $node $fullpath 
+									set newnode [$self putItems $node [list $fullpath] {}]
 									# we passed only one. Move the cursor to this
 									$tbl see [lindex $newnode 0]
 								}
