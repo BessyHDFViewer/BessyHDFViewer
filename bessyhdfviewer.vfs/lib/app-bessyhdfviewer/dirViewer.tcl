@@ -69,6 +69,10 @@ namespace eval dirViewer {} {
 		component tbl
 		component vsb
 		component hsb
+
+		component watch ;# inotify watching paths
+		variable watchlist {}
+
 		variable homedir
 		variable cwd
 
@@ -84,22 +88,15 @@ namespace eval dirViewer {} {
 		option -hasparent -default 1 -readonly 1
 		delegate option -selectmode to tbl
 	
-		proc globmatch {flist patterns} {
-			# perform matching similar to glob 
-			# and reduce flist to names that match the pattern
-			set result {}
-			foreach f $flist {
-				set match false
-				foreach p $patterns {
-					if {[string match $p $f]} {
-						lappend result $f
-						break
-					}
+		proc globmatch {fname patterns} {
+			# match fname against patternlist similar to glob 
+			foreach p $patterns {
+				if {[string match $p $fname]} {
+					return true
 				}
 			}
-			return $result
+			return false
 		}
-
 
 		typeconstructor {
 			if {[catch {package require inotify}]} {
@@ -132,8 +129,6 @@ namespace eval dirViewer {} {
 				$tbl configure -spacing 1
 			}
 
-			$self ChangeColumns -columns {}
-
 			install vsb using ttk::scrollbar $win.vsb -orient vertical   -command [list $tbl yview]
 			install hsb using ttk::scrollbar $win.hsb -orient horizontal -command [list $tbl xview]
 			
@@ -157,6 +152,15 @@ namespace eval dirViewer {} {
 			grid rowconfigure    $win 1 -weight 1
 			grid columnconfigure $win 0 -weight 1
 
+
+			# create inotify watch (if available)
+			if {$haveinotify} {
+				set watch ${selfns}::mywatch
+				inotify create $watch [mymethod inotifyhandler]
+			}
+
+			$self ChangeColumns -columns {}
+
 			# read in the options
 			$self configurelist $args
 
@@ -167,6 +171,12 @@ namespace eval dirViewer {} {
 			SmallUtils::defer [mymethod refreshView]
 		}
 
+		destructor {
+			if {$haveinotify} {
+				catch {rename $watch {}}
+			}
+		}
+
 
 		method ChangeColumns {option value} {
 			set options($option) $value
@@ -175,7 +185,7 @@ namespace eval dirViewer {} {
 			if {!$RebuildPending} {
 				set PendingState [$self saveView]
 				set RebuildPending true
-				$tbl delete 0 end
+				$self cleartable
 			}
 
 			switch $option {
@@ -209,13 +219,28 @@ namespace eval dirViewer {} {
 			SmallUtils::defer [mymethod refreshView]
 		}
 
+		method cleartable {} {
+			$tbl delete 0 end
+			# remove all watches
+			if {$haveinotify} {
+				if {[catch {
+					foreach {path watchid flags} [$watch info] {
+						$watch remove $path
+						dict unset watchlist $watchid
+					}
+				} err]} {
+					puts stderr "Error happened in inotify: $err, watch=$watch"
+				}
+			}
+		}
+
 		#------------------------------------------------------------------------------
-		# putContents
+		# putDir
 		#
 		# Outputs the contents of the directory dir into the tablelist widget tbl, as
 		# child items of the one identified by nodeIdx.
 		#------------------------------------------------------------------------------
-		method putContents {dir nodeIdx} {
+		method putDir {dir nodeIdx} {
 			#
 			# The following check is necessary because this procedure
 			# is also invoked by the "Refresh" and "Parent" buttons
@@ -230,6 +255,8 @@ namespace eval dirViewer {} {
 						-type okcancel -default ok]
 					if {[string compare $choice "ok"] == 0} {
 						while {![file isdirectory $dir] || ![file readable $dir]} {
+							# TODO buggy on Windows
+							# file readable can return false on a network share
 							set dir [file dirname $dir]
 						}
 					} else {
@@ -240,8 +267,8 @@ namespace eval dirViewer {} {
 				}
 			}
 
-			if {[string compare $nodeIdx "root"] == 0} {
-				$tbl delete 0 end
+			if {$nodeIdx eq "root"} {
+				$self cleartable
 			}
 
 			# create list of directories and files. If $dir == ""
@@ -253,8 +280,25 @@ namespace eval dirViewer {} {
 				set directories [glob -nocomplain -types d -directory $dir *]
 				set files [glob -nocomplain -types f -directory $dir {*}$options(-globpattern)]
 			}
+		
+			$self putItems $nodeIdx $files $directories
 			
+			if {$haveinotify} {
+				# set up the watch for this directory
+				set wid [$watch add $dir CM]
+				if {$nodeIdx eq "root"} {
+					set key root
+				} else {
+					set key [$tbl getfullkeys $nodeIdx]
+				}
+				dict set watchlist $wid node $key
+				dict set watchlist $wid path $dir
+			}
 
+		}
+
+
+		method putItems {node files directories} {
 			set prog_max [expr {max(1,[llength $directories]+[llength $files]-1)}]
 			event generate $win <<ProgressStart>> -data $prog_max
 			set progress 0
@@ -270,14 +314,12 @@ namespace eval dirViewer {} {
 			set itemList {}
 			
 			foreach dirname $directories {
-				
-				if {$dir == "" } {
-					# in case of volume display, avoid [file tail]
-					# as it truncates C:/ to ""
+				set dirname [file normalize $dirname]
+				set dirtail [file tail $dirname]
+				if {$dirtail eq ""} {
+					# on Windows, file tail truncates C:/ to ""
+					# use expanded name instead
 					set dirtail $dirname
-				} else {
-					set dirname [file normalize $dirname]
-					set dirtail [file tail $dirname]
 				}
 
 				if {$options(-classifycommand) != {}} {
@@ -316,7 +358,7 @@ namespace eval dirViewer {} {
 			# tbl as list of children of the row identified by nodeIdx
 			#
 			set itemList [$tbl applysorting $itemList]
-			set fullkeys [$tbl insertchildlist $nodeIdx end $itemList]
+			set fullkeys [$tbl insertchildlist $node end $itemList]
 
 			#
 			# Insert an image into the first cell of each newly inserted row
@@ -342,11 +384,45 @@ namespace eval dirViewer {} {
 
 
 			event generate $win <<ProgressFinished>>
+			return $fullkeys
+		}
+
+		method inotifyhandler {wid} {
+			if {[catch {
+				while {[$watch queue]} {
+					set events [$watch read]
+					puts "Info: $events"
+
+					foreach ev $events {
+						if {[string match {[CM]} [dict get $ev flags]]} {
+							# a file was finalized or moved here
+							set fn [dict get $ev filename]
+							set wid [dict get $ev watchid]
+
+							if {[dict exists $watchlist $wid]} {
+								# find corresponding path in the tree
+								set node [dict get $watchlist $wid node]
+								set path [dict get $watchlist $wid path]
+
+								# check if this file is in the filterlist
+								if {[globmatch $fn $options(-globpattern)]} {
+									set newnode [$self putItems $node [list [file join $path $fn]] {}]
+									# we passed only one. Move the cursor to this
+									$tbl see [lindex $newnode 0]
+								}
+							}
+						}
+					}
+
+				}
+			} err]} {
+				puts stderr "Error in handling inotify event: $err"
+			}
 		}
 
 		method display {dir} {
 			set cwd $dir
-			$self putContents $dir root
+			$self putDir $dir root
 			set options(-hasparent) [expr {$cwd != {}}]
 		}
 
@@ -426,7 +502,7 @@ namespace eval dirViewer {} {
 		method expandCmd {ttbl row} {
 			if {[$tbl childcount $row] == 0} {
 				set dir [$tbl rowattrib $row pathName]
-				$self putContents $dir $row
+				$self putDir $dir $row
 			}
 
 			if {[$tbl childcount $row] != 0} {
