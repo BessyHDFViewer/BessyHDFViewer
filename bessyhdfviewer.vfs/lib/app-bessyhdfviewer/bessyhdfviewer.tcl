@@ -1921,7 +1921,7 @@ namespace eval BessyHDFViewer {
 
 	proc bessy_reshape_hdf4 {fn} {
 
-		SmallUtils::autovar hdf HDFpp %AUTO% $fn
+		SmallUtils::autovar hdf HDFpp -args $fn
 		set hlist [$hdf dump]
 		
 		set BESSY_INF 9.9e36
@@ -2032,7 +2032,7 @@ namespace eval BessyHDFViewer {
 	}
 
 	proc bessy_reshape_hdf5 {fn} {
-		SmallUtils::autovar hdf H5pp %AUTO% $fn
+		SmallUtils::autovar hdf H5pp -args $fn
 		set rawd [$hdf dump]
 		# new HDF5 stores data under /c1/deviceid
 		# and MotorPos etc. under /device/
