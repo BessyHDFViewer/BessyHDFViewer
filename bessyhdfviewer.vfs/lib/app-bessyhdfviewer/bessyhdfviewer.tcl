@@ -1567,6 +1567,7 @@ namespace eval BessyHDFViewer {
 		ClearFilterErrors
 		$w(progbar) configure -maximum $max
 		tk_busy hold .
+		puts "tk busy hold succeeded"
 	}
 
 	proc OpenProgress {i} {
@@ -1586,7 +1587,13 @@ namespace eval BessyHDFViewer {
 	proc OpenFinished {} {
 		variable w
 		$w(progbar) configure -value 0
-		tk_busy forget .
+		# sometimes tk busy fails - simply catch the error
+		if {[catch { tk_busy forget . } err]} {
+			puts stderr "tk busy failed: $err"
+		} else {
+			puts stderr "tk busy forget succeeded"
+		}
+
 		SaveCache
 		FilterFinish
 	}
@@ -1950,14 +1957,16 @@ namespace eval BessyHDFViewer {
 				set data [dict get $dataset data]
 				set index 0
 				foreach v $data {
-					if {abs($v) >= $BESSY_INF || $v == $BESSY_NAN} {
-						# invalid data point, replace by NaN
-						lset data $index NaN
-					} else {
-						if {$index > $maxindex} {
-							set maxindex $index
+					catch {
+						if {abs($v) >= $BESSY_INF || $v == $BESSY_NAN} {
+							# invalid data point, replace by NaN
+							lset data $index NaN
+						} else {
+							if {$index > $maxindex} {
+								set maxindex $index
+							}
 						}
-					}
+					} ;# silence error (if v is already NaN)
 					incr index
 				}
 
