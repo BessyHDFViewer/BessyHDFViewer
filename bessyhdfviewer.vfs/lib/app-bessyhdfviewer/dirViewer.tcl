@@ -285,14 +285,16 @@ namespace eval dirViewer {} {
 			
 			if {$haveinotify} {
 				# set up the watch for this directory
-				set wid [$watch add $dir CM]
-				if {$nodeIdx eq "root"} {
-					set key root
-				} else {
-					set key [$tbl getfullkeys $nodeIdx]
+				if {$dir != ""} {
+					set wid [$watch add $dir CM]
+					if {$nodeIdx eq "root"} {
+						set key root
+					} else {
+						set key [$tbl getfullkeys $nodeIdx]
+					}
+					dict set watchlist $wid node $key
+					dict set watchlist $wid path $dir
 				}
-				dict set watchlist $wid node $key
-				dict set watchlist $wid path $dir
 			}
 
 		}
@@ -400,7 +402,7 @@ namespace eval dirViewer {} {
 			if {[catch {
 				while {[$watch queue]} {
 					set events [$watch read]
-					puts "Info: $events"
+					#puts "Debug info: $events"
 
 					foreach ev $events {
 						if {[string match {[CM]} [dict get $ev flags]]} {

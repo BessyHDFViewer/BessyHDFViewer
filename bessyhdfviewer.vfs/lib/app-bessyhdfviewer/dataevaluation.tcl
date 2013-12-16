@@ -152,6 +152,9 @@ namespace eval DataEvaluation {
 		# simplistic peak & center detector as in measurement program
 		set output ""
 		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		lassign [$BessyHDFViewer::w(Graph) cget -xrange] xmin xmax
+		if {$xmin eq "*"} { set xmin -Inf }
+		if {$xmax eq "*"} { set xmax +Inf }
 		foreach id $plotids {
 			# filter NaNs from the dataset
 			set data [$BessyHDFViewer::w(Graph) getdata $id data]
@@ -160,6 +163,7 @@ namespace eval DataEvaluation {
 			set fdata {}
 			foreach {x y} $data {
 				if {isnan($x) || isnan($y)} { continue }
+				if {$x<$xmin || $x>$xmax } { continue }
 				lappend fdata $x $y
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
