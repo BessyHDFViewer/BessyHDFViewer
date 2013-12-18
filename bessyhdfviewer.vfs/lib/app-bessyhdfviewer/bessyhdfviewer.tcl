@@ -1567,7 +1567,7 @@ namespace eval BessyHDFViewer {
 		ClearFilterErrors
 		$w(progbar) configure -maximum $max
 		tk_busy hold .
-		puts "tk busy hold succeeded"
+		# puts "tk busy hold succeeded"
 	}
 
 	proc OpenProgress {i} {
@@ -1591,7 +1591,7 @@ namespace eval BessyHDFViewer {
 		if {[catch { tk_busy forget . } err]} {
 			puts stderr "tk busy failed: $err"
 		} else {
-			puts stderr "tk busy forget succeeded"
+			# puts stderr "tk busy forget succeeded"
 		}
 
 		SaveCache
