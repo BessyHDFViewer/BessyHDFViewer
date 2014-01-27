@@ -11,6 +11,7 @@ namespace eval DataEvaluation {
 		RefDivide  refdivide "Divide by first dataset"
 		SaveData   document-save-as "Save plot as ASCII data"
 		SavePDF    save-pdf  "Save plot as PDF"
+		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
 	}
 
 	# peak-locating using the AMPD method
@@ -373,6 +374,90 @@ namespace eval DataEvaluation {
 				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
 			}
 		}
+	}
+
+	proc XRR-FFT {} {
+		package require math::fourier
+		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		if {[llength $plotids] != 1} {
+			return -code error "Only 1 XRR curve, please"
+		}
+
+		lassign $plotids id
+		
+		set data [$BessyHDFViewer::w(Graph) getdata $id data]
+		set title [$BessyHDFViewer::w(Graph) getdata $id title]
+		set energy [BessyHDFViewer::bessy_get_field $BessyHDFViewer::hdfdata Energy]
+		if {[llength $energy] != 1} {
+			return -code error "Couldn't read energy: $energy"
+		}
+
+		# compute wavelength
+		set pi 3.1415926535897932
+		set lambda [expr {1.9864455e-25/($energy*1.6021765e-19)*1e9}] ;# nm
+		
+		# compute theta step
+		set thetastep [expr {([lindex $data end-1]-[lindex $data 0])/([llength $data]/2)*2*$pi/180.0}]
+		
+		set xstep [expr {$lambda/(2*$pi*$thetastep)}]
+
+		
+		
+		set max -Inf
+		set th_c NaN
+		# compute theta at which R*theta^4 peaks
+		foreach {theta R} $data {
+			set val [expr {$R*$theta**4}]
+			if {$val>$max} {
+				set max $val
+				set th_c $theta
+			}
+		}
+
+		# compute normalized/windowed data
+		set ndata {}
+		foreach {theta R} $data {
+			if {$theta > $th_c} {
+				set fresnel [expr {( ($theta - sqrt($theta**2-$th_c**2)) /($theta + sqrt($theta**2-$th_c**2)) )**2} ]
+				lappend ndata [expr {$R/$fresnel}]
+			}
+		}
+
+		set L [llength $ndata]
+		set wdata {}
+		set ind 0
+		foreach R $ndata {
+			# lappend wdata [expr {$ind*$qbins}] [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
+			lappend wdata [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
+			incr ind
+		}
+		# $BessyHDFViewer::w(Graph) update $id data $wdata title "$title fresneled windowed"
+
+		# compute FFT 
+		set ftdata [math::fourier::dft $wdata]
+		
+		# compute nm binning
+		# and cut off everything before the first rise
+		set ind 0
+		set oldpsd Inf
+		set skip true
+		foreach c $ftdata {
+			lassign $c re im
+			set psd [expr {$re**2+$im**2}]
+			if {$psd > $oldpsd} { set skip false }
+
+			if {!$skip} {
+				lappend result [expr {$ind*$xstep/$L}] $psd
+			}
+			
+			set oldpsd $psd
+			incr ind
+			if {($ind > $L/2)} { break }
+			# break at Nyquist
+		}
+		$BessyHDFViewer::w(Graph) update $id data $result title "XRR-FFT $title"
+		$BessyHDFViewer::w(Graph) set xlabel "Thickness (nm)"
+		$BessyHDFViewer::w(Graph) set ylabel "PSD"
 	}
 
 	proc SaveData {} {
