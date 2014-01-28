@@ -399,7 +399,7 @@ namespace eval DataEvaluation {
 		# compute theta step
 		set thetastep [expr {([lindex $data end-1]-[lindex $data 0])/([llength $data]/2)*2*$pi/180.0}]
 		
-		set xstep [expr {$lambda/(2*$pi*$thetastep)}]
+		set xstep [expr {$lambda/$thetastep}]
 
 		
 		
@@ -433,6 +433,13 @@ namespace eval DataEvaluation {
 		}
 		# $BessyHDFViewer::w(Graph) update $id data $wdata title "$title fresneled windowed"
 
+		# compute padded length 2^n with at least 4X more data points
+
+		set pL [expr {2**(int(ceil(log($L)/log(2)))+2)}]
+		# puts "Length: $pL [llength $wdata]"
+
+		lappend wdata {*}[lrepeat [expr {$pL-$L}] 0.0]
+		# puts "Length: $pL [llength $wdata]"
 		# compute FFT 
 		set ftdata [math::fourier::dft $wdata]
 		
@@ -447,12 +454,12 @@ namespace eval DataEvaluation {
 			if {$psd > $oldpsd} { set skip false }
 
 			if {!$skip} {
-				lappend result [expr {$ind*$xstep/$L}] $psd
+				lappend result [expr {$ind*$xstep/$pL}] $psd
 			}
 			
 			set oldpsd $psd
 			incr ind
-			if {($ind > $L/2)} { break }
+			if {($ind > $pL/2)} { break }
 			# break at Nyquist
 		}
 		$BessyHDFViewer::w(Graph) update $id data $result title "XRR-FFT $title"
