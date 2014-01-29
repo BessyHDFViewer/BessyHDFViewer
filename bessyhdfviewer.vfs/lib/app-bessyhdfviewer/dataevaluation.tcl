@@ -401,26 +401,11 @@ namespace eval DataEvaluation {
 		
 		set xstep [expr {$lambda/$thetastep}]
 
-		
-		
-		set max -Inf
-		set th_c NaN
-		# compute theta at which R*theta^4 peaks
-		foreach {theta R} $data {
-			set val [expr {$R*$theta**4}]
-			if {$val>$max} {
-				set max $val
-				set th_c $theta
-			}
-		}
-
 		# compute normalized/windowed data
+		# normalize by theta^4 (asymptote of Fresnel reflectivity)
 		set ndata {}
 		foreach {theta R} $data {
-			if {$theta > $th_c} {
-				set fresnel [expr {( ($theta - sqrt($theta**2-$th_c**2)) /($theta + sqrt($theta**2-$th_c**2)) )**2} ]
-				lappend ndata [expr {$R/$fresnel}]
-			}
+			lappend ndata [expr {$R*$theta**4}]
 		}
 
 		set L [llength $ndata]
