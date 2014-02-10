@@ -378,78 +378,113 @@ namespace eval DataEvaluation {
 
 	proc XRR-FFT {} {
 		package require math::fourier
-		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
-		if {[llength $plotids] != 1} {
-			return -code error "Only 1 XRR curve, please"
-		}
 
-		lassign $plotids id
+		# extract plot info from file, with energy and file attached
+		set rawdata [BessyHDFViewer::SELECT \
+			[list Energy HDF $BessyHDFViewer::xformat $BessyHDFViewer::yformat] \
+			$BessyHDFViewer::HDFFiles -allnan true]
+
+		$BessyHDFViewer::w(Graph) clear
 		
-		set data [$BessyHDFViewer::w(Graph) getdata $id data]
-		set title [$BessyHDFViewer::w(Graph) getdata $id title]
-		set energy [BessyHDFViewer::bessy_get_field $BessyHDFViewer::hdfdata Energy]
-		if {[llength $energy] != 1} {
-			return -code error "Couldn't read energy: $energy"
-		}
-
-		# compute wavelength
-		set pi 3.1415926535897932
-		set lambda [expr {1.9864455e-25/($energy*1.6021765e-19)*1e9}] ;# nm
-		
-		# compute theta step
-		set thetastep [expr {([lindex $data end-1]-[lindex $data 0])/([llength $data]/2)*2*$pi/180.0}]
-		
-		set xstep [expr {$lambda/$thetastep}]
-
-		# compute normalized/windowed data
-		# normalize by theta^4 (asymptote of Fresnel reflectivity)
-		set ndata {}
-		foreach {theta R} $data {
-			lappend ndata [expr {$R*$theta**4}]
-		}
-
-		set L [llength $ndata]
-		set wdata {}
-		set ind 0
-		foreach R $ndata {
-			# lappend wdata [expr {$ind*$qbins}] [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
-			lappend wdata [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
-			incr ind
-		}
-		# $BessyHDFViewer::w(Graph) update $id data $wdata title "$title fresneled windowed"
-
-		# compute padded length 2^n with at least 4X more data points
-
-		set pL [expr {2**(int(ceil(log($L)/log(2)))+2)}]
-		# puts "Length: $pL [llength $wdata]"
-
-		lappend wdata {*}[lrepeat [expr {$pL-$L}] 0.0]
-		# puts "Length: $pL [llength $wdata]"
-		# compute FFT 
-		set ftdata [math::fourier::dft $wdata]
-		
-		# compute nm binning
-		# and cut off everything before the first rise
-		set ind 0
-		set oldpsd Inf
-		set skip true
-		foreach c $ftdata {
-			lassign $c re im
-			set psd [expr {$re**2+$im**2}]
-			if {$psd > $oldpsd} { set skip false }
-
-			if {!$skip} {
-				lappend result [expr {$ind*$xstep/$pL}] $psd
+		# split data into chunks with equal energy and file
+		set splitdata {}
+		set dataset {}
+		lassign [lindex $rawdata 0] Energy_old HDF_old
+		lappend rawdata {0 {} {} {}} ;# dummy dataset to force spilling the list
+		foreach line $rawdata {
+			lassign $line Energy HDF theta R
+			if {abs($Energy - $Energy_old) > 0.1 || $HDF != $HDF_old} {
+				# switch to different dataset
+				set data {}
+				dict set data data $splitdata
+				dict set data energy $Energy_old
+				dict set data HDF $HDF_old
+				lappend dataset $data
+				set splitdata {}
+				set Energy_old $Energy 
+				set HDF_old $HDF
 			}
-			
-			set oldpsd $psd
-			incr ind
-			if {($ind > $pL/2)} { break }
-			# break at Nyquist
+			lappend splitdata $theta $R
 		}
-		$BessyHDFViewer::w(Graph) update $id data $result title "XRR-FFT $title"
+
+	
+		set pi 3.1415926535897932
+		set plotstyles [BessyHDFViewer::PreferenceGet PlotStyles { {linespoints color black pt circle } }]
+
+		foreach data $dataset style $plotstyles {
+			if {$data == {}} { break }
+
+			set energy [dict get $data energy]
+			set xrrdata [dict get $data data]
+			if {[llength $xrrdata] < 4} { continue }
+
+			# compute wavelength
+			set lambda [expr {1.9864455e-25/($energy*1.6021765e-19)*1e9}] ;# nm
+			
+			# compute theta step
+			set xrrdata [lsort -real -stride 2 $xrrdata]
+			set thetastep [expr {([lindex $xrrdata end-1]-[lindex $xrrdata 0])/([llength $xrrdata]/2)*2*$pi/180.0}]
+			
+			set xstep [expr {$lambda/$thetastep}]
+
+			# compute normalized/windowed data
+			# normalize by theta^4 (asymptote of Fresnel reflectivity)
+			set ndata {}
+			foreach {theta R} $xrrdata {
+				lappend ndata [expr {$R*$theta**4}]
+			}
+
+			set L [llength $ndata]
+			set wdata {}
+			set ind 0
+			foreach R $ndata {
+				# lappend wdata [expr {$ind*$qbins}] [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
+				lappend wdata [expr {$R*(0.5-0.5*cos(2*$pi/($L-1)*($ind-$L)))}]
+				incr ind
+			}
+			# $BessyHDFViewer::w(Graph) update $id data $wdata title "$title fresneled windowed"
+
+			# compute padded length 2^n with at least 4X more data points
+
+			set pL [expr {2**(int(ceil(log($L)/log(2)))+2)}]
+			# puts "Length: $pL [llength $wdata]"
+
+			lappend wdata {*}[lrepeat [expr {$pL-$L}] 0.0]
+			# puts "Length: $pL [llength $wdata]"
+			# compute FFT 
+			set ftdata [math::fourier::dft $wdata]
+			
+			# compute nm binning
+			# and cut off everything before the first rise
+			set ind 0
+			set oldpsd Inf
+			set skip true
+			set result {}
+			foreach c $ftdata {
+				lassign $c re im
+				set psd [expr {$re**2+$im**2}]
+				if {$psd > $oldpsd} { set skip false }
+
+				if {!$skip} {
+					lappend result [expr {$ind*$xstep/$pL}] $psd
+				}
+				
+				set oldpsd $psd
+				incr ind
+				if {($ind > $pL/2)} { break }
+				# break at Nyquist
+			}
+
+			# compute abbreviated title 
+			set HDF [file tail [dict get $data HDF]]
+			
+			set title "XRR-FFT $HDF [format %.1feV $energy]"
+			$BessyHDFViewer::w(Graph) plot $result title $title with {*}$style
+		}
+
 		$BessyHDFViewer::w(Graph) set xlabel "Thickness (nm)"
 		$BessyHDFViewer::w(Graph) set ylabel "PSD"
+		$BessyHDFViewer::w(Graph) set key on
 	}
 
 	proc SaveData {} {
