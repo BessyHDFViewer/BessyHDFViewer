@@ -1995,7 +1995,7 @@ namespace eval BessyHDFViewer {
 	}
 
 	proc eveH5getDSNames {d chain} {
-		dict keys [dict filter [dict get $d data c1 data] script {key value} {
+		dict keys [dict filter [dict get $d data c1 data default data] script {key value} {
 			expr {[dict get $value type]=="DATASET"}
 		}]
 	}
@@ -2052,16 +2052,17 @@ namespace eval BessyHDFViewer {
 		set joinsets {}
 		foreach ds $DSnames {
 			if {![catch {
-				switch [dict get $rawd data $chain data $ds attrs DeviceType] {
+				switch [dict get $rawd data $chain data default data $ds attrs DeviceType] {
 					Channel { set group Detector }
 					Axis { set group Motor }
 					default { set group Detector }
 				}
 			}]} {
 				# no error - move this dataset
-				set name [dict get $rawd data $chain data $ds attrs Name]
-				dict_move rawd [list data $chain data $ds attrs] reshaped [list $group $name attrs]
-				dict_move rawd [list data $chain data $ds data] reshaped [list $group $name data]
+				set name [dict get $rawd data $chain data default data $ds attrs Name]
+				dict_move rawd [list data $chain data default data $ds attrs] reshaped [list $group $name attrs]
+				dict_move rawd [list data $chain data default data $ds data] reshaped [list $group $name data]
+				dict set rawd EVETranslate $ds $name
 				lappend joinsets $group $name
 			}
 
@@ -2079,6 +2080,22 @@ namespace eval BessyHDFViewer {
 		}
 
 		dict set reshaped Unresolved $rawd
+
+		# check for preferredChannel / Axis and create Plot info
+		set plotinfo [dict get $rawd data $chain attrs]
+		if {![catch {dict get $plotinfo preferredAxis} axis]} {
+			# find corresponding axis name
+			if {![catch {dict get $rawd EVETranslate $axis} Motor]} {
+				dict set reshaped Plot Motor $Motor
+			}
+		}
+
+		if {![catch {dict get $plotinfo preferredChannel} channel]} {
+			# find corresponding axis name
+			if {![catch {dict get $rawd EVETranslate $channel} Detector]} {
+				dict set reshaped Plot Detector $Detector
+			}
+		}
 
 		return $reshaped
 	}
