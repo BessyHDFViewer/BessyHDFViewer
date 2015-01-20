@@ -1709,7 +1709,7 @@ namespace eval BessyHDFViewer {
 			namespace eval ::SELECT [list set $var $val]
 		}
 
-		foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
+		foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
 			if {[dict exists $hdfdata $key]} {
 				dict for {key value} [dict get $hdfdata $key] {
 					namespace eval ::SELECT [list set $key $value]
@@ -1934,6 +1934,7 @@ namespace eval BessyHDFViewer {
 		set BESSY_INF 9.9e36
 		set BESSY_NAN -7.7e36
 
+		set hdict {}
 		set datakeys {}
 		set maxindex -1
 		foreach dataset $hlist {
