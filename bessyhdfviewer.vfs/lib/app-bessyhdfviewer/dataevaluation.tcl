@@ -384,7 +384,14 @@ namespace eval DataEvaluation {
 			[list Energy HDF $BessyHDFViewer::xformat $BessyHDFViewer::yformat] \
 			$BessyHDFViewer::HDFFiles -allnan true]
 
+		lassign [$BessyHDFViewer::w(Graph) cget -xrange] thetamin thetamax
+		if {$thetamin eq "*"} { set thetamin -Inf }
+		if {$thetamax eq "*"} { set thetamax +Inf }
+
 		$BessyHDFViewer::w(Graph) clear
+		$BessyHDFViewer::w(Graph) set auto x
+		$BessyHDFViewer::w(Graph) set auto y
+
 		
 		# split data into chunks with equal energy and file
 		set splitdata {}
@@ -404,7 +411,9 @@ namespace eval DataEvaluation {
 				set Energy_old $Energy 
 				set HDF_old $HDF
 			}
-			lappend splitdata $theta $R
+			if {$theta >= $thetamin && $theta <= $thetamax} {
+				lappend splitdata $theta $R
+			}
 		}
 
 	
