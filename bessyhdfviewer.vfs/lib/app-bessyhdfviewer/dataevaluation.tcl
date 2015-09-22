@@ -580,7 +580,7 @@ namespace eval DataEvaluation {
 
 	proc ArdeViewer {} {
 		# run an instance of ardeviewer, if not yet started
-		set ardecmd "/usr/local/bin/python /Users/chris/Programmieren/ardeviewer/ardeviewer.py slave"
+		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd "ardeviewer --slave"]
 
 		set tiffnum [BessyHDFViewer::SELECT \
 			[list Pilatus_Tiff] \
@@ -612,12 +612,13 @@ namespace eval DataEvaluation {
 		}
 
 		proc pylist {l} {
-			return "([join [lmap x $l {pyquote $x}] ,])"
+			return "\[[join [lmap x $l {pyquote $x}] ,]\]"
 		}
 
 		constructor {path} {
-			set pipe [open "| $path" w]
-			fconfigure $pipe -buffering line
+			set pipe [open "| $path" w+]
+			fconfigure $pipe -buffering line -blocking 0 -encoding utf-8
+			fileevent $pipe readable [mymethod feedback]
 		}
 
 		destructor {
@@ -625,7 +626,7 @@ namespace eval DataEvaluation {
 		}
 
 		method exec {cmd} {
-			puts "Sending command $cmd"
+			# puts "Sending command $cmd"
 			puts $pipe $cmd
 		}
 
@@ -633,6 +634,14 @@ namespace eval DataEvaluation {
 			# open a list of files in the instance
 			$self exec "self.open_flist([pylist $flist])"
 
+		}
+
+		method feedback {} {
+			set data [read $pipe]
+			puts "VIEWER: $data"
+			if {[eof $pipe]} {
+				$self destroy
+			}
 		}
 	}
 		
