@@ -12,6 +12,7 @@ namespace eval DataEvaluation {
 		SaveData   document-save-as "Save plot as ASCII data"
 		SavePDF    save-pdf  "Save plot as PDF"
 		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
+		ArdeViewer	ardeviewer       "Run ardeviewer"
 	}
 
 	# peak-locating using the AMPD method
@@ -565,6 +566,64 @@ namespace eval DataEvaluation {
 			grid columnconfigure $win 0 -weight 1
 
 			$text insert 1.0 $options(-text)
+		}
+	}
+
+	proc ArdeViewer {} {
+		# run an instance of ardeviewer, if not yet started
+		set ardecmd "/usr/local/bin/python /Users/chris/Programmieren/ardeviewer/ardeviewer.py slave"
+
+		set tiffnum [BessyHDFViewer::SELECT \
+			[list Pilatus_Tiff] \
+			$BessyHDFViewer::HDFFiles -allnan true]
+		
+		set hdfpath [lindex $BessyHDFViewer::HDFFiles 0]
+		set hdfdir [file dirname $hdfpath]
+		set hdfname [file rootname [file tail $hdfpath]]
+
+		# decompose hdf name into prefix 
+		regexp {^(.*)_(.*)_(\d+)$} $hdfname -> fcm prefix num
+
+		set pprefix [file join $hdfdir "pilatus_$prefix"]
+
+		set tifflist [lmap num $tiffnum { format "%s_%04d.tif" $pprefix [expr int($num)] }]
+
+		# make sure ardeviewer is up
+		if {[llength [info commands Viewer]]==0} { ardeviewer Viewer $ardecmd }
+
+		Viewer openlist $tifflist
+	}
+
+	snit::type ardeviewer {
+		variable pipe
+
+		proc pyquote {s} {
+			# quote a string suitable for Python
+			return "\"[string map {"\"" "\\\"" "\\" "\\\\" "\n" "\\n"} $s]\""
+		}
+
+		proc pylist {l} {
+			return "([join [lmap x $l {pyquote $x}] ,])"
+		}
+
+		constructor {path} {
+			set pipe [open "| $path" w]
+			fconfigure $pipe -buffering line
+		}
+
+		destructor {
+			close $pipe
+		}
+
+		method exec {cmd} {
+			puts "Sending command $cmd"
+			puts $pipe $cmd
+		}
+
+		method openlist {flist} {
+			# open a list of files in the instance
+			$self exec "self.open_flist([pylist $flist])"
+
 		}
 	}
 		
