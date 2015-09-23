@@ -12,7 +12,8 @@ namespace eval DataEvaluation {
 		SaveData   document-save-as "Save plot as ASCII data"
 		SavePDF    save-pdf  "Save plot as PDF"
 		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
-		ArdeViewer	ardeviewer       "Run ardeviewer"
+		ArdeViewer	ardeviewer       "Show referenced TIFF in external viewer"
+		ArdeViewerHDF	ardeviewer-hdf       "open selected HDF in external viewer"
 	}
 
 	# peak-locating using the AMPD method
@@ -578,48 +579,93 @@ namespace eval DataEvaluation {
 		}
 	}
 
+	proc makeArdeViewer {} {
+		# make sure ardeviewer is up
+		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd "ardeviewer --slave"]
+		if {[llength [info commands Viewer]]==0} { ardeviewer Viewer $ardecmd }
+	}
+
+	proc ArdeViewerHDF {} {
+		if {[llength $BessyHDFViewer::HDFFiles] != 1} {
+			error "Only a single HDF can be loaded in the external viewer"
+		}
+		
+		set fn [pyquote [lindex $BessyHDFViewer::HDFFiles 0]]
+		
+		makeArdeViewer
+		Viewer exec [format {self.plugins['HDF-SAXS'].openHDF(%s)} $fn]
+
+	}
+
 	proc ArdeViewer {} {
 		# run an instance of ardeviewer, if not yet started
 		variable ns
-		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd "ardeviewer --slave"]
+		set tifffmt [BessyHDFViewer::PreferenceGet TiffFmt "pilatus_%s_%04d.tif"]
 
-		set tiffnum [BessyHDFViewer::SELECT \
-			[list Pilatus_Tiff] \
-			$BessyHDFViewer::HDFFiles -allnan true]
+		# create the correspondence map, only keep valid TIFF numbers
+		set tifflist {}
+		set ptnr 0
+		variable viewdpmap {}
+		foreach hdfpath $BessyHDFViewer::HDFFiles {
+			set tiffnum [BessyHDFViewer::SELECT Pilatus_Tiff \
+				[list $hdfpath] -allnan true]
 
-		set hdfpath [lindex $BessyHDFViewer::HDFFiles 0]
-		set hdfdir [file dirname $hdfpath]
-		set hdfname [file rootname [file tail $hdfpath]]
+			set dpnr -1
+			foreach tiff $tiffnum {
+				incr dpnr
+				# parse tiffnr into integer
+				if {[catch {expr {int($tiff)}} tiffnr]} { continue }
 
-		# decompose hdf name into prefix 
-		regexp {^(.*)_(.*)_(\d+)$} $hdfname -> fcm prefix num
+				# decompose hdf file name into directory, prefix and number
+				set hdfdir [file dirname $hdfpath]
+				set hdfname [file rootname [file tail $hdfpath]]
 
-		set pprefix [file join $hdfdir "pilatus_$prefix"]
+				regexp {^(.*)_(.*)_(\d+)$} $hdfname -> fcm prefix num
 
-		set tifflist [lmap num $tiffnum { format "%s_%04d.tif" $pprefix [expr int($num)] }]
+				lappend  tifflist [file join $hdfdir [format $tifffmt $prefix $tiffnr]]
+				
+				dict set viewdpmap [list $hdfpath $dpnr] $ptnr
+				incr ptnr
+			}
+		}
 
-		# make sure ardeviewer is up
-		if {[llength [info commands Viewer]]==0} { ardeviewer Viewer $ardecmd }
+		makeArdeViewer
 
 		Viewer openlist $tifflist
 		BessyHDFViewer::RegisterPickCallback ${ns}::ArdeViewerPick
+		trace add command ${ns}::Viewer delete ${ns}::ArdeViewerClearPick
 	}
 
 	proc ArdeViewerPick {clickdata} {
-		Viewer goto [dict get $clickdata dpnr]
+		variable viewdpmap
+		
+		set dpnr [dict get $clickdata dpnr]
+		set fn [dict get $clickdata fn]
+		set key [list $fn $dpnr]
+
+		if {[dict exists $viewdpmap $key]} {
+			set idx [dict get $viewdpmap $key]
+			Viewer goto $idx 
+		}
+	}
+
+	proc ArdeViewerClearPick {args} {
+		variable ns
+		BessyHDFViewer::UnRegisterPickCallback ${ns}::ArdeViewerPick
+		puts "Viewer callback stopped."
+	}
+
+	proc pyquote {s} {
+		# quote a string suitable for Python
+		return "\"[string map {"\"" "\\\"" "\\" "\\\\" "\n" "\\n"} $s]\""
+	}
+
+	proc pylist {l} {
+		return "\[[join [lmap x $l {pyquote $x}] ,]\]"
 	}
 
 	snit::type ardeviewer {
 		variable pipe
-
-		proc pyquote {s} {
-			# quote a string suitable for Python
-			return "\"[string map {"\"" "\\\"" "\\" "\\\\" "\n" "\\n"} $s]\""
-		}
-
-		proc pylist {l} {
-			return "\[[join [lmap x $l {pyquote $x}] ,]\]"
-		}
 
 		constructor {path} {
 			set pipe [open "| $path" w+]

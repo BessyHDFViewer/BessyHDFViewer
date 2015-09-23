@@ -1050,10 +1050,14 @@ namespace eval BessyHDFViewer {
 			click {
 				lassign $args x y
 				lassign [$w(Graph) pickpoint $x $y] id dpnr xd yd
+				
+				if {$id == {}} { return }
+
 				set fn [dict get $HDFsshown $id]
 
 				set pointerinfo(dpnr) $dpnr
 				set pointerinfo(fn) $fn
+				set pointerinfo(id) $id
 
 				if {$id != {}} {
 					set pointerinfo(clickx) $xd

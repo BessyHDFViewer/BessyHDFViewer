@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="32"
+   height="32"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.5 r10040"
+   sodipodi:docname="ardeviewer-hdf.svg"
+   inkscape:export-filename="/home/cgollwit/Programmieren/BessyHDFViewer/bessyhdfviewer.vfs/lib/app-bessyhdfviewer/icons/ardeviewer-hdf.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient3757">
+      <stop
+         id="stop3769"
+         offset="0"
+         style="stop-color:#daff65;stop-opacity:1" />
+      <stop
+         style="stop-color:#b77309;stop-opacity:1;"
+         offset="0.4289332"
+         id="stop3773" />
+      <stop
+         style="stop-color:#d11712;stop-opacity:1"
+         offset="0.61276174"
+         id="stop3771" />
+      <stop
+         id="stop3767"
+         offset="0.79659027"
+         style="stop-color:#84ffa1;stop-opacity:1" />
+      <stop
+         id="stop3765"
+         offset="0.91914266"
+         style="stop-color:#329f97;stop-opacity:1" />
+      <stop
+         style="stop-color:#604fff;stop-opacity:1"
+         offset="1"
+         id="stop3761" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3757"
+       id="radialGradient3763"
+       cx="52.130707"
+       cy="62.747196"
+       fx="52.130707"
+       fy="62.747196"
+       r="64"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.25043072,0,0,0.25499306,-0.05513078,1020.3621)" />
+    <filter
+       inkscape:collect="always"
+       id="filter3779">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="0.11341797"
+         id="feGaussianBlur3781" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       id="filter3799"
+       x="-0.14506173"
+       width="1.2901235"
+       y="-0.2748538"
+       height="1.5497076">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="2.1759259"
+         id="feGaussianBlur3801" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="11.2"
+     inkscape:cx="17.853773"
+     inkscape:cy="9.6909743"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:snap-grids="true"
+     inkscape:snap-bbox="true"
+     inkscape:window-width="1187"
+     inkscape:window-height="1028"
+     inkscape:window-x="438"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2985"
+       empspacing="4"
+       visible="true"
+       enabled="true"
+       snapvisiblegridlinesonly="true"
+       dotted="false" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1020.3622)">
+    <rect
+       style="color:#000000;fill:url(#radialGradient3763);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect2987"
+       width="32.05513"
+       height="32.639111"
+       x="-0.05513078"
+       y="1020.3622" />
+    <rect
+       style="color:#000000;fill:#ffffff;fill-opacity:0.83730164;fill-rule:nonzero;stroke:none;stroke-width:5.31496048;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter3799);enable-background:accumulate"
+       id="rect3789"
+       width="34"
+       height="19"
+       x="-1"
+       y="14"
+       transform="translate(0,1020.3622)" />
+    <rect
+       style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3775"
+       width="32"
+       height="2.9999998"
+       x="0"
+       y="1029.3622" />
+    <rect
+       y="-17"
+       x="1020.3622"
+       height="3.0000005"
+       width="33.057022"
+       id="rect3779"
+       style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       transform="matrix(0,1,-1,0,0,0)" />
+    <rect
+       y="1040.3622"
+       x="0"
+       height="2.9999998"
+       width="32"
+       id="rect2999"
+       style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+    <g
+       id="g3783">
+      <text
+         xml:space="preserve"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;filter:url(#filter3779);font-family:URW Palladio L;-inkscape-font-specification:URW Palladio L Medium"
+         x="1.0449554"
+         y="1050.5653"
+         id="text2999"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan3001"
+           x="1.0449554"
+           y="1050.5653">hdf</tspan></text>
+      <text
+         sodipodi:linespacing="125%"
+         id="text2995"
+         y="1049.9222"
+         x="0.31281251"
+         style="font-size:20px;font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:URW Palladio L;-inkscape-font-specification:URW Palladio L Medium"
+         xml:space="preserve"><tspan
+           y="1049.9222"
+           x="0.31281251"
+           id="tspan2997"
+           sodipodi:role="line">hdf</tspan></text>
+    </g>
+  </g>
+</svg>
