@@ -1516,6 +1516,7 @@ namespace eval ukaz {
 					$shapeproc $hull [list $sx $ycur] \
 						[dict get $plotdata $id color] \
 						[dict get $plotdata $id pointsize]	\
+						[dict get $plotdata $id linewidth] \
 						$selfns
 				}
 
