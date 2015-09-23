@@ -1,6 +1,6 @@
 namespace eval DataEvaluation {
 	# built-in methods for general data evaluation
-
+	variable ns [namespace current]
 	# list of available commands, to be evaluated by the main program
 	# function, icon, description
 
@@ -580,12 +580,13 @@ namespace eval DataEvaluation {
 
 	proc ArdeViewer {} {
 		# run an instance of ardeviewer, if not yet started
+		variable ns
 		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd "ardeviewer --slave"]
 
 		set tiffnum [BessyHDFViewer::SELECT \
 			[list Pilatus_Tiff] \
 			$BessyHDFViewer::HDFFiles -allnan true]
-		
+
 		set hdfpath [lindex $BessyHDFViewer::HDFFiles 0]
 		set hdfdir [file dirname $hdfpath]
 		set hdfname [file rootname [file tail $hdfpath]]
@@ -601,6 +602,11 @@ namespace eval DataEvaluation {
 		if {[llength [info commands Viewer]]==0} { ardeviewer Viewer $ardecmd }
 
 		Viewer openlist $tifflist
+		BessyHDFViewer::RegisterPickCallback ${ns}::ArdeViewerPick
+	}
+
+	proc ArdeViewerPick {clickdata} {
+		Viewer goto [dict get $clickdata dpnr]
 	}
 
 	snit::type ardeviewer {
@@ -642,6 +648,10 @@ namespace eval DataEvaluation {
 			if {[eof $pipe]} {
 				$self destroy
 			}
+		}
+
+		method goto {dpnr} {
+			$self exec "self.goto_img($dpnr)"
 		}
 	}
 		

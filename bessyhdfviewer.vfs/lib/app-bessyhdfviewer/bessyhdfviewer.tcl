@@ -252,7 +252,7 @@ namespace eval BessyHDFViewer {
 		foreach {wid desc var } {
 			xlb "x: " xv 
 			ylb "y: " yv 
-			nrlb "Point: " cnr 
+			nrlb "Point: " dpnr 
 			cxlb "x: " cx
 			cylb "y: " cy } {
 			set w(point.$wid) [ttk::label $w(legend).$wid -text $desc]
@@ -1030,10 +1030,13 @@ namespace eval BessyHDFViewer {
 
 	set pointerinfo(clickx) ""
 	set pointerinfo(clicky) ""
+	variable pickcallbacks {}
 	proc UpdatePointerInfo {action args} {
 		# callback for mouse events on canvas
 		variable pointerinfo
 		variable w
+		variable HDFsshown
+
 		switch $action {
 			motion {
 				lassign $args coords
@@ -1047,8 +1050,11 @@ namespace eval BessyHDFViewer {
 			click {
 				lassign $args x y
 				lassign [$w(Graph) pickpoint $x $y] id dpnr xd yd
-				
-				set pointerinfo(cnr) $dpnr
+				set fn [dict get $HDFsshown $id]
+
+				set pointerinfo(dpnr) $dpnr
+				set pointerinfo(fn) $fn
+
 				if {$id != {}} {
 					set pointerinfo(clickx) $xd
 					set pointerinfo(clicky) $yd
@@ -1058,8 +1064,25 @@ namespace eval BessyHDFViewer {
 					set pointerinfo(cx) ""
 					set pointerinfo(cy) ""
 				}
+				
+				variable pickcallbacks
+				dict for {cmd dummy} $pickcallbacks {
+					$cmd [array get pointerinfo]
+				}
 			}
 		}
+	}
+
+	
+	proc RegisterPickCallback {cmd} {
+		variable pickcallbacks
+		dict set pickcallbacks $cmd 1
+		return $cmd
+	}
+	
+	proc UnRegisterPickCallback {cmd} {
+		variable pickcallbacks
+		dict unset pickcallbacks $cmd
 	}
 
 	proc PlotProperties {} {
@@ -1256,6 +1279,7 @@ namespace eval BessyHDFViewer {
 		
 		# cache the current data sets in this list
 		variable datashown {}
+		variable HDFsshown {}
 
 		dict for {fn style} $styles {
 			if {$nfiles != 1} {
@@ -1272,7 +1296,9 @@ namespace eval BessyHDFViewer {
 			set title [file tail $fn]
 
 			if {[llength $data] >= 2} {
-				lappend plotid [$w(Graph) plot $data with {*}$style title $title]
+				set id [$w(Graph) plot $data with {*}$style title $title]
+				lappend plotid $id
+				dict set HDFsshown $id $fn
 			}
 			
 			lappend datashown $fn $data
