@@ -594,7 +594,7 @@ namespace eval DataEvaluation {
 		
 		makeArdeViewer
 		Viewer exec [format {self.plugins['HDF-SAXS'].openHDF(%s)} $fn]
-
+		Viewer configure -command {}
 	}
 
 	proc ArdeViewer {} {
@@ -634,6 +634,7 @@ namespace eval DataEvaluation {
 		Viewer openlist $tifflist
 		BessyHDFViewer::RegisterPickCallback ${ns}::ArdeViewerPick
 		trace add command ${ns}::Viewer delete ${ns}::ArdeViewerClearPick
+		Viewer configure -command ${ns}::ArdeViewerScroll
 	}
 
 	proc ArdeViewerPick {clickdata} {
@@ -655,6 +656,16 @@ namespace eval DataEvaluation {
 		puts "Viewer callback stopped."
 	}
 
+	proc ArdeViewerScroll {idx} {
+		variable viewdpmap
+		set dp [lindex [dict keys $viewdpmap] $idx]
+		if {$dp != {}} {
+			lassign $dp hdf dpnr
+			BessyHDFViewer::ClearHighlights
+			BessyHDFViewer::HighlightDataPoint $hdf $dpnr pt circles color red lw 3 ps 1.5
+		}
+	}
+
 	proc pyquote {s} {
 		# quote a string suitable for Python
 		return "\"[string map {"\"" "\\\"" "\\" "\\\\" "\n" "\\n"} $s]\""
@@ -666,8 +677,10 @@ namespace eval DataEvaluation {
 
 	snit::type ardeviewer {
 		variable pipe
-
-		constructor {path} {
+		option -command {}
+		
+		constructor {path args} {
+			$self configurelist $args
 			set pipe [open "| $path" w+]
 			fconfigure $pipe -buffering line -blocking 0 -encoding utf-8
 			fileevent $pipe readable [mymethod feedback]
@@ -694,10 +707,25 @@ namespace eval DataEvaluation {
 			if {[eof $pipe]} {
 				$self destroy
 			}
+
+			# parse data to see if it contains goto commands
+			set idx {}
+			foreach line [split $data \n] {
+				if {[regexp {###\s+GOTO\s+(\d+)} $line -> nr]} {
+					set idx $nr
+				}
+			}
+
+			if {$idx != {}} { 
+				set cmd $options(-command)
+				if {$cmd != {}} { $cmd $idx }
+			}
 		}
 
-		method goto {dpnr} {
-			$self exec "self.goto_img($dpnr)"
+		method goto {idx} {
+			$self exec "self.goto_img($idx)"
+			set cmd $options(-command)
+			if {$cmd != {}} { $cmd $idx }
 		}
 	}
 		
