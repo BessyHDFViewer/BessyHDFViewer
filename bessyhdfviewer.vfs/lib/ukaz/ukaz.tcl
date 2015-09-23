@@ -572,19 +572,19 @@ namespace eval ukaz {
 	}
 
 	########### Functions for drawing marks on a canvas ##############
-	proc shape-circles {can coord color size tag} {
+	proc shape-circles {can coord color size width tag} {
 		set r [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
 			lappend ids [$can create oval \
 				[expr {$x-$r}] [expr {$y-$r}] \
 				[expr {$x+$r}] [expr {$y+$r}] \
-				-outline $color -fill "" -tag $tag]
+				-outline $color -fill "" -width $width -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-circles {can coord color size tag} {
+	proc shape-filled-circles {can coord color size width tag} {
 		set r [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
@@ -596,18 +596,18 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-squares {can coord color size tag} {
+	proc shape-squares {can coord color size width tag} {
 		set s [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
 		lappend ids [$can create rectangle  \
 				[expr {$x-$s}] [expr {$y-$s}] [expr {$x+$s}] [expr {$y+$s}] \
-				-outline $color -fill "" -tag $tag]
+				-outline $color -fill "" -width $width -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-squares {can coord color size tag} {
+	proc shape-filled-squares {can coord color size width tag} {
 		set s [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
@@ -619,7 +619,7 @@ namespace eval ukaz {
 	}
 
 
-	proc shape-hexagons {can coord color size tag} {
+	proc shape-hexagons {can coord color size width tag} {
 		set s [expr {5.0*$size}]
 		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
 		set ids {}
@@ -630,12 +630,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -tag $tag]
+				-outline $color -fill "" -width $width -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-hexagons {can coord color size tag} {
+	proc shape-filled-hexagons {can coord color size width tag} {
 		set s [expr {5.0*$size}]
 		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
 		set ids {}
@@ -651,7 +651,7 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-triangles {can coord color size tag} {
+	proc shape-triangles {can coord color size width tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
 		set ids {}
@@ -662,12 +662,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -tag $tag]
+				-outline $color -fill "" -width $width -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-triangles {can coord color size tag} {
+	proc shape-filled-triangles {can coord color size width tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
 		set ids {}
@@ -683,7 +683,7 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-uptriangles {can coord color size tag} {
+	proc shape-uptriangles {can coord color size width tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
 		set ids {}
@@ -694,12 +694,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -tag $tag]
+				-outline $color -fill "" -width $width -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-uptriangles {can coord color size tag} {
+	proc shape-filled-uptriangles {can coord color size width tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
 		set ids {}
@@ -1407,6 +1407,7 @@ namespace eval ukaz {
 			$shapeproc $hull $transdata \
 				[dict get $plotdata $id color] \
 				[dict get $plotdata $id pointsize]	\
+				[dict get $plotdata $id linewidth]	\
 				$selfns
 		}
 	
