@@ -83,6 +83,8 @@ namespace eval dirViewer {} {
 		option -globpattern -default {*}
 		option -columns -default {} -configuremethod ChangeColumns
 		option -columnoptions -default {} -configuremethod ChangeColumns
+		option -foldcolumn -default {}
+
 		option -classifycommand -default {}
 		option -selectcommand -default {}
 		option -hasparent -default 1 -readonly 1
@@ -360,8 +362,45 @@ namespace eval dirViewer {} {
 			# tbl as list of children of the row identified by nodeIdx
 			#
 			set itemList [$tbl applysorting $itemList]
-			set fullkeys [$tbl insertchildlist $node end $itemList]
+			# puts $itemList
+			set fcindex [lsearch $options(-columns) $options(-foldcolumn)]
+			if {$options(-foldcolumn) != {} && $fcindex >= 0} {
+				incr fcindex
+				puts "Folding by column nr. $fcindex"
+				
+				set oldtrait {}
+				set nthitems {}
+				
+				set parents [lrange $itemList 0 0]
+				set childlists {}
+				
+				foreach item [lrange $itemList 1 end] {
+					set trait [lindex $item $fcindex]
+					if {$trait != $oldtrait || $trait == {}} {
+						lappend childlists $nthitems
+						lappend parents $item
+						set nthitems {}
+					} else {
+						lappend nthitems $item
+					}
+					set oldtrait $trait
+				}
+				lappend childlists $nthitems
 
+				# now insert into tablelist, first all firsts
+				set parentkeys [$tbl insertchildlist $node end $parents]
+				set fullkeys {}
+				foreach p $parentkeys cl $childlists {
+					lappend fullkeys $p
+					if {[llength $cl] != 0} {
+						lappend fullkeys {*}[$tbl insertchildlist $p end $cl]
+						$tbl collapse $p
+					}
+				}
+
+			} else {
+				set fullkeys [$tbl insertchildlist $node end $itemList]
+			}
 			#
 			# Insert an image into the first cell of each newly inserted row
 			#
@@ -515,6 +554,9 @@ namespace eval dirViewer {} {
 		# of the one identified by row, and updates the image displayed in that cell.
 		#------------------------------------------------------------------------------
 		method expandCmd {ttbl row} {
+			set data [$tbl get $row]
+			if {[lindex $data 0 0] != "directory"} { return }
+
 			if {[$tbl childcount $row] == 0} {
 				set dir [$tbl rowattrib $row pathName]
 				$self putDir $dir $row
@@ -532,7 +574,10 @@ namespace eval dirViewer {} {
 		# tablelist widget tbl.
 		#------------------------------------------------------------------------------
 		method collapseCmd {ttbl row} {
-			$tbl cellconfigure $row,0 -image [BessyHDFViewer::IconGet closed-folder]
+			set data [$tbl get $row]
+			if {[lindex $data 0 0] == "directory"} {
+				$tbl cellconfigure $row,0 -image [BessyHDFViewer::IconGet closed-folder]
+			}
 		}
 
 		#------------------------------------------------------------------------------
