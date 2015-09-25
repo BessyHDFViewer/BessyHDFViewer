@@ -130,7 +130,7 @@ namespace eval DataEvaluation {
 			foreach idx $minima {
 				set x [lindex $fdata [expr {2*$idx}]]
 				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "[format %.15g $x] [format %.15g $y]"
+				lappend output "[format %.6g $x] [format %.6g $y]"
 				lappend minimaxy $x $y
 			}
 			
@@ -139,7 +139,7 @@ namespace eval DataEvaluation {
 			foreach idx $maxima {
 				set x [lindex $fdata [expr {2*$idx}]]
 				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "[format %.15g $x] [format %.15g $y]"
+				lappend output "[format %.6g $x] [format %.6g $y]"
 				lappend maximaxy $x $y
 			}
 
@@ -229,12 +229,12 @@ namespace eval DataEvaluation {
 			# generate output
 			lappend output "# $title"
 			lappend output "# Peak:"
-			lappend output "[format %.15g $maxx] [format %.15g $maxy]"
+			lappend output "[format %.6g $maxx] [format %.6g $maxy]"
 			if {$leftx != {} && $rightx != {}} {
 				lappend output "# Center:"
-				lappend output "[format %.15g $cx]"
+				lappend output "[format %.7g $cx]"
 				lappend output "# Width:"
-				lappend output "[format %.15g $width]"
+				lappend output "[format %.7g $width]"
 			}
 
 			lappend output "# Bounds:"
@@ -555,8 +555,13 @@ namespace eval DataEvaluation {
 
 		typemethod Show {msg args} {
 			set name .textdisplay_$instc
-			incr instc
-			TextDisplay $name -text $msg {*}$args
+			if {[winfo exists $name]} {
+				$name AddText "\n\n$msg"
+			} else {
+				incr instc
+				set name .textdisplay_$instc
+				TextDisplay $name -text $msg {*}$args
+			}
 		}
 
 
@@ -576,6 +581,12 @@ namespace eval DataEvaluation {
 			grid columnconfigure $win 0 -weight 1
 
 			$text insert 1.0 $options(-text)
+		}
+
+		method AddText {msg} {
+			$text insert end $msg
+			$text see end
+			raise $win
 		}
 	}
 
