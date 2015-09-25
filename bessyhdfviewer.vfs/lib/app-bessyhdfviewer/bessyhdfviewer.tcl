@@ -157,7 +157,7 @@ namespace eval BessyHDFViewer {
 
 		set w(filterbut) [ttk::checkbutton $w(pathfr).filterbut -text "Filter" -style Toolbutton \
 			-variable ${ns}::filterenabled \
-			-command [list ${ns}::SwitchFilterState -refresh]]
+			-command ${ns}::SwitchFilterState]
 		variable filterenabled [PreferenceGet FilterEnabled 0]
 		ClearFilterErrors
 		
@@ -169,12 +169,28 @@ namespace eval BessyHDFViewer {
 		
 		bind $w(filterent) <Key-Return> ${ns}::FilterUpdate
 		bind $w(filterent) <<ComboboxSelected>> ${ns}::FilterUpdate
+		
+		set w(groupbut) [ttk::checkbutton $w(pathfr).groupbut -text "Grouping" -style Toolbutton \
+			-variable ${ns}::groupingenabled \
+			-command ${ns}::SwitchGroupingState\
+			-image [IconGet tree-collapse]]
+		
+		tooltip::tooltip $w(groupbut) "Enable grouping of files"
+
+		variable groupingenabled [PreferenceGet GroupingEnabled 0]
+		
+		set w(groupbox) [ttk::combobox $w(pathfr).grouping -textvariable ${ns}::GroupColumn \
+			-width 20 -state readonly]
+		variable GroupColumn [PreferenceGet GroupColumn {Comment}]
+		
+		bind $w(groupbox) <<ComboboxSelected>> ${ns}::GroupingUpdate
+
 
 		set w(coleditbut) [ttk::button $w(pathfr).coleditbut -text "Configure columns" \
 			-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
 		tooltip::tooltip $w(coleditbut) "Edit displayed columns in browser"
 
-		grid $w(pathent) $w(filterbut) $w(filterent) $w(coleditbut) -sticky ew
+		grid $w(pathent) $w(filterbut) $w(filterent) $w(groupbut) $w(groupbox) $w(coleditbut) -sticky ew
 		grid columnconfigure $w(pathfr) $w(pathent) -weight 1
 
 		set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
@@ -192,14 +208,14 @@ namespace eval BessyHDFViewer {
 
 		ChooseColumns [PreferenceGet Columns {"Motor" "Detector" "Modified"}]
 		SwitchFilterState
+		SwitchGroupingState
 
 		# Create navigation buttons
 		#
 		set w(bbar) [ttk::frame $w(listfr).bbar]
-		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) refreshView]]
+		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) RefreshRequest]]
 		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
 		set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
-		set w(bcollapse) [ttk::button $w(bbar).coll -text "Grouping" -image [IconGet tree-collapse] -compound left -command ${ns}::GroupingCmd]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 
 		set w(foldbut) [ttk::button $w(bbar).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
@@ -207,7 +223,7 @@ namespace eval BessyHDFViewer {
 
 		variable PlotFolded false
 		
-		pack $w(bhome) $w(bupwards) $w(bcollapse) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
+		pack $w(bhome) $w(bupwards) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
 		pack $w(foldbut) -side left -expand yes -fill none -anchor e
 
 		set w(progbar) [ttk::progressbar $w(listfr).progbar]
@@ -543,6 +559,7 @@ namespace eval BessyHDFViewer {
 
 		$w(filelist) configure -columns $columns -columnoptions $columnopts
 		$w(filterent) configure -aclist $columns
+		GroupingUpdate
 
 	}
 
@@ -1026,16 +1043,6 @@ namespace eval BessyHDFViewer {
 				}
 			}
 		}
-	}
-
-	variable FoldColumn {}  ;# [PreferenceGet FoldColumn {}]
-	proc GroupingCmd {} {
-		variable w
-		variable ActiveColumns
-		variable FoldColumn 
-		
-		set FoldColumn Comment
-		$w(filelist) configure -foldcolumn $FoldColumn
 	}
 
 	set pointerinfo(clickx) ""
@@ -1619,7 +1626,7 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
-	proc SwitchFilterState {{refresh {}}} {
+	proc SwitchFilterState {} {
 		variable w
 		variable filterenabled
 		if {$filterenabled} {
@@ -1630,10 +1637,23 @@ namespace eval BessyHDFViewer {
 		
 		PreferenceSet FilterEnabled $filterenabled
 		
-		if {$refresh =="-refresh"} {
-			$w(filelist) refreshView
-		}
+		$w(filelist) RefreshRequest
 	}
+
+	proc SwitchGroupingState {} {
+		variable w
+		variable groupingenabled
+		if {$groupingenabled} {
+			grid $w(groupbox)
+		} else {
+			grid remove $w(groupbox)
+		}
+		
+		PreferenceSet GroupingEnabled $groupingenabled
+		
+		GroupingUpdate
+	}
+
 
 	proc FilterUpdate {} {
 		# filter was changed manually
@@ -1646,8 +1666,24 @@ namespace eval BessyHDFViewer {
 			$w(filterent) configure -values $hist
 		}
 		PreferenceSet FilterExpression $filterexpression
-		$w(filelist) refreshView
+		$w(filelist) RefreshRequest
 	}
+
+	proc GroupingUpdate {} {
+		variable w
+		variable ActiveColumns
+		variable GroupColumn 
+		variable groupingenabled
+		if {$groupingenabled} {
+			$w(groupbox) configure -values $ActiveColumns
+			$w(filelist) configure -foldcolumn $GroupColumn
+			PreferenceSet GroupColumn $GroupColumn
+		} else {
+			$w(filelist) configure -foldcolumn {}
+		}
+		$w(filelist) RefreshRequest
+	}
+
 
 	proc OpenArgument {files} {
 		variable w
