@@ -170,7 +170,8 @@ namespace eval dirViewer {} {
 			# Request un update of the contents of this viewer
 			#
 			$tbl sortbycolumn 0
-			SmallUtils::defer [mymethod refreshView]
+			
+			$self RefreshRequest
 		}
 
 		destructor {
@@ -217,8 +218,8 @@ namespace eval dirViewer {} {
 					}
 				}
 			}
-
-			SmallUtils::defer [mymethod refreshView]
+			
+			$self RefreshRequest
 		}
 
 		method cleartable {} {
@@ -366,7 +367,6 @@ namespace eval dirViewer {} {
 			set fcindex [lsearch $options(-columns) $options(-foldcolumn)]
 			if {$options(-foldcolumn) != {} && $fcindex >= 0} {
 				incr fcindex
-				puts "Folding by column nr. $fcindex"
 				
 				set oldtrait {}
 				set nthitems {}
@@ -376,14 +376,20 @@ namespace eval dirViewer {} {
 				
 				foreach item [lrange $itemList 1 end] {
 					set trait [lindex $item $fcindex]
-					if {$trait != $oldtrait || $trait == {}} {
+					set type [lindex $item 0 0]
+					if {$trait != $oldtrait || $trait == {} || $type == "directory" } {
 						lappend childlists $nthitems
 						lappend parents $item
 						set nthitems {}
 					} else {
 						lappend nthitems $item
 					}
-					set oldtrait $trait
+					
+					if {$type == "directory"} { 
+						set oldtrait {}
+					} else {
+						set oldtrait $trait
+					}
 				}
 				lappend childlists $nthitems
 
@@ -596,7 +602,10 @@ namespace eval dirViewer {} {
 			}
 		}
 
-		
+	    method RefreshRequest {} {
+			SmallUtils::defer [mymethod refreshView]
+		}
+
 		#------------------------------------------------------------------------------
 		# refreshView
 		#

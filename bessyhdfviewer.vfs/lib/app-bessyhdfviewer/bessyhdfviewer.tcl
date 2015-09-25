@@ -199,7 +199,7 @@ namespace eval BessyHDFViewer {
 		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) refreshView]]
 		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
 		set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
-		set w(bcollapse) [ttk::button $w(bbar).coll -text "Collapse" -image [IconGet tree-collapse] -compound left -command [list $w(filelist) collapseCurrent]]
+		set w(bcollapse) [ttk::button $w(bbar).coll -text "Grouping" -image [IconGet tree-collapse] -compound left -command ${ns}::GroupingCmd]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 
 		set w(foldbut) [ttk::button $w(bbar).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
@@ -1026,6 +1026,16 @@ namespace eval BessyHDFViewer {
 				}
 			}
 		}
+	}
+
+	variable FoldColumn {}  ;# [PreferenceGet FoldColumn {}]
+	proc GroupingCmd {} {
+		variable w
+		variable ActiveColumns
+		variable FoldColumn 
+		
+		set FoldColumn Comment
+		$w(filelist) configure -foldcolumn $FoldColumn
 	}
 
 	set pointerinfo(clickx) ""
