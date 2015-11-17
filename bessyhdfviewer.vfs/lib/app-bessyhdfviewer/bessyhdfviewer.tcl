@@ -152,7 +152,7 @@ namespace eval BessyHDFViewer {
 			set browsepath [file normalize [pwd]]
 		}
 
-		bind $w(pathent) <FocusOut> ${ns}::DirUpdate
+		bind $w(pathent) <FocusOut> ${ns}::RestoreCWD
 		bind $w(pathent) <Key-Return> ${ns}::DirUpdate
 
 		set w(filterbut) [ttk::checkbutton $w(pathfr).filterbut -text "Filter" -style Toolbutton \
@@ -1599,6 +1599,13 @@ namespace eval BessyHDFViewer {
 		variable browsepath
 		set browsepath $dir
 		PreferenceSet HomeDir $dir
+	}
+
+	proc RestoreCWD {} {
+		# focus out from path entry
+		# set displayed path to CWD
+		variable w
+		DirChanged [$w(filelist) getcwd]
 	}
 
 	proc DirUpdate {} {
