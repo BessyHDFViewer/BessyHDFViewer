@@ -612,20 +612,38 @@ namespace eval DataEvaluation {
 		# run an instance of ardeviewer, if not yet started
 		variable ns
 		set tifffmt [BessyHDFViewer::PreferenceGet TiffFmt "pilatus_%s_%04d.tif"]
+		
+		# get currently displayed zoom area
+		lassign [$BessyHDFViewer::w(Graph) cget -xrange] xmin xmax
+		lassign [$BessyHDFViewer::w(Graph) cget -yrange] ymin ymax
+		
+		if {$xmin eq "*"} { set xmin -Inf }
+		if {$xmax eq "*"} { set xmax +Inf }
+
+		if {$ymin eq "*"} { set ymin -Inf }
+		if {$ymax eq "*"} { set ymax +Inf }
+
 
 		# create the correspondence map, only keep valid TIFF numbers
 		set tifflist {}
 		set ptnr 0
 		variable viewdpmap {}
 		foreach hdfpath $BessyHDFViewer::HDFFiles {
-			set tiffnum [BessyHDFViewer::SELECT Pilatus_Tiff \
+			set tiffnum [BessyHDFViewer::SELECT [list Pilatus_Tiff $BessyHDFViewer::xformat $BessyHDFViewer::yformat] \
 				[list $hdfpath] -allnan true]
 
 			set dpnr -1
-			foreach tiff $tiffnum {
+			foreach line $tiffnum { 
+				lassign $line tiff x y 
 				incr dpnr
 				# parse tiffnr into integer
 				if {[catch {expr {int($tiff)}} tiffnr]} { continue }
+
+				# skip images that do not fit into the plot region
+				# careful: NaN-safe comparison 
+				if {!( ($x>=$xmin) && ($x<=$xmax) && ($y>=$ymin) && ($y<=$ymax))} {
+					continue
+				}
 
 				# decompose hdf file name into directory, prefix and number
 				set hdfdir [file dirname $hdfpath]
