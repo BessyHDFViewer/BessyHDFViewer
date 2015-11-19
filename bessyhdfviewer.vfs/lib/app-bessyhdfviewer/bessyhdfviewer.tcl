@@ -724,8 +724,12 @@ namespace eval BessyHDFViewer {
 				# an error occured during filtering
 				FilterError $filterres
 			} else {
-				if {!$filterres} { 
-					set classicon SKIP
+				if {[string is bool $filterres]} {
+					if {!$filterres} { 
+						set classicon SKIP
+					}
+				} else {
+					FilterError "Result of filter not boolean: $filterres"
 				}
 			}
 		}
