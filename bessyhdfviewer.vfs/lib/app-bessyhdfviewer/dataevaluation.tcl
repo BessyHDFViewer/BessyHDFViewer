@@ -254,16 +254,113 @@ namespace eval DataEvaluation {
 			centermin $fdata $max1 $minidx $max2 
 		}]
 
-		set cmaxima [lmap {x} $maxima {expr 1.0}]
+		set cmaxima [lmap {maxidx} $maxima {
+			lassign [bracket $augmin $maxidx] min1 min2
+			centermax $fdata $min1 $maxidx $min2 
+		}]
+
 		list $cminima $cmaxima
 	}
 	
 	proc centermin {fdata idx1 idx2 idx3} {
 		# 
+	#	puts "$idx1 $idx2 $idx3"
 		lassign [xyindex $fdata $idx1] x1 y1
 		lassign [xyindex $fdata $idx2] x2 y2
-		lassign [xyindex $fdata $idx3] x3 y3
-		return [list $x1 $x2 $x3]
+		lassign [xyindex $fdata $idx3] x3 y3	
+	#	puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		# go from min position to the left and right
+		# until we hit the threshold
+		set rightx {}
+		set leftx {}
+
+		set thresh 0.5
+		# ythresh is 50% (or thresh) above the minimum in y, 
+		# but not lower than either end of the bracket y1 and y3
+		set ythresh [expr {min($y1,$y3,max($y1,$y3)*$thresh + $y2*(1.0-$thresh))}]
+		set xold $x2; set yold $y2
+
+		# go right
+		for {set ind $idx2} {$ind <= $idx3} {incr ind 1} {
+			lassign [xyindex $fdata $ind] xcur ycur
+			if {$ycur >= $ythresh} {
+				# interpolate for position 
+				puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
+				set rightx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+				break
+			}
+			set xold $xcur
+			set yold $ycur
+		}
+		
+		# go left
+		set xold $x2; set yold $y2
+		for {set ind $idx2} {$ind >= 0} {incr ind -1} {
+			lassign [xyindex $fdata $ind] xcur ycur
+			if {$ycur >= $ythresh} {
+				# interpolate for position 
+				set leftx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+				break
+			}
+			set xold $xcur
+			set yold $ycur
+		}
+
+		set width [expr {$rightx-$leftx}]
+		set cx [expr {($leftx+$rightx)/2}]
+
+		return [list $cx $width]
+	}
+
+
+	proc centermax {fdata idx1 idx2 idx3} {
+		# 
+	#	puts "$idx1 $idx2 $idx3"
+		lassign [xyindex $fdata $idx1] x1 y1
+		lassign [xyindex $fdata $idx2] x2 y2
+		lassign [xyindex $fdata $idx3] x3 y3	
+	#	puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		# go from max position to the left and right
+		# until we hit the threshold
+		set rightx {}
+		set leftx {}
+
+		set thresh 0.5
+		# ythresh is 50% (or thresh) above the minimum in y, 
+		# but not lower than either end of the bracket y1 and y3
+		set ythresh [expr {max($y1,$y3,min($y1,$y3)*$thresh + $y2*(1.0-$thresh))}]
+		set xold $x2; set yold $y2
+
+		# go right
+		for {set ind $idx2} {$ind <= $idx3} {incr ind 1} {
+			lassign [xyindex $fdata $ind] xcur ycur
+			if {$ycur <= $ythresh} {
+				# interpolate for position 
+				puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
+				set rightx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+				break
+			}
+			set xold $xcur
+			set yold $ycur
+		}
+		
+		# go left
+		set xold $x2; set yold $y2
+		for {set ind $idx2} {$ind >= 0} {incr ind -1} {
+			lassign [xyindex $fdata $ind] xcur ycur
+			if {$ycur <= $ythresh} {
+				# interpolate for position 
+				set leftx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
+				break
+			}
+			set xold $xcur
+			set yold $ycur
+		}
+
+		set width [expr {$rightx-$leftx}]
+		set cx [expr {($leftx+$rightx)/2}]
+
+		return [list $cx $width]
 	}
 
 	proc FindPeaks {} {
@@ -300,7 +397,8 @@ namespace eval DataEvaluation {
 			set maximaxy {}
 			foreach idx $maxima centre $cmaxima {
 				lassign [xyindex $fdata $idx] x y
-				lappend output "[format %.6g $x] [format %.6g $y] [format %.6g $centre]"
+				lappend output "[format %.6g $x] [format %.6g $y]  $centre " ;#[format %.6g $centre]"
+
 				lappend maximaxy $x $y
 			}
 
