@@ -592,7 +592,7 @@ namespace eval DataEvaluation {
 
 	proc makeArdeViewer {} {
 		# make sure ardeviewer is up
-		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd "ardeviewer --slave"]
+		set ardecmd [BessyHDFViewer::PreferenceGet ViewerCmd [list ardeviewer --slave]]
 		if {[llength [info commands Viewer]]==0} { ardeviewer Viewer $ardecmd }
 	}
 
@@ -710,7 +710,7 @@ namespace eval DataEvaluation {
 		
 		constructor {path args} {
 			$self configurelist $args
-			set pipe [open "| $path" w+]
+			set pipe [open |[list {*}$path 2>@1] w+]
 			fconfigure $pipe -buffering line -blocking 0 -encoding utf-8
 			fileevent $pipe readable [mymethod feedback]
 		}
