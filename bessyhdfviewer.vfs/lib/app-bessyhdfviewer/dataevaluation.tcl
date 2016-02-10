@@ -16,91 +16,7 @@ namespace eval DataEvaluation {
 		ArdeViewerHDF	ardeviewer-hdf       "open selected HDF in external viewer"
 	}
 
-	# peak-locating using the AMPD method
-	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
-	#
-	# NOTE: Scholkmann's algorithm description is a bit confusing
-	# using random numbers and standard deviations
-	# This implementation tries to follow the original idea,
-	# but in a deterministic way 
-	proc ampd_max {v} {
-		set N [llength $v]
-		# find maximum of gamma
-		set lambda 1
-		set gmax 0
-		for {set k 1} {$k<$N/2-1} {incr k} {
-			set gamma 0
-			for {set i $k} {$i<$N-$k} {incr i} {
-				# negative copmarisons are needed to properly deal with NaN
-				incr gamma [expr {!([lindex $v $i] <= [lindex $v [expr {$i-$k}]]) &&
-					!([lindex $v $i] <= [lindex $v [expr {$i+$k}]])}]
-			}
-			
-			if {$gamma > $gmax} {
-				set gmax $gamma
-				set lambda $k
-			}
-		}
 
-		# now find maxima for all levels up to k<=lambda
-		set maxima {}
-		for {set i $lambda} {$i<$N-$lambda} {incr i} {
-			# find total maximum in the window of size 2*lambda+1
-			# centered around i
-			set goon false
-			for {set k 1} {$k<=$lambda} {incr k} {
-				if {([lindex $v $i] <= [lindex $v [expr {$i-$k}]]) ||
-					([lindex $v $i] <= [lindex $v [expr {$i+$k}]])} {
-					set goon true
-					break
-				}
-			}
-			if {$goon} { continue }
-			set val [lindex $v $i]
-			lappend maxima $i
-		}
-		return $maxima
-	}
-
-	proc ampd_min {v} {
-		set N [llength $v]
-		# find maximum of gamma
-		set lambda 1
-		set gmax 0
-		for {set k 1} {$k<$N/2-1} {incr k} {
-			set gamma 0
-			for {set i $k} {$i<$N-$k} {incr i} {
-				# negative copmarisons are needed to properly deal with NaN
-				incr gamma [expr {!([lindex $v $i] >= [lindex $v [expr {$i-$k}]]) &&
-					!([lindex $v $i] >= [lindex $v [expr {$i+$k}]])}]
-			}
-			
-			if {$gamma > $gmax} {
-				set gmax $gamma
-				set lambda $k
-			}
-		}
-
-		# now find minima for all levels up to k<=lambda
-		set minima {}
-		for {set i $lambda} {$i<$N-$lambda} {incr i} {
-			# find total maximum in the window of size 2*lambda+1
-			# centered around i
-			set goon false
-			for {set k 1} {$k<=$lambda} {incr k} {
-				if {([lindex $v $i] >= [lindex $v [expr {$i-$k}]]) ||
-					([lindex $v $i] >= [lindex $v [expr {$i+$k}]])} {
-					set goon true
-					break
-				}
-			}
-			if {$goon} { continue }
-			set val [lindex $v $i]
-			lappend minima $i
-		}
-		return $minima
-	}
-	
 	# peak-locating using the AMPD method
 	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
 	#
@@ -146,7 +62,7 @@ namespace eval DataEvaluation {
 		 
 		# Use the larger lambda of both maxima and minima
 		# i.e. detect "less" peaks
-		
+		puts "min: $lambda_min, $gmin  max: $lambda_max, $gmax"
 		set lambda [expr {max($lambda_min, $lambda_max)}]
 		# now find minima for all levels up to k<=lambda
 		set minima {}
@@ -264,11 +180,11 @@ namespace eval DataEvaluation {
 	
 	proc centermin {fdata idx1 idx2 idx3} {
 		# 
-	#	puts "$idx1 $idx2 $idx3"
+		puts "$idx1 $idx2 $idx3"
 		lassign [xyindex $fdata $idx1] x1 y1
 		lassign [xyindex $fdata $idx2] x2 y2
 		lassign [xyindex $fdata $idx3] x3 y3	
-	#	puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
 		# go from min position to the left and right
 		# until we hit the threshold
 		set rightx {}
@@ -279,6 +195,8 @@ namespace eval DataEvaluation {
 		# but not lower than either end of the bracket y1 and y3
 		set ythresh [expr {min($y1,$y3,max($y1,$y3)*$thresh + $y2*(1.0-$thresh))}]
 		set xold $x2; set yold $y2
+		
+		if {$ythresh <= $y2} { return -code continue }
 
 		# go right
 		for {set ind $idx2} {$ind <= $idx3} {incr ind 1} {
@@ -309,17 +227,17 @@ namespace eval DataEvaluation {
 		set width [expr {$rightx-$leftx}]
 		set cx [expr {($leftx+$rightx)/2}]
 
-		return [list $cx $width]
+		return [list $x2 $y2 $cx $width]
 	}
 
 
 	proc centermax {fdata idx1 idx2 idx3} {
 		# 
-	#	puts "$idx1 $idx2 $idx3"
+		puts "$idx1 $idx2 $idx3"
 		lassign [xyindex $fdata $idx1] x1 y1
 		lassign [xyindex $fdata $idx2] x2 y2
 		lassign [xyindex $fdata $idx3] x3 y3	
-	#	puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
 		# go from max position to the left and right
 		# until we hit the threshold
 		set rightx {}
@@ -331,6 +249,9 @@ namespace eval DataEvaluation {
 		set ythresh [expr {max($y1,$y3,min($y1,$y3)*$thresh + $y2*(1.0-$thresh))}]
 		set xold $x2; set yold $y2
 
+
+		if {$ythresh >= $y2} { return -code continue }
+		
 		# go right
 		for {set ind $idx2} {$ind <= $idx3} {incr ind 1} {
 			lassign [xyindex $fdata $ind] xcur ycur
@@ -360,7 +281,7 @@ namespace eval DataEvaluation {
 		set width [expr {$rightx-$leftx}]
 		set cx [expr {($leftx+$rightx)/2}]
 
-		return [list $cx $width]
+		return [list $x2 $y2 $cx $width]
 	}
 
 	proc FindPeaks {} {
@@ -389,7 +310,7 @@ namespace eval DataEvaluation {
 			set minimaxy {}
 			foreach idx $minima centre $cminima {
 				lassign [xyindex $fdata $idx] x y
-				lappend output "[format %.6g $x] [format %.6g $y] $centre " ;#[format %.6g $centre]"
+				lappend output [join [lmap c $centre {format %15.6g $c}] " "]
 				lappend minimaxy $x $y
 			}
 			
@@ -397,7 +318,7 @@ namespace eval DataEvaluation {
 			set maximaxy {}
 			foreach idx $maxima centre $cmaxima {
 				lassign [xyindex $fdata $idx] x y
-				lappend output "[format %.6g $x] [format %.6g $y]  $centre " ;#[format %.6g $centre]"
+				lappend output [join [lmap c $centre {format %15.6g $c}] " "]
 
 				lappend maximaxy $x $y
 			}
