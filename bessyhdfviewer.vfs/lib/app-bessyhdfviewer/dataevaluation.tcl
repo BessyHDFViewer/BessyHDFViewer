@@ -100,7 +100,171 @@ namespace eval DataEvaluation {
 		}
 		return $minima
 	}
+	
+	# peak-locating using the AMPD method
+	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
+	#
+	# NOTE: Scholkmann's algorithm description is a bit confusing
+	# using random numbers and standard deviations
+	# This implementation tries to follow the original idea,
+	# but in a deterministic way 
+	#
+	# Minima and maxima are determined from a common lambda
+	# to ensure that they alternate
+	# Finally, the peak centres are computed from the FWHM (as in FindCenter)
+	proc ampd_minmax {v} {
+		set N [llength $v]
+		# find maximum of gamma for minima and maxima
+		#
+		set lambda_min 1
+		set lambda_max 1
+		set gmax 0
+		set gmin 0
+		for {set k 1} {$k<$N/2-1} {incr k} {
+			set gamma_min 0
+			set gamma_max 0
+			for {set i $k} {$i<$N-$k} {incr i} {
+				# negative copmarisons are needed to properly deal with NaN
+				# Minima
+				incr gamma_min [expr {!([lindex $v $i] >= [lindex $v [expr {$i-$k}]]) &&
+					!([lindex $v $i] >= [lindex $v [expr {$i+$k}]])}]
+				# Maxima
+				incr gamma_max [expr {!([lindex $v $i] <= [lindex $v [expr {$i-$k}]]) &&
+					!([lindex $v $i] <= [lindex $v [expr {$i+$k}]])}]
+			}
+			
+			if {$gamma_max > $gmax} {
+				set gmax $gamma_max
+				set lambda_max $k
+			}
 
+			if {$gamma_min > $gmin} {
+				set gmin $gamma_min
+				set lambda_min $k
+			}
+		}
+		 
+		# Use the larger lambda of both maxima and minima
+		# i.e. detect "less" peaks
+		
+		set lambda [expr {max($lambda_min, $lambda_max)}]
+		# now find minima for all levels up to k<=lambda
+		set minima {}
+		for {set i $lambda} {$i<$N-$lambda} {incr i} {
+			# find total maximum in the window of size 2*lambda+1
+			# centered around i
+			set goon false
+			for {set k 1} {$k<=$lambda} {incr k} {
+				if {([lindex $v $i] >= [lindex $v [expr {$i-$k}]]) ||
+					([lindex $v $i] >= [lindex $v [expr {$i+$k}]])} {
+					set goon true
+					break
+				}
+			}
+			if {$goon} { continue }
+			set val [lindex $v $i]
+			lappend minima $i
+		}
+		
+		# now find maxima for all levels up to k<=lambda
+		set maxima {}
+		for {set i $lambda} {$i<$N-$lambda} {incr i} {
+			# find total maximum in the window of size 2*lambda+1
+			# centered around i
+			set goon false
+			for {set k 1} {$k<=$lambda} {incr k} {
+				if {([lindex $v $i] <= [lindex $v [expr {$i-$k}]]) ||
+					([lindex $v $i] <= [lindex $v [expr {$i+$k}]])} {
+					set goon true
+					break
+				}
+			}
+			if {$goon} { continue }
+			set val [lindex $v $i]
+			lappend maxima $i
+		}
+
+
+		return [list $minima $maxima]
+	}
+
+	
+	proc xyindex {fdata idx} {
+		set x [lindex $fdata [expr {2*$idx}]]
+		set y [lindex $fdata [expr {2*$idx+1}]]
+		list $x $y
+	}
+	
+	proc argmin {list} {
+		lsearch -real $list [tcl::mathfunc::min {*}$list]
+	}
+
+	proc argmax {list} {
+		lsearch -real $list [tcl::mathfunc::max {*}$list]
+	}
+
+	proc bracket {idxlist idx} {
+		# find two indices in idxlist
+		# such that ind1<idx<ind2
+		# idxlist is assumed to be sorted 
+		# and bracketing idx
+		foreach curridx $idxlist {
+			if {$curridx > $idx} {
+				return [list $previdx $curridx]
+			}
+			set previdx $curridx
+		}
+		return -code error "$idx not bracketed in list $idxlist" 
+	}
+
+	proc centerpeaks {fdata ylist minima maxima} {
+		# augmin and augmax are lists
+		# with an artificial min/max appended
+		# such that every real minimum is enclosed by two max
+		# and vice versa
+
+		lassign $minima firstmin
+		lassign $maxima firstmax
+		set lastmin [lindex $minima end]
+		set lastmax [lindex $maxima end]
+
+		if {$firstmin ne {} && ($firstmin < $firstmax || $firstmax eq {})} {
+			set augmax [argmax [lrange $ylist 0 $firstmin]]
+		}
+
+		if {$firstmax ne {} && ($firstmax < $firstmin || $firstmin eq {})} {
+			set augmin [argmin [lrange $ylist 0 $firstmax]]
+		}
+
+		lappend augmax {*}$maxima
+		lappend augmin {*}$minima
+
+		if {$lastmin ne {} && ($lastmin > $lastmax || $lastmax eq {})} {
+			set pos [argmax [lrange $ylist $lastmin end]]
+			lappend augmax [expr {$pos+$lastmin}]
+		}
+
+		if {$lastmax ne {} && ($lastmax > $lastmin || $lastmin eq {})} {
+			set pos [argmin [lrange $ylist $lastmax end]]
+			lappend augmin [expr {$pos+$lastmax}]
+		}
+
+		set cminima [lmap {minidx} $minima {
+			lassign [bracket $augmax $minidx] max1 max2
+			centermin $fdata $max1 $minidx $max2 
+		}]
+
+		set cmaxima [lmap {x} $maxima {expr 1.0}]
+		list $cminima $cmaxima
+	}
+	
+	proc centermin {fdata idx1 idx2 idx3} {
+		# 
+		lassign [xyindex $fdata $idx1] x1 y1
+		lassign [xyindex $fdata $idx2] x2 y2
+		lassign [xyindex $fdata $idx3] x3 y3
+		return [list $x1 $x2 $x3]
+	}
 
 	proc FindPeaks {} {
 		# run the peak detector on the currently displayed list
@@ -117,34 +281,32 @@ namespace eval DataEvaluation {
 				lappend fdata $x $y
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
-			# now rip off the y-values only
-			set vlist {}
-			foreach {x y} $fdata { lappend vlist $y }
+			# now take out the y-values only
+			set ylist [lmap {x y} $fdata {set y}]
 			# compute minima / maxima
-			set minima [ampd_min $vlist]
-			set maxima [ampd_max $vlist]
+			lassign [ampd_minmax $ylist] minima maxima
+			lassign [centerpeaks $fdata $ylist $minima $maxima] cminima cmaxima
 			# generate output
 			lappend output "# $title"
 			lappend output "# Minima:"
 			set minimaxy {}
-			foreach idx $minima {
-				set x [lindex $fdata [expr {2*$idx}]]
-				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "[format %.6g $x] [format %.6g $y]"
+			foreach idx $minima centre $cminima {
+				lassign [xyindex $fdata $idx] x y
+				lappend output "[format %.6g $x] [format %.6g $y] $centre " ;#[format %.6g $centre]"
 				lappend minimaxy $x $y
 			}
 			
 			lappend output "# Maxima:"
 			set maximaxy {}
-			foreach idx $maxima {
-				set x [lindex $fdata [expr {2*$idx}]]
-				set y [lindex $fdata [expr {2*$idx+1}]]
-				lappend output "[format %.6g $x] [format %.6g $y]"
+			foreach idx $maxima centre $cmaxima {
+				lassign [xyindex $fdata $idx] x y
+				lappend output "[format %.6g $x] [format %.6g $y] [format %.6g $centre]"
 				lappend maximaxy $x $y
 			}
 
 			$BessyHDFViewer::w(Graph) plot $minimaxy with points color green pt filled-hexagons
 			$BessyHDFViewer::w(Graph) plot $maximaxy with points color red pt filled-hexagons
+			
 
 		}
 
