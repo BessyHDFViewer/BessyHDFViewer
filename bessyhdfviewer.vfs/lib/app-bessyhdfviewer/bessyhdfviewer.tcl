@@ -196,7 +196,7 @@ namespace eval BessyHDFViewer {
 		set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
 			-classifycommand ${ns}::ClassifyHDF \
 			-selectcommand ${ns}::PreviewFile \
-			-globpattern {*.hdf *.h5} \
+			-globpattern {*.hdf *.h5 *.dat} \
 			-selectmode extended]
 
 		bind $w(filelist) <<DirviewerChDir>> [list ${ns}::DirChanged %d]
@@ -2072,7 +2072,9 @@ namespace eval BessyHDFViewer {
 		# switch on the file extension
 		switch [file extension $fn] {
 			.hdf { return [bessy_reshape_hdf4 $fn] }
-			default { return [bessy_reshape_hdf5 $fn] }
+			.h5 { return [bessy_reshape_hdf5 $fn] }
+			.dat { return [bessy_reshape_ascii $fn] }
+			default { return [bessy_reshape_ascii $fn] }
 		}
 	}
 
@@ -2249,6 +2251,86 @@ namespace eval BessyHDFViewer {
 		}
 
 		return $reshaped
+	}
+
+	proc bessy_reshape_ascii {fn} {
+		# read file completely into RAM
+		SmallUtils::autofd fd $fn r
+		set lines [split [read $fd] \n]
+
+		set reshaped {}
+		# extract header: all lines from beginning
+		# which start with # as the first non-blank character
+		foreach line $lines {
+			if {[regexp {^\s*#(.*)$} $line -> hline]} {
+				lappend header $hline
+			} else {
+				break
+			}
+		}
+
+		dict set reshaped Motor {}
+		dict set reshaped Motors {}
+		dict set reshaped Detector {}
+		dict set reshaped Detectors {}
+		
+		set attribpath {{}}
+		set indents [list 0]
+		foreach hline $header {
+			# skip empty lines
+			if {[regexp {^\s*$} $hline]} { continue }
+			
+			# parse attributes of the form key = value
+			if {[regexp {^\s*(.*?)\s*=\s*(.*)\s*$} $hline -> key value]} {
+				dict set reshaped {*}$attribpath $key $value
+				continue
+			} 			
+			
+			# parse 
+			if {[regexp {^(\s*)(.*):\s*$} $hline -> indent key]} {
+				if {$attribpath eq {{}} } { set attribpath {} }
+				set newindlength [string length $indent]
+				puts "$newindlength $key"
+				if {$newindlength > [lindex $indents end]} {
+					puts "Indenting in"
+					lappend attribpath $key
+					lappend indents $newindlength
+					puts "$indents $attribpath"
+				} else {
+					puts "Indenting out"
+					while {$newindlength <= [lindex $indents end]} {
+						set indents [lrange $indents 0 end-1]
+						set attribpath [lrange $attribpath 0 end-1]
+						puts "$indents $attribpath"
+					}
+					lappend indents $newindlength
+					lappend attribpath $key
+					puts "$indents $attribpath"
+				}
+
+				continue
+			}
+			 # not an attribute or folder name
+			 # could be a column definition
+			 set columns [regexp -all -inline {\S+} $hline]
+
+		}
+	#	puts [hformat $reshaped]
+		# move the contents from Motors to Motor/attrs
+		dict for {motor attrs} [dict get $reshaped Motors] {
+			dict set reshaped Motor $motor attrs $attrs
+			dict set reshaped Motor $motor data {}
+		}
+
+		# move the contents from Detectors to Detector/attrs
+		dict for {detector attrs} [dict get $reshaped Detectors] {
+			dict set reshaped Detector $detector attrs $attrs
+			dict set reshaped Detector $detector data {}
+		}
+
+		puts "Found columns: $columns"
+		return $reshaped
+
 	}
 
 	proc bessy_class {data} {
