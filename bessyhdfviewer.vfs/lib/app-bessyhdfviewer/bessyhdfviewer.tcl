@@ -757,7 +757,7 @@ namespace eval BessyHDFViewer {
 
 				# select the motor/det
 				set BessyClass [bessy_class $hdfdata]
-				dict_assign $BessyClass class motor detector motors detectors
+				dict_assign $BessyClass class motor detector motors detectors datasets
 
 				if {$class == "MCA"} {
 					$w(xent) configure -values {Row}
@@ -769,8 +769,8 @@ namespace eval BessyHDFViewer {
 					# insert available axes into axis choosers
 					if {[catch {
 						
-						$w(xent) configure -values $motors
-						$w(yent) configure -values $detectors
+						$w(xent) configure -values [list {*}$motors {*}$detectors {*}$datasets]
+						$w(yent) configure -values [list {*}$detectors {*}$motors {*}$datasets]
 						$w(xent) state !disabled
 						$w(yent) state !disabled
 
@@ -796,7 +796,7 @@ namespace eval BessyHDFViewer {
 
 			default {
 				# multiple files selected - prepare for batch work
-				set BessyClass {class {} axes {} motors {} detectors {} motor {} detector {}}
+				set BessyClass {class {} axes {} motors {} detectors {} motor {} detector {} datasets {}}
 				wm title . "BessyHDFViewer"
 			}
 		}
@@ -820,6 +820,9 @@ namespace eval BessyHDFViewer {
 			# insert available axes into plotdata
 			if {[catch {
 				set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
+				if {[dict exists $hdfdata Dataset]} {
+					set plotdata [dict merge $plotdata [dict get $hdfdata Dataset]]
+				}
 			} err]} {
 				# could not get sensible plot axes - not BESSY hdf?
 				puts $err
@@ -832,7 +835,7 @@ namespace eval BessyHDFViewer {
 		set tbldata {}
 		for {set i 0} {$i<[dict get $BessyClass nrows]} {incr i} {
 			set line $i
-			foreach {var entry} $plotdata {
+			dict for {var entry} $plotdata {
 				lappend line [lindex [dict get $entry data] $i]
 			}
 			lappend tbldata $line
@@ -889,12 +892,13 @@ namespace eval BessyHDFViewer {
 				}
 			}
 
-			set motors [dict keys [dict get $hdfdata Motor]]
-			set detectors [dict keys [dict get $hdfdata Detector]]
-			set variables [list {*}$motors {*}$detectors]
-			set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
-
-
+			dict_assign [bessy_class $hdfdata] motors detectors datasets
+			set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]] 
+			if {[dict exists $hdfdata Dataset]} {
+				set table [dict merge $table [dict get $hdfdata Dataset]]
+			}
+			
+			set variables [list {*}$motors {*}$detectors {*}$datasets]
 			# write header lines
 			if {"Attributes" in $headerfmt} {
 				append result "# Motors:\n"
@@ -1221,7 +1225,7 @@ namespace eval BessyHDFViewer {
 			# check the data already read for plot axis 
 			# and enable/disable the axis format choosers appropriately
 			variable BessyClass
-			dict_assign $BessyClass class motor detector motors detectors axes
+			dict_assign $BessyClass class motor detector motors detectors datasets axes
 			if {$class == "MCA"} {
 				set xformatlist {{$calS*$Row+$calO} Row}
 				set yformatlist {MCA}
@@ -1231,8 +1235,8 @@ namespace eval BessyHDFViewer {
 				set stdy MCA
 			} elseif {$axes!= {}} {
 				# insert available axes into axis choosers
-				set xformatlist $motors
-				set yformatlist $detectors
+				set xformatlist [list {*}$motors {*}$detectors {*}$datasets]
+				set yformatlist [list {*}$detectors {*}$motors {*}$datasets]
 				$w(xent) state !disabled
 				$w(yent) state !disabled
 				set stdx $motor
@@ -1287,7 +1291,7 @@ namespace eval BessyHDFViewer {
 
 		PreferenceSet FormatHistory $formathistory
 
-		lappend xformatlist  {*}[lreverse [dict keys [dict get $formathistory x]]]
+		lappend xformatlist {*}[lreverse [dict keys [dict get $formathistory x]]]
 		lappend yformatlist {*}[lreverse [dict keys [dict get $formathistory y]]]
 
 		$w(xent) configure -values $xformatlist
@@ -1886,6 +1890,10 @@ namespace eval BessyHDFViewer {
 			set table [dict merge $table [dict get $hdfdata Detector]]
 		}
 
+		if {[dict exists $hdfdata Dataset]} {
+			set table [dict merge $table [dict get $hdfdata Dataset]]
+		}
+
 		set i 0
 		foreach fmt $fmtlist {
 			if {[string first {$} $fmt]<0} {
@@ -2290,22 +2298,16 @@ namespace eval BessyHDFViewer {
 			if {[regexp {^(\s*)(.*):\s*$} $hline -> indent key]} {
 				if {$attribpath eq {{}} } { set attribpath {} }
 				set newindlength [string length $indent]
-				puts "$newindlength $key"
 				if {$newindlength > [lindex $indents end]} {
-					puts "Indenting in"
 					lappend attribpath $key
 					lappend indents $newindlength
-					puts "$indents $attribpath"
 				} else {
-					puts "Indenting out"
 					while {$newindlength <= [lindex $indents end]} {
 						set indents [lrange $indents 0 end-1]
 						set attribpath [lrange $attribpath 0 end-1]
-						puts "$indents $attribpath"
 					}
 					lappend indents $newindlength
 					lappend attribpath $key
-					puts "$indents $attribpath"
 				}
 
 				continue
@@ -2315,7 +2317,7 @@ namespace eval BessyHDFViewer {
 			 set columns [regexp -all -inline {\S+} $hline]
 
 		}
-	#	puts [hformat $reshaped]
+		
 		# move the contents from Motors to Motor/attrs
 		dict for {motor attrs} [dict get $reshaped Motors] {
 			dict set reshaped Motor $motor attrs $attrs
@@ -2328,7 +2330,70 @@ namespace eval BessyHDFViewer {
 			dict set reshaped Detector $detector data {}
 		}
 
-		puts "Found columns: $columns"
+		set table {}
+		set NR 0
+		set maxcolnum 0
+		foreach line $lines {
+			# ignore all empty and commented lines
+			if {[regexp {^\s*(#.*)?$} $line]} { continue }
+			
+			set data [regexp -all -inline {\S+} $line]
+			# try to convert them into double, if possible
+			set allnan true
+			set dconv [lmap x $data {
+				if {[string is double -strict $x]} {
+					set allnan false
+					set v $x
+				} else {
+					set v NaN
+				}
+				set v
+			}]
+
+			if {$allnan} { 
+				# assume that this is an unquoted column definition line
+				# == Origin format
+				set columns $data
+				continue
+			}
+
+			if {[llength $dconv] > $maxcolnum} {
+				# add new columns 
+				set newmaxcolnum [llength $dconv]
+				for {set i $maxcolnum} {$i<$newmaxcolnum} {incr i} {
+					dict set table $i [lrepeat $NR NaN]
+				}
+				set maxcolnum $newmaxcolnum
+			}
+			
+			for {set i 0} {$i<$maxcolnum} {incr i} {
+				set x [lindex $dconv $i]
+				if {$x eq {}} { set x NaN }
+				dict lappend table $i $x
+			}
+		
+			incr NR
+
+		}
+		
+		# stick data into reshaped array
+		for {set i 0} {$i<$maxcolnum} {incr i} {
+			set c [lindex $columns $i]
+			if {$c eq {}} { set c Column[expr {$i+1}] }
+			set data [dict get $table $i]
+			if {[dict exists $reshaped Motor $c]} {
+				dict set reshaped Motor $c data $data
+				continue
+			}
+			if {[dict exists $reshaped Detector $c]} {
+				dict set reshaped Detector $c data $data
+				continue
+			}
+			# if not found in either motor or detector array
+			# set path to Datasets
+			dict set reshaped Dataset $c data $data
+		}
+
 		return $reshaped
 
 	}
@@ -2347,7 +2412,11 @@ namespace eval BessyHDFViewer {
 			set detectors {}
 		}
 		
-		set axes [list {*}$motors {*}$detectors]
+		if {[catch {dict keys [dict get $data Dataset]} datasets]} {
+			set datasets {}
+		}
+		
+		set axes [list {*}$motors {*}$detectors {*}$datasets]
 
 		set Plot true
 		if {[catch {dict get $data Plot Motor} motor]} {
@@ -2360,6 +2429,16 @@ namespace eval BessyHDFViewer {
 		if {[catch {dict get $data Plot Detector} detector]} {
 			set Plot false
 			set detector [lindex $detectors 0]
+		}
+
+		if {$motor eq {} || $detector eq {}} {
+			# take the first two different columns
+			if {[llength $axes]==1} {
+				set motor Row
+				set detector [lindex $axes 0]
+			} else {
+				lassign $axes motor detector
+			}
 		}
 
 		# now check for different classes. MCA has only this dataset, no motors etc.
@@ -2390,15 +2469,19 @@ namespace eval BessyHDFViewer {
 				set class UNKNOWN
 			}
 
-			# determine length from motor
-			if {[catch {llength [dict get $data Motor $motor data]} length]} {
-				if {[catch {llength [dict get $data Detector $detector data]} length]} {
+			# determine length from first axis
+			set firstaxis [lindex $axes 0]
+			foreach cat {Motor Detector Dataset} {
+				if {[catch {llength [dict get $data $cat $firstaxis data]} length]} {
 					set length 0
+				} else {
+					break
 				}
 			}
 		}
 		return [dict create class $class motor $motor detector $detector \
-					nrows $length motors $motors detectors $detectors axes $axes]
+					nrows $length motors $motors detectors $detectors \
+					datasets $datasets axes $axes]
 	}
 
 	proc bessy_get_field {hdfdata field} {
@@ -2446,7 +2529,7 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
-	proc bessy_get_keys {hdfdata {category {Detector Motor Meta}}} {
+	proc bessy_get_keys {hdfdata {category {Detector Motor Dataset Meta}}} {
 		set datakeys {}
 		set attrkeys {}
 		foreach catkey $category {
@@ -2459,11 +2542,14 @@ namespace eval BessyHDFViewer {
 					lappend datakeys Motor 
 					lappend attrkeys MotorPositions OptionalPositions
 				}
+				Dataset {
+					lappend datakeys Dataset
+				}
 				Meta {
 					lappend attrkeys Plot {}
 				}
 				Axes {
-					lappend datakeys Detector Motor
+					lappend datakeys Detector Motor Dataset
 				}
 				default {
 					return -code error "Unknown category: $catkey. Expected Motor, Detector or Meta"
@@ -2488,7 +2574,7 @@ namespace eval BessyHDFViewer {
 		return [lsort -uniq $keys]
 	}
 
-	proc bessy_get_keys_flist {flist {category {Detector Motor Meta}}} {
+	proc bessy_get_keys_flist {flist {category {Detector Motor Dataset Meta}}} {
 		set allkeys {}
 		foreach fn $flist {
 			if {![catch {bessy_reshape $fn} data]} {
