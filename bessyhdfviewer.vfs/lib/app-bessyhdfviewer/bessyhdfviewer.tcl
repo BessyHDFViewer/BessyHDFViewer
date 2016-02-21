@@ -2269,6 +2269,7 @@ namespace eval BessyHDFViewer {
 		set reshaped {}
 		# extract header: all lines from beginning
 		# which start with # as the first non-blank character
+		set header {}
 		foreach line $lines {
 			if {[regexp {^\s*#(.*)$} $line -> hline]} {
 				lappend header $hline
@@ -2282,6 +2283,7 @@ namespace eval BessyHDFViewer {
 		dict set reshaped Detector {}
 		dict set reshaped Detectors {}
 		
+		set columns {}
 		set attribpath {{}}
 		set indents [list 0]
 		foreach hline $header {
