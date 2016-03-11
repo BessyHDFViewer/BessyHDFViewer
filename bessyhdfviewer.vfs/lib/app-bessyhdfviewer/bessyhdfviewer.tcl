@@ -1508,8 +1508,8 @@ namespace eval BessyHDFViewer {
 		$w(difftbl) configure -columns $columnconfig
 
 		# make alphabetically sorted list of keys
-		set allkeys {Motor {} Detector {} Meta {}}
-		foreach category {Motor Detector Meta} {
+		set allkeys {Motor {} Detector {} Dataset {} Meta {}}
+		foreach category {Motor Detector Dataset Meta} {
 			foreach dataset $data {
 				dict lappend allkeys $category {*}[bessy_get_keys $dataset $category]
 			}
@@ -1520,7 +1520,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		# compute difference
-		foreach category  {Motor Detector Meta} {
+		foreach category  {Motor Detector Dataset Meta} {
 			set node [$w(difftbl) insertchild root end [list $category]]
 			set diff {}
 			foreach key [dict get $allkeys $category] {
