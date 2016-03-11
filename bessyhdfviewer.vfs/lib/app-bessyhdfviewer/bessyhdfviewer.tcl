@@ -842,6 +842,23 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	proc quotedjoin {list {sep " "}} {
+		# serialize a list into quoted format
+		# Tcl's "list" uses braces for quoting, which is not well understood
+		# from other software. Using more conventional double quotes and backslashes
+		# makes the result more portable (and also readable from within Tcl)
+		set result {}
+		foreach el $list {
+			if {[regexp {[\s{}"'"\\]} $el]} {
+				# found metacharacters
+				set eltrans [string map [list \" \\" \\ \\\\] $el]
+				lappend result "\"$eltrans\""
+			} else {
+				lappend result $el
+			}
+		}
+		return [join $result $sep]
+	}
 
 	proc DumpAttrib {data {indent ""}} {
 		set result ""
@@ -914,10 +931,10 @@ namespace eval BessyHDFViewer {
 			}
 
 			if {"Columns" in $headerfmt} {
-				append result "# [join $variables \t]\n"
+				append result "# [quotedjoin $variables \t]\n"
 			}
 			if {"BareColumns" in $headerfmt} {
-				append result "[join $variables \t]\n"
+				append result "[quotedjoin $variables \t]\n"
 			}
 			# compute maximum length for each data column - might be different due to BESSY_INF trimming
 			set maxlength 0
@@ -1380,7 +1397,7 @@ namespace eval BessyHDFViewer {
 			}
 				
 			# operate on the cached data
-			set data [SELECTdata $fmtlist $hdfdata -allnan true -extravars $extravars]
+			set data [SELECTdata $fmtlist $hdfdata -allnan true -allnumeric true -extravars $extravars]
 			# reduce to flat list
 			set data [concat {*}$data]
 
@@ -1845,7 +1862,7 @@ namespace eval BessyHDFViewer {
 		#  -allnan bool if true, put NaN for every error from expression evaluation
 		#               if false, put NaN only from genuine NaNs (0/0, NaN in data...)
 
-		set defaults [dict create LIMIT Inf -allnan false -extravars {} -firstrow 0]
+		set defaults [dict create LIMIT Inf -allnan false -allnumeric false -extravars {} -firstrow 0]
 		set opts [dict merge $defaults $args]
 		if {[dict size $opts] != [dict size $defaults]} {
 			return -code error "SELECTdata formats data ?LIMIT max? ?-allnan boolean? ?-extravars dictvalue? ?-firstrow n?"
@@ -1853,20 +1870,24 @@ namespace eval BessyHDFViewer {
 
 		set limit [dict get $opts LIMIT]
 		set allnan [dict get $opts -allnan]
-		
+		set allnumeric [dict get $opts -allnumeric]
+
 		set result {}
 		set Row [dict get $opts -firstrow]
-		# set common values 
+		# set common values
+		set allkeys {}
 		catch {namespace delete ::SELECT}
 		namespace eval ::SELECT {} 
 		dict for {var val} [dict get $opts -extravars] {
 			namespace eval ::SELECT [list set $var $val]
+			lappend allkeys $var
 		}
 
 		foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
 			if {[dict exists $hdfdata $key]} {
-				dict for {key value} [dict get $hdfdata $key] {
-					namespace eval ::SELECT [list set $key $value]
+				dict for {var value} [dict get $hdfdata $key] {
+					namespace eval ::SELECT [list set $var $value]
+					lappend allkeys $var
 				}
 			}
 		}
@@ -1878,6 +1899,7 @@ namespace eval BessyHDFViewer {
 			# put attributes of MCA into global variable space
 			dict for {key value} [dict get $hdfdata MCA attrs] {
 				namespace eval ::SELECT [list set $key $value]
+				lappend allkeys $key
 			}
 
 		}
@@ -1894,11 +1916,13 @@ namespace eval BessyHDFViewer {
 			set table [dict merge $table [dict get $hdfdata Dataset]]
 		}
 
+		lappend allkeys {*}[dict keys $table] Row
+
 		set i 0
 		foreach fmt $fmtlist {
-			if {[string first {$} $fmt]<0} {
-				# no $ found - interpret the whole thing as one variable name
-				lset fmtlist $i "\${$fmt}"
+			if {[lsearch -exact $allkeys $fmt]>=0} {
+				# equal to one of the columns - interpret the whole thing as one variable name
+				lset fmtlist $i "\[set [list $fmt]\]"
 			}
 			if {$fmt == {}} {
 				lset fmtlist $i {{}}
@@ -1925,6 +1949,7 @@ namespace eval BessyHDFViewer {
 					# expr handles NaN in many different ways by throwing errors:(
 					if {$allnan || [regexp {Not a Number|domain error|non-numeric} $lresult]} { set lresult NaN }
 				}
+				if {$allnumeric &&  ![string is double -strict $lresult]} { set lresult NaN }
 				lappend line $lresult
 			}
 			lappend result $line
@@ -2316,7 +2341,11 @@ namespace eval BessyHDFViewer {
 			}
 			 # not an attribute or folder name
 			 # could be a column definition
-			 set columns [regexp -all -inline {\S+} $hline]
+			 if {[string is list $hline]} {
+				set columns $hline
+			} else {
+				set columns [regexp -all -inline {\S+} $hline]
+			}
 
 		}
 		
@@ -2355,7 +2384,11 @@ namespace eval BessyHDFViewer {
 			if {$allnan} { 
 				# assume that this is an unquoted column definition line
 				# == Origin format
-				set columns $data
+				if {[string is list $line]} {
+					set columns $line
+				} else {
+					set columns $data
+				}
 				continue
 			}
 
@@ -2378,10 +2411,12 @@ namespace eval BessyHDFViewer {
 
 		}
 		
+		dict set reshaped Dataset {}
+		set allsets {}
+		
 		# stick data into reshaped array
 		for {set i 0} {$i<$maxcolnum} {incr i} {
 			set c [lindex $columns $i]
-			if {$c eq {}} { set c Column[expr {$i+1}] }
 			set data [dict get $table $i]
 			if {[dict exists $reshaped Motor $c]} {
 				dict set reshaped Motor $c data $data
@@ -2393,8 +2428,16 @@ namespace eval BessyHDFViewer {
 			}
 			# if not found in either motor or detector array
 			# set path to Datasets
-			dict set reshaped Dataset $c data $data
+			
+			if {$c ne {}} {
+				dict set reshaped Dataset $c data $data
+			}
+			set colname Column[expr {$i+1}]
+			dict set allsets $colname data $data
+			# always save to Columnx, in case it got mixed up badly
 		}
+
+		dict set reshaped Dataset [dict merge [dict get $reshaped Dataset] $allsets]
 
 		return $reshaped
 

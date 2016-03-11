@@ -700,8 +700,7 @@ namespace eval DataEvaluation {
 			
 			lappend output "# Dataset $idx"
 			lappend output "# $title"
-			lappend output "# format x: $BessyHDFViewer::xformat"
-			lappend output "# format x: $BessyHDFViewer::yformat"
+			lappend output "# [BessyHDFViewer::quotedjoin [list $BessyHDFViewer::xformat $BessyHDFViewer::yformat]]"
 			foreach {x y} $data {
 				lappend output "$x $y"
 			}
