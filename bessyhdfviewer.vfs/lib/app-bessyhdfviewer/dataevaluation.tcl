@@ -777,14 +777,20 @@ namespace eval DataEvaluation {
 	}
 
 	proc ArdeViewerHDF {} {
-		if {[llength $BessyHDFViewer::HDFFiles] != 1} {
-			error "Only a single HDF can be loaded in the external viewer"
+		if {[llength $BessyHDFViewer::HDFFiles] > 2} {
+			error "Only a single HDF with images and an optional transmission can be loaded"
 		}
 		
-		set fn [pyquote [lindex $BessyHDFViewer::HDFFiles 0]]
-		
 		makeArdeViewer
-		Viewer exec [format {self.plugins['HDF-SAXS'].openHDF(%s)} $fn]
+		foreach fn $BessyHDFViewer::HDFFiles {
+			set pyfn [pyquote $fn]
+			set properties [BessyHDFViewer::bessy_class [BessyHDFViewer::bessy_reshape $fn]]
+			if {[dict get $properties class] in {SINGLE_IMG MULTIPLE_IMG}} {
+				Viewer exec [format {self.plugins['HDF-SAXS'].openHDF(%s)} $pyfn] -wait
+			} else {
+				Viewer exec [format {self.plugins['HDF-SAXS'].load_hdf_trans(%s)} $pyfn] -wait
+			}
+		}
 		Viewer configure -command {}
 	}
 
@@ -887,6 +893,7 @@ namespace eval DataEvaluation {
 	snit::type ardeviewer {
 		variable pipe
 		option -command {}
+		variable ready false
 		
 		constructor {path args} {
 			$self configurelist $args
@@ -899,9 +906,12 @@ namespace eval DataEvaluation {
 			close $pipe
 		}
 
-		method exec {cmd} {
-			# puts "Sending command $cmd"
+		method exec {cmd {wait -nowait}} {
+			# puts "Sending command $pipe $cmd"
 			puts $pipe $cmd
+			if {$wait == "-wait"} {
+				vwait [myvar ready]
+			}
 		}
 
 		method openlist {flist} {
@@ -911,6 +921,7 @@ namespace eval DataEvaluation {
 		}
 
 		method feedback {} {
+			set ready true
 			set data [read $pipe]
 			puts "VIEWER: $data"
 			if {[eof $pipe]} {
