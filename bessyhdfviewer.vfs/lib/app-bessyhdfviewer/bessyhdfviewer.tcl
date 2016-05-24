@@ -2534,7 +2534,7 @@ namespace eval BessyHDFViewer {
 		
 		set values {}
 
-		foreach datakey {Detector Motor} {
+		foreach datakey {Detector Motor Dataset} {
 			# keys that are tried to find data
 			if {[dict exists $hdfdata $datakey $field data]} {
 				lappend values {*}[dict get $hdfdata $datakey $field data]

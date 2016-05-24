@@ -180,11 +180,11 @@ namespace eval DataEvaluation {
 	
 	proc centermin {fdata idx1 idx2 idx3} {
 		# 
-		puts "$idx1 $idx2 $idx3"
+		#puts "$idx1 $idx2 $idx3"
 		lassign [xyindex $fdata $idx1] x1 y1
 		lassign [xyindex $fdata $idx2] x2 y2
 		lassign [xyindex $fdata $idx3] x3 y3	
-		puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		#puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
 		# go from min position to the left and right
 		# until we hit the threshold
 		set rightx {}
@@ -203,7 +203,7 @@ namespace eval DataEvaluation {
 			lassign [xyindex $fdata $ind] xcur ycur
 			if {$ycur >= $ythresh} {
 				# interpolate for position 
-				puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
+				#puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
 				set rightx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
 				break
 			}
@@ -233,11 +233,11 @@ namespace eval DataEvaluation {
 
 	proc centermax {fdata idx1 idx2 idx3} {
 		# 
-		puts "$idx1 $idx2 $idx3"
+		#puts "$idx1 $idx2 $idx3"
 		lassign [xyindex $fdata $idx1] x1 y1
 		lassign [xyindex $fdata $idx2] x2 y2
 		lassign [xyindex $fdata $idx3] x3 y3	
-		puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
+		#puts "($x1,$y1) ($x2,$y2) ($x3,$y3)"
 		# go from max position to the left and right
 		# until we hit the threshold
 		set rightx {}
@@ -257,7 +257,7 @@ namespace eval DataEvaluation {
 			lassign [xyindex $fdata $ind] xcur ycur
 			if {$ycur <= $ythresh} {
 				# interpolate for position 
-				puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
+				#puts "ythresh=$ythresh (xcur,ycur)=($xcur,$ycur) yold=($xold,$yold) ind=$ind" 
 				set rightx [expr {$xold + ($xcur-$xold)*double($ythresh-$yold)/double($ycur-$yold)}]
 				break
 			}
@@ -313,6 +313,10 @@ namespace eval DataEvaluation {
 				lappend output [join [lmap c $centre {format %15.6g $c}] " "]
 				lappend minimaxy $x $y
 			}
+			# output list for copying with two fixed decimal places
+			foreach centre $cminima {
+				lappend output [format "%.2f" [lindex $centre 2]]
+			}
 			
 			lappend output "# Maxima:"
 			set maximaxy {}
@@ -321,6 +325,11 @@ namespace eval DataEvaluation {
 				lappend output [join [lmap c $centre {format %15.6g $c}] " "]
 
 				lappend maximaxy $x $y
+			}
+
+			# output list for copying with two fixed decimal places
+			foreach centre $cmaxima {
+				lappend output [format "%.2f" [lindex $centre 2]]
 			}
 
 			$BessyHDFViewer::w(Graph) plot $minimaxy with points color green pt filled-hexagons
