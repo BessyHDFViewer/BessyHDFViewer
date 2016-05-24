@@ -860,6 +860,24 @@ namespace eval BessyHDFViewer {
 		return [join $result $sep]
 	}
 
+	proc exprquote {varname} {
+		# quote a vraible name for use with expr
+		# for "simple" names, preceeding with $ is sufficient
+		# in more complex cases use ${}, and for list metacharacters
+		# [set varname]
+		if {[regexp {^[[:alpha:]_][[:alnum:]_]*$} $varname]} {
+			# only alphanumeric - don't use braces
+			return "\$$varname"
+		} elseif [regexp "\[\]\[{}\\\\\"]" $varname] {
+			# list metacharacters - use the set form
+			return "\[set [list $varname]\]"
+		} else {
+			# weird, but not completely weird - 
+			# insert braces
+			return "\$\{$varname\}"
+		}
+	}
+
 	proc DumpAttrib {data {indent ""}} {
 		set result ""
 		dict for {key val} $data {
@@ -1258,6 +1276,26 @@ namespace eval BessyHDFViewer {
 				$w(yent) state !disabled
 				set stdx $motor
 				set stdy $detector
+				
+				# check if mean was enabled in the detector
+				if {"${detector}_mean" in $detectors} {
+					set stdy ${detector}_mean
+				}
+				
+				# check for normalization 
+				if {[dict exists $hdfdata Plot Monitor]} {
+					set monitor [dict get $hdfdata Plot Monitor]
+					if {"${monitor}_mean" in $detectors} {
+						set monitor "${monitor}_mean"
+					}
+
+					if {$monitor in $detectors} {
+						set stdy "[exprquote $stdy]/[exprquote $monitor]"
+						# append normalized form to suggestions
+						lappend yformatlist $stdy
+					}
+				}
+			
 			} else {
 				set xformatlist {}
 				set yformatlist {}
