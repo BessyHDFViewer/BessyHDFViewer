@@ -2232,6 +2232,7 @@ namespace eval BessyHDFViewer {
 		foreach {group dset} $joinlist {
 			set ds [dict get $reshaped $group $dset data]
 			lappend data $ds
+			lappend grouplist $group
 		}
 
 		# build unique PosList
@@ -2243,11 +2244,17 @@ namespace eval BessyHDFViewer {
 		# OUTER JOIN into result
 		set UniquePosList [lsort -unique -integer $PosList]
 		set result {}
-		foreach ds $data {
+		foreach ds $data  group $grouplist {
 			set column {}
+			set val NaN
 			foreach Pos $UniquePosList {
 				if {![dict exists $ds $Pos]} {
-					set val NaN
+					# in case of a motor, continue old value
+					# i.e. don't touch "val"
+					# else, i.e. Detector, set to NaN = not measured
+					if {$group != "Motor"} {
+						set val NaN
+					}
 				} else {
 					set val [dict get $ds $Pos]
 				}
