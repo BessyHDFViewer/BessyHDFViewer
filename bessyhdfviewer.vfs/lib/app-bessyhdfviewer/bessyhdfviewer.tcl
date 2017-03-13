@@ -2218,8 +2218,8 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
-	proc eveH5getDSNames {d chain} {
-		dict keys [dict filter [dict get $d data c1 data default data] script {key value} {
+	proc eveH5getDSNames {d path} {
+		dict keys [dict filter [dict get $d {*}$path] script {key value} {
 			expr {[dict get $value type]=="DATASET"}
 		}]
 	}
@@ -2274,25 +2274,56 @@ namespace eval BessyHDFViewer {
 	proc bessy_reshape_hdf5 {fn} {
 		SmallUtils::autovar hdf H5pp -args $fn
 		set rawd [$hdf dump]
+		# read version of HDF file
+		if {![dict exists $rawd attrs EVEH5Version]} {
+			# this is the original version without a version tag
+			set EVEH5Version 1.0
+		} else {
+			set EVEH5Version [dict get $rawd attrs EVEH5Version]
+		}
+
+		puts "Version of HDF-File: $EVEH5Version"
+
+		# only "real" difference: path to the datasets
+		set chain c1
+		switch $EVEH5Version {
+			1.0 { 
+				set path [list data $chain data]
+			}
+			2.0 -
+			3.0  {
+				set path [list data $chain data default data]
+			}
+
+			4.0 {
+				set path [list data $chain data main data]
+			}
+
+			default {
+				error "Unknown EVE H5 data version"
+			}
+		}
+		
+		
 		# new HDF5 stores data under /c1/deviceid
 		# and MotorPos etc. under /device/
 		set reshaped {}
 		dict_move rawd {attrs} reshaped {{}}
-		set chain c1
-		set DSnames [eveH5getDSNames $rawd $chain]
+		
+		set DSnames [eveH5getDSNames $rawd $path]
 		set joinsets {}
 		foreach ds $DSnames {
 			if {![catch {
-				switch [dict get $rawd data $chain data default data $ds attrs DeviceType] {
+				switch [dict get $rawd {*}$path $ds attrs DeviceType] {
 					Channel { set group Detector }
 					Axis { set group Motor }
 					default { set group Detector }
 				}
 			}]} {
 				# no error - move this dataset
-				set name [dict get $rawd data $chain data default data $ds attrs Name]
-				dict_move rawd [list data $chain data default data $ds attrs] reshaped [list $group $name attrs]
-				dict_move rawd [list data $chain data default data $ds data] reshaped [list $group $name data]
+				set name [dict get $rawd {*}$path $ds attrs Name]
+				dict_move rawd [list {*}$path $ds attrs] reshaped [list $group $name attrs]
+				dict_move rawd [list {*}$path $ds data] reshaped [list $group $name data]
 				dict set rawd EVETranslate $ds $name
 				lappend joinsets $group $name
 			}
