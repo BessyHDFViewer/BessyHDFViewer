@@ -2286,17 +2286,22 @@ namespace eval BessyHDFViewer {
 
 		# only "real" difference: path to the datasets
 		set chain c1
+
 		switch $EVEH5Version {
 			1.0 { 
 				set path [list data $chain data]
+				set optpath {}
 			}
 			2.0 -
-			3.0  {
+			3.0 -
+			3.1 {
 				set path [list data $chain data default data]
+				set optpath [data $chain data alternate data]
 			}
 
 			4.0 {
 				set path [list data $chain data main data]
+				set optpath [list data $chain data snapshot data]
 			}
 
 			default {
@@ -2342,6 +2347,29 @@ namespace eval BessyHDFViewer {
 		}
 
 		dict set reshaped Unresolved $rawd
+
+		# check for single-shot data stored in alternate / snapshot
+		puts "Snapshot in $optpath"
+		if {$optpath ne {} && [catch {
+			dict for {key dset} [dict get $rawd {*}$optpath] {
+				set name [dict get $dset attrs Name]
+				set dtype [dict get $dset attrs DeviceType]
+				set data [lmap {pos val} [dict get $dset data] {set val}]
+				switch $dtype {
+					Axis {
+						dict set reshaped MotorPositions $name $data
+					}
+					Channel {
+						dict set reshaped DetectorValues $name $data
+					}
+					default {
+						dict set reshaped OptionalPositions $name $data
+					}
+				}
+			}
+		} snaperr]} {
+			puts stderr $snaperr
+		}
 
 		# check for preferredChannel / Axis and create Plot info
 		set plotinfo [dict get $rawd data $chain attrs]
