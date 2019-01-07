@@ -2296,13 +2296,15 @@ namespace eval BessyHDFViewer {
 			3.0 -
 			3.1 {
 				set path [list data $chain data default data]
-				set optpath [data $chain data alternate data]
+				set optpath [list data $chain data alternate data]
 			}
 
-			4.0 {
+			4.0 -
+			6  {
 				set path [list data $chain data main data]
 				set optpath [list data $chain data snapshot data]
 			}
+
 
 			default {
 				error "Unknown EVE H5 data version"
