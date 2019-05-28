@@ -288,6 +288,9 @@ namespace eval DataEvaluation {
 		# run the peak detector on the currently displayed list
 		set output ""
 		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		lassign [$BessyHDFViewer::w(Graph) cget -xrange] xmin xmax
+		if {$xmin eq "*"} { set xmin -Inf }
+		if {$xmax eq "*"} { set xmax +Inf }
 		foreach id $plotids {
 			# filter NaNs from the dataset
 			set data [$BessyHDFViewer::w(Graph) getdata $id data]
@@ -296,6 +299,7 @@ namespace eval DataEvaluation {
 			set fdata {}
 			foreach {x y} $data {
 				if {isnan($x) || isnan($y)} { continue }
+				if {$x<$xmin || $x>$xmax } { continue }
 				lappend fdata $x $y
 			}
 			set fdata [lsort -stride 2 -real -uniq $fdata]
@@ -592,6 +596,8 @@ namespace eval DataEvaluation {
 		lappend rawdata {0 {} {} {}} ;# dummy dataset to force spilling the list
 		foreach line $rawdata {
 			lassign $line Energy HDF theta R
+			if {isnan($Energy)} { continue }
+			if {isnan($Energy_old)} { set Energy_old $Energy }
 			if {abs($Energy - $Energy_old) > 0.1 || $HDF != $HDF_old} {
 				# switch to different dataset
 				set data {}
@@ -604,6 +610,7 @@ namespace eval DataEvaluation {
 				set HDF_old $HDF
 			}
 			if {$theta >= $thetamin && $theta <= $thetamax} {
+				if {isnan($R)} { set R 0.0 }
 				lappend splitdata $theta $R
 			}
 		}
