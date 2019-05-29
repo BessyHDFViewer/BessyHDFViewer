@@ -119,7 +119,7 @@ proc ::tkcon::Init {args} {
 	if {![info exists COLOR($key)]} { set COLOR($key) $default }
     }
 
-    # expandorder could also include 'Xotcl' (before Procname)
+    # expandorder could also include 'Methodname' for XOTcl/NSF methods
     foreach {key default} {
 	autoload	{}
 	blinktime	500
@@ -150,6 +150,7 @@ proc ::tkcon::Init {args} {
 	slaveeval	{}
 	slaveexit	close
 	subhistory	1
+	tabspace	8
 	gc-delay	60000
 	gets		{congets}
 	overrideexit	1
@@ -185,8 +186,8 @@ proc ::tkcon::Init {args} {
 	    alias clear dir dump echo idebug lremove
 	    tkcon_puts tkcon_gets observe observe_var unalias which what
 	}
-	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.113 2012/03/07 03:02:21 hobbs Exp $}
-	HEADURL		{http://tkcon.cvs.sourceforge.net/tkcon/tkcon/tkcon.tcl?rev=HEAD}
+	RCS		{RCS: @(#) $Id: tkcon.tcl,v 1.124 2016/09/14 21:14:43 hobbs Exp $}
+	HEADURL		{http://tkcon.cvs.sourceforge.net/viewvc/tkcon/tkcon/tkcon.tcl}
 
 	docs		"http://tkcon.sourceforge.net/"
 	email		{jeff(a)hobbs(.)org}
@@ -320,7 +321,13 @@ proc ::tkcon::Init {args} {
 		-color-*	{ set COLOR([string range $arg 7 end]) $val }
 		-exec		{ set OPT(exec) $val }
 		-main - -e - -eval	{ append OPT(maineval) \n$val\n }
-		-package - -load	{ lappend OPT(autoload) $val }
+		-package - -load	{
+		    lappend OPT(autoload) $val
+		    if {$val eq "nsf" || $val eq "nx" || $val eq "XOTcl" } {
+			# If xotcl is loaded, prepend expand order for it
+			set OPT(expandorder) [concat Methodname $OPT(expandorder)]
+		    }
+		}
 		-slave		{ append OPT(slaveeval) \n$val\n }
 		-nontcl		{ set OPT(nontcl) [regexp -nocase $truth $val]}
 		-root		{ set PRIV(root) $val }
@@ -555,7 +562,7 @@ proc ::tkcon::InitInterp {name type} {
 	switch -exact $type {
 	    slave {
 		foreach cmd $PRIV(slavealias) {
-		    Main interp alias $name ::$cmd $PRIV(name) ::$cmd
+		    Main [list interp alias $name ::$cmd $PRIV(name) ::$cmd]
 		}
 	    }
 	    interp {
@@ -699,7 +706,10 @@ proc ::tkcon::InitUI {title} {
 
     if {!$PRIV(WWW)} {
 	wm title $root "tkcon $PRIV(version) $title"
-	if {$PRIV(showOnStartup)} { wm deiconify $root }
+	if {$PRIV(showOnStartup)} {
+	    # this may throw an error if toplevel is embedded
+	    catch {wm deiconify $root}
+	}
     }
     if {$PRIV(showOnStartup)} { focus -force $PRIV(console) }
     if {$OPT(gc-delay)} {
@@ -1059,9 +1069,9 @@ proc ::tkcon::EvalCmd {w cmd} {
 		    set tag [UniqueTag $w]
 		    $w insert output $res [list stderr $tag] \n$trailer stderr
 		    $w tag bind $tag <Enter> \
-			    [list $w tag configure $tag -under 1]
+			    [list $w tag configure $tag -underline 1]
 		    $w tag bind $tag <Leave> \
-			    [list $w tag configure $tag -under 0]
+			    [list $w tag configure $tag -underline 0]
 		    $w tag bind $tag <ButtonRelease-1> \
 			    "if {!\[info exists tk::Priv(mouseMoved)\] || !\$tk::Priv(mouseMoved)} \
 			    {[list $OPT(edit) -attach [Attach] -type error -- $PRIV(errorInfo)]}"
@@ -1111,6 +1121,10 @@ proc ::tkcon::AddSlaveHistory cmd {
     set code [catch {EvalSlave history event $ev} lastCmd]
     if {$code || $cmd ne $lastCmd} {
 	EvalSlave history add $cmd
+	# Save history every time so it's not lost in case of an abnormal termination.
+	# Do not warn in case of an error: we don't want an error message 
+	# after each command if the history file is not writable.
+	catch {SaveHistory}
     }
 }
 
@@ -2590,30 +2604,40 @@ proc ::tkcon::MainInit {} {
 	}
 	proc ::exit args {
 	    if {$::tkcon::OPT(usehistory)} {
-		if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
-		    puts stderr "unable to save history file:\n$fid"
+		if {[catch {::tkcon::SaveHistory} msg]} {
+		    puts stderr "unable to save history file:\n$msg"
 		    # pause a moment, because we are about to die finally...
 		    after 1000
-		} else {
-		    set max [::tkcon::EvalSlave history nextid]
-		    set id [expr {$max - $::tkcon::OPT(history)}]
-		    if {$id < 1} { set id 1 }
-		    ## FIX: This puts history in backwards!!
-		    while {($id < $max) && ![catch \
-			    {::tkcon::EvalSlave history event $id} cmd]} {
-			if {$cmd ne ""} {
-			    puts $fid "::tkcon::EvalSlave\
-				    history add [list $cmd]"
-			}
-			incr id
-		    }
-		    close $fid
 		}
 	    }
 	    uplevel 1 ::tkcon::FinalExit $args
 	}
     }
 
+    ## ::tkcon::SaveHistory - saves history to history file
+    ## If the history file is not writable it raises an error
+    proc ::tkcon::SaveHistory {} {
+	if {$::tkcon::OPT(usehistory)} {
+	    if {[catch {open $::tkcon::PRIV(histfile) w} fid]} {
+		error $fid
+	    } else {
+		set max [::tkcon::EvalSlave history nextid]
+		set id [expr {$max - $::tkcon::OPT(history)}]
+		if {$id < 1} { set id 1 }
+		## FIX: This puts history in backwards!!
+		while {($id < $max) && ![catch \
+			{::tkcon::EvalSlave history event $id} cmd]} {
+		    if {$cmd ne ""} {
+			puts $fid "::tkcon::EvalSlave\
+			    history add [list $cmd]"
+			}
+		    incr id
+		}
+		close $fid
+	    }
+	}
+    }
+    
     ## ::tkcon::InterpEval - passes evaluation to another named interpreter
     ## If the interpreter is named, but no args are given, it returns the
     ## [tk appname] of that interps master (not the associated eval slave).
@@ -3046,8 +3070,8 @@ proc ::tkcon::HighlightError w {
 	    set tag [UniqueTag $w]
 	    $w tag add $tag $start+${c0}c $start+1c+${c1}c
 	    $w tag configure $tag -foreground $COLOR(stdout)
-	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
-	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
+	    $w tag bind $tag <Enter> [list $w tag configure $tag -underline 1]
+	    $w tag bind $tag <Leave> [list $w tag configure $tag -underline 0]
 	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -find $what -- $cmd]}"
 	}
@@ -3075,8 +3099,8 @@ proc ::tkcon::HighlightError w {
 	    set tag [UniqueTag $w]
 	    $w tag add $tag $ix+1c $start
 	    $w tag configure $tag -foreground $COLOR(proc)
-	    $w tag bind $tag <Enter> [list $w tag configure $tag -under 1]
-	    $w tag bind $tag <Leave> [list $w tag configure $tag -under 0]
+	    $w tag bind $tag <Enter> [list $w tag configure $tag -underline 1]
+	    $w tag bind $tag <Leave> [list $w tag configure $tag -underline 0]
 	    $w tag bind $tag <ButtonRelease-1> "if {!\$tk::Priv(mouseMoved)} \
 		    {[list $OPT(edit) -attach $app -type proc -- $cmd]}"
 	}
@@ -3673,8 +3697,8 @@ proc tkcon {cmd args} {
 	    if {![winfo exists $PRIV(root)]} {
 		eval [linsert $args 0 ::tkcon::Init]
 	    }
-	    wm deiconify $PRIV(root)
-	    raise $PRIV(root)
+	    # this may throw an error if toplevel is embedded
+	    catch {wm deiconify $PRIV(root); raise $PRIV(root)}
 	    focus -force $PRIV(console)
 	}
 	ti* {
@@ -3821,6 +3845,7 @@ proc tkcon_gets args {
 proc edit {args} {
     variable ::tkcon::PRIV
     variable ::tkcon::COLOR
+    variable ::tkcon::OPT
 
     array set opts {-find {} -type {} -attach {} -wrap {none}}
     while {[string match -* [lindex $args 0]]} {
@@ -3879,11 +3904,14 @@ proc edit {args} {
 	-foreground $COLOR(stdin) \
 	-background $COLOR(bg) \
 	-insertbackground $COLOR(cursor) \
-	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0
+	-font $::tkcon::OPT(font) -borderwidth 1 -highlightthickness 0 \
+	-undo 1
     catch {
-	# 8.4+ stuff
-	$w.text configure -undo 1
+	# 8.5+ stuff
+	set tabsp [expr {$OPT(tabspace) * [font measure $OPT(font) 0]}]
+	$w.text configure -tabs [list $tabsp left] -tabstyle wordprocessor
     }
+
     scrollbar $w.sx -orient h -command [list $w.text xview]
     scrollbar $w.sy -orient v -command [list $w.text yview]
 
@@ -3907,14 +3935,14 @@ proc edit {args} {
     ##
     set text $w.text
     set m [menu [::tkcon::MenuButton $menu Edit edit]]
-    $m add command -label "Cut"   -under 2 \
+    $m add command -label "Cut"   -underline 2 \
 	-command [list tk_textCut $text]
-    $m add command -label "Copy"  -under 0 \
+    $m add command -label "Copy"  -underline 0 \
 	-command [list tk_textCopy $text]
-    $m add command -label "Paste" -under 0 \
+    $m add command -label "Paste" -underline 0 \
 	-command [list tk_textPaste $text]
     $m add separator
-    $m add command -label "Find" -under 0 \
+    $m add command -label "Find" -underline 0 \
 	-command [list ::tkcon::FindBox $text]
 
     ## Send To Menu
@@ -3968,6 +3996,8 @@ proc edit {args} {
 	    $w.text insert 1.0 [join $args \n]
 	}
     }
+    # prevent stuff above being "undoable" in newer Tk
+    catch { $w.text edit reset ; $w.text edit modified 0 }
     wm deiconify $w
     focus $w.text
     if {[string compare $opts(-find) {}]} {
@@ -4314,14 +4344,15 @@ proc idebug {opt args} {
     set level [expr {[info level]-1}]
     switch -glob -- $opt {
 	on	{
-	    if {[llength $args]} { set IDEBUG(id) $args }
+	    # id is just arg0 [bug #50]
+	    if {[llength $args]} { set IDEBUG(id) [lindex $args 0] }
 	    return [set IDEBUG(on) 1]
 	}
 	off	{ return [set IDEBUG(on) 0] }
 	id  {
 	    if {![llength $args]} {
 		return $IDEBUG(id)
-	    } else { return [set IDEBUG(id) $args] }
+	    } else { return [set IDEBUG(id) [lindex $args 0]] }
 	}
 	break {
 	    if {!$IDEBUG(on) || $IDEBUG(debugging) || \
@@ -5676,17 +5707,22 @@ proc ::tkcon::Expand {w {type ""}} {
     set exp "\[^\\\\\]\[\[ \t\n\r\\\{\"$\]"
     set tmp [$w search -backwards -regexp $exp insert-1c limit-1c]
     if {[string compare {} $tmp]} {append tmp +2c} else {set tmp limit}
-    if {[$w compare $tmp >= insert]} return
     set str [$w get $tmp insert]
+    # Expand procs can return "break" to indicate not to try further
+    # matches, otherwise "continue" says "I got nothing, continue on"
+    # We can ignore return codes from the specific expand type checks
     switch -glob $type {
-	pa* { set res [ExpandPathname $str] }
-	pr* { set res [ExpandProcname $str] }
-	v*  { set res [ExpandVariable $str] }
+	pa* { set code [catch {ExpandPathname $str} res] }
+	pr* { set code [catch {ExpandProcname $str} res] }
+	v*  { set code [catch {ExpandVariable $str} res] }
 	default {
+	    # XXX could be extended to allow the results of all matches
+	    # XXX to be amalgamted ... may be confusing to user
 	    set res {}
 	    foreach t $::tkcon::OPT(expandorder) {
-		if {![catch {Expand$t $str} res] && \
-			[string compare {} $res]} break
+		set code [catch {Expand$t $str} res]
+		if {$code == 0 || $code == 3} { break }
+		set res {}
 	    }
 	}
     }
@@ -5712,6 +5748,10 @@ proc ::tkcon::Expand {w {type ""}} {
 #		possible further matches
 ## 
 proc ::tkcon::ExpandPathname str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     set pwd [EvalAttached pwd]
     # Cause a string like {C:/Program\ Files/} to become "C:/Program Files/"
     regsub -all {\\([][ ])} $str {\1} str
@@ -5758,7 +5798,7 @@ proc ::tkcon::ExpandPathname str {
 	}
     }
     EvalAttached [list cd $pwd]
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
 ## ::tkcon::ExpandProcname - expand a tcl proc name based on $str
@@ -5768,6 +5808,10 @@ proc ::tkcon::ExpandPathname str {
 #		possible further matches
 ##
 proc ::tkcon::ExpandProcname str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     set match [EvalAttached [list info commands $str*]]
     if {[llength $match] == 0} {
 	set ns [EvalAttached \
@@ -5784,33 +5828,58 @@ proc ::tkcon::ExpandProcname str {
     } else {
 	regsub -all {([^\\]) } $match {\1\\ } match
     }
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
-## ::tkcon::ExpandXotcl - expand an xotcl method name based on $str
+## ::tkcon::ExpandMethodname - expand an NSF/XOTcl method name based on $str
 # ARGS:	str	- partial proc name to expand
 # Calls:	::tkcon::ExpandBestMatch
 # Returns:	list containing longest unique match followed by all the
 #		possible further matches
 ##
-proc ::tkcon::ExpandXotcl str {
-    # in a first step, get the cmd to check, if we should handle subcommands
-    set cmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
-    # Only do the xotcl magic if there are two cmds and xotcl is loaded
-    if {[llength $cmd] != 2
-	|| ![EvalAttached [list info exists ::xotcl::version]]} {
-	return
+proc ::tkcon::ExpandMethodname str {
+
+    # In a first step, obtain the typed-in cmd from the console
+    set typedCmd [::tkcon::CmdGet $::tkcon::PRIV(console)]
+    set obj [lindex $typedCmd 0]
+    if {$obj eq $typedCmd} {
+	# just a single word, can't be a method expansion
+        return -code continue
     }
-    set obj [lindex $cmd 0]
-    set sub [lindex $cmd 1]
-    set match [EvalAttached [list $obj info methods $sub*]]
-    if {[llength $match] > 1} {
-	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } str
-	set match [linsert $match 0 $str]
+    # Get the full string after the object
+    set sub [string trimleft [string range $typedCmd [string length [list $obj]] end]]
+    if {[EvalAttached [list info exists ::nsf::version]]} {
+	# Next Scripting Framework is loaded
+	if {![EvalAttached [list ::nsf::object::exists $obj]]} {return -code continue}
+	if {[string match ::* $sub]} {
+	    # NSF allows dispatch of unregistered methods via absolute
+	    # paths
+	    set cmd "concat \[info commands $sub*\] \[namespace children \[namespace qualifiers $sub\] $sub*\]"
+	} else {
+	    set cmd [list $obj ::nsf::methods::object::info::lookupmethods -callprotection public -path -- $sub*]
+	}
+    } elseif {[EvalAttached [list info exists ::xotcl::version]]} {
+	# XOTcl < 2.* is loaded
+	if {![EvalAttached [list ::xotcl::Object isobject $obj]]} {return -code continue}
+	set cmd [list $obj info methods $sub*]
     } else {
-	regsub -all {([^\\]) } $match {\1\\ } match
+	# No NSF/XOTcl loaded
+        return -code continue
     }
-    return $match
+
+    set match [EvalAttached $cmd]
+    if {[llength $match] > 1} {
+	regsub -all {([^\\]) } [ExpandBestMatch $match $str] {\1\\ } bestMatch
+	if {$str eq "" && [string match "* " $bestMatch]} {
+	    set match [linsert $match 0 ""]
+	} else {
+	    regsub -all {\\ } $bestMatch { } bestMatch
+	    set match [linsert $match 0 [lindex $bestMatch end]]
+	}
+    } else {
+	set match [lindex [lindex $match 0] end]
+    }
+    return -code break $match
 }
 
 ## ::tkcon::ExpandVariable - expand a tcl variable name based on $str
@@ -5820,6 +5889,10 @@ proc ::tkcon::ExpandXotcl str {
 #		possible further matches
 ## 
 proc ::tkcon::ExpandVariable str {
+
+    # require at least a single character, otherwise continue
+    if {$str eq ""} {return -code continue}
+
     if {[regexp {([^\(]*)\((.*)} $str junk ary str]} {
 	## Looks like they're trying to expand an array.
 	set match [EvalAttached [list array names $ary $str*]]
@@ -5840,7 +5913,7 @@ proc ::tkcon::ExpandVariable str {
 	    regsub -all {([^\\]) } $match {\1\\ } match
 	}
     }
-    return $match
+    return -code [expr {$match eq "" ? "continue" : "break"}] $match
 }
 
 ## ::tkcon::ExpandBestMatch2 - finds the best unique match in a list of names
