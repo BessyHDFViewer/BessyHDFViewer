@@ -94,6 +94,7 @@ namespace eval BessyHDFViewer {
 		# initialize iconlist
 		variable IconClassMap {
 			MCA  mca
+			HDDS mca
 			MULTIPLE_IMG image-multiple
 			SINGLE_IMG image-x-generic
 			PLOT graph
@@ -2142,11 +2143,16 @@ namespace eval BessyHDFViewer {
 	proc bessy_reshape {fn} {
 		# switch on the file extension
 		switch [file extension $fn] {
-			.hdf { return [bessy_reshape_hdf4 $fn] }
-			.h5 { return [bessy_reshape_hdf5 $fn] }
-			.dat { return [bessy_reshape_ascii $fn] }
-			default { return [bessy_reshape_ascii $fn] }
+			.hdf { set data [bessy_reshape_hdf4 $fn] 
+				dict set data {} FileFormat HDF4 }
+			.h5 { set data [bessy_reshape_hdf5 $fn] 
+				dict set data {} FileFormat HDF5 }
+			.dat { set data [bessy_reshape_ascii $fn]
+				dict set data {} FileFormat ASCII }
+			default { set data [bessy_reshape_ascii $fn] 
+				dict set data {} FileFormat ASCII }
 		}
+		return $data
 	}
 
 	proc bessy_reshape_hdf4 {fn} {
@@ -2220,7 +2226,14 @@ namespace eval BessyHDFViewer {
 
 	proc eveH5getDSNames {d path} {
 		dict keys [dict filter [dict get $d {*}$path] script {key value} {
-			expr {[dict get $value type]=="DATASET"}
+			expr {[dict get $value type] eq "DATASET"}
+		}]
+	}
+
+	proc eveH5getHDDSNames {d path} {
+		dict keys [dict filter [dict get $d {*}$path] script {key value} {
+			expr { ([dict get $value type] eq "GROUP") &&
+				[dict exists $value attrs Name] }
 		}]
 	}
 
@@ -2263,11 +2276,13 @@ namespace eval BessyHDFViewer {
 			lappend result $column
 		}
 
-		set posjoinlist [list Detector PosCounter {*}$joinlist] 
+		set posjoinlist [list Dataset PosCounter {*}$joinlist] 
 		# write back
 		foreach {group dset} $posjoinlist {column} $result {
 			dict set reshaped $group $dset data $column
 		}
+
+		dict set reshaped Dataset PosCounter attrs {}
 
 		return $posjoinlist
 	}
@@ -2347,6 +2362,18 @@ namespace eval BessyHDFViewer {
 
 		foreach {group name} $joinsets {
 			dict_move reshaped [list $group $name attrs unit] reshaped [list $group $name attrs Unit]
+		}
+
+		# check for multidimensional data
+		set HDDSnames [eveH5getHDDSNames $rawd $path]
+
+		foreach MPname $HDDSnames {
+			set rawmca [dict get $rawd {*}$path $MPname]
+			set name [dict get $rawmca attrs Name]
+			dict for {Pos dataset} [dict get $rawmca data] {
+			       dict set reshaped HDDataset $name $Pos [dict get $dataset data]
+	       		}	       
+			dict unset rawd {*}$path $MPname
 		}
 
 		dict set reshaped Unresolved $rawd
@@ -2554,6 +2581,8 @@ namespace eval BessyHDFViewer {
 		# classify dataset into Images, Plot and return plot axes
 		set images [dict exists $data Detector Pilatus_Tiff data]
 		set mca [dict exists $data MCA]
+		set hdds [dict exists $data HDDataset]
+		set fileformat [dict get $data {} FileFormat]
 		
 		# determine available axes = motors and detectors
 		if {[catch {dict keys [dict get $data Motor]} motors]} {
@@ -2596,7 +2625,7 @@ namespace eval BessyHDFViewer {
 		# now check for different classes. MCA has only this dataset, no motors etc.
 		set class UNKNOWN
 
-		if {$mca} {
+		if {$mca && $fileformat eq "HDF4"} {
 			set motors {Row}
 			set detectors {MCA}
 			set length [llength [dict get $data MCA data]]
@@ -2613,7 +2642,9 @@ namespace eval BessyHDFViewer {
 			}
 			# otherwise no images are found
 		} else {
-			if {$Plot} {
+			if {$hdds} {
+				set class HDDS
+			} elseif {$Plot} {
 				# there is a valid Plot
 				set class PLOT
 			} else {
