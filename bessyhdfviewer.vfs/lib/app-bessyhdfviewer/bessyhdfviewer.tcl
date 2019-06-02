@@ -2243,7 +2243,7 @@ namespace eval BessyHDFViewer {
 		
 		# OUTER JOIN into result
 		set UniquePosList [lsort -unique -integer $PosList]
-		set result {}
+		set result [list $UniquePosList]
 		foreach ds $data  group $grouplist {
 			set column {}
 			set val NaN
@@ -2263,12 +2263,13 @@ namespace eval BessyHDFViewer {
 			lappend result $column
 		}
 
+		set posjoinlist [list Detector PosCounter {*}$joinlist] 
 		# write back
-		foreach {group dset} $joinlist {column} $result {
+		foreach {group dset} $posjoinlist {column} $result {
 			dict set reshaped $group $dset data $column
 		}
 
-		return $result
+		return $posjoinlist
 	}
 
 	proc bessy_reshape_hdf5 {fn} {
