@@ -14,6 +14,7 @@ namespace eval DataEvaluation {
 		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
 		ArdeViewer	ardeviewer       "Show referenced TIFF in external viewer"
 		ArdeViewerHDF	ardeviewer-hdf       "open selected HDF in external viewer"
+		SpectrumViewer	mca	"Display embedded spectra"
 	}
 
 
@@ -964,5 +965,65 @@ namespace eval DataEvaluation {
 			if {$cmd != {}} { $cmd $idx }
 		}
 	}
+
+	proc SpectrumViewer {} {
+		variable w
+		variable ns
+		if {[llength $BessyHDFViewer::HDFFiles] != 1} {
+			return code error "Only 1 file can be selected!"
+		}
+		if {[dict exists $BessyHDFViewer::hdfdata HDDataset]} {
+			set firstkey [lindex [dict keys [dict get $BessyHDFViewer::hdfdata HDDataset]] 0]
+			variable spectra [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]
+			variable spectrumfn [lindex $BessyHDFViewer::HDFFiles 0]
+
+			toplevel .spectrum
+			set w(SpectrumGraph) [ukaz::graph .spectrum.g]
+			pack $w(SpectrumGraph) -fill both -expand yes
+			$w(SpectrumGraph) set log y
+			BessyHDFViewer::RegisterPickCallback ${ns}::SpectrumPick
+		}
+	}
+
+	proc dict_getdefault {dict args} {
+		set default [lindex $args end]
+		set keys [lrange $args 0 end-1]
+		if {[dict exists $dict {*}$keys]} {
+			return [dict get $dict {*}$keys]
+		} else {
+			return $default
+		}
+	}
+
+	proc enumerate {list} {
+		set result {}
+		for {set ind 0} {$ind < [llength $list]} {incr ind} {
+			lappend result $ind [lindex $list $ind]
+		}
+		return $result
+	}
+
+	proc SpectrumPick {clickdata} {
+		variable spectra
+		variable spectrumfn
+		variable w
+		set dpnr [dict get $clickdata dpnr]
+		set fn [dict get $clickdata fn]
+
+		if {$fn ne $spectrumfn} { return }
+
+		set poscounter [dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
+		set Pos [lindex $poscounter $dpnr]
+		
+		if {[dict exists $spectra $Pos]} {
+			set specdata [enumerate [dict get $spectra $Pos]]
+			BessyHDFViewer::ClearHighlights
+			BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles color red lw 3 ps 1.5
+			$w(SpectrumGraph) clear
+			$w(SpectrumGraph) plot $specdata with lines title "Spec $Pos"
+		}
+	}
+
+	
 		
 }
