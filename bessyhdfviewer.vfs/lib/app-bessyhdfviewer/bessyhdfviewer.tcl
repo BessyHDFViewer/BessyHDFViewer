@@ -2582,7 +2582,7 @@ namespace eval BessyHDFViewer {
 		set images [dict exists $data Detector Pilatus_Tiff data]
 		set mca [dict exists $data MCA]
 		set hdds [dict exists $data HDDataset]
-		set fileformat [dict get $data {} FileFormat]
+		set fileformat [SmallUtils::dict_getdefault $data {} FileFormat {}]
 		
 		# determine available axes = motors and detectors
 		if {[catch {dict keys [dict get $data Motor]} motors]} {

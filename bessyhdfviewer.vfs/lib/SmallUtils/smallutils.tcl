@@ -131,6 +131,24 @@ namespace eval SmallUtils {
 		# puts "RAII destructing $cmd"
 		catch {close $fd}
 	}
+	
+	proc dict_getdefault {dict args} {
+		set default [lindex $args end]
+		set keys [lrange $args 0 end-1]
+		if {[dict exists $dict {*}$keys]} {
+			return [dict get $dict {*}$keys]
+		} else {
+			return $default
+		}
+	}
+
+	proc enumerate {list} {
+		set result {}
+		for {set ind 0} {$ind < [llength $list]} {incr ind} {
+			lappend result $ind [lindex $list $ind]
+		}
+		return $result
+	}
 
 
 }

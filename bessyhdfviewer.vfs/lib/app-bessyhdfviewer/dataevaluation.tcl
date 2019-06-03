@@ -1,3 +1,4 @@
+package require SmallUtils
 namespace eval DataEvaluation {
 	# built-in methods for general data evaluation
 	variable ns [namespace current]
@@ -985,24 +986,6 @@ namespace eval DataEvaluation {
 		}
 	}
 
-	proc dict_getdefault {dict args} {
-		set default [lindex $args end]
-		set keys [lrange $args 0 end-1]
-		if {[dict exists $dict {*}$keys]} {
-			return [dict get $dict {*}$keys]
-		} else {
-			return $default
-		}
-	}
-
-	proc enumerate {list} {
-		set result {}
-		for {set ind 0} {$ind < [llength $list]} {incr ind} {
-			lappend result $ind [lindex $list $ind]
-		}
-		return $result
-	}
-
 	proc SpectrumPick {clickdata} {
 		variable spectra
 		variable spectrumfn
@@ -1012,11 +995,11 @@ namespace eval DataEvaluation {
 
 		if {$fn ne $spectrumfn} { return }
 
-		set poscounter [dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
+		set poscounter [SmallUtils::dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
 		set Pos [lindex $poscounter $dpnr]
 		
 		if {[dict exists $spectra $Pos]} {
-			set specdata [enumerate [dict get $spectra $Pos]]
+			set specdata [SmallUtils::enumerate [dict get $spectra $Pos]]
 			BessyHDFViewer::ClearHighlights
 			BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles color red lw 3 ps 1.5
 			$w(SpectrumGraph) clear
