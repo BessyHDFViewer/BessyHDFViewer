@@ -2417,6 +2417,13 @@ namespace eval BessyHDFViewer {
 			}
 		}
 
+		if {![catch {dict get $plotinfo PreferredNormalizationChannel} normchannel]} {
+			# find corresponding axis name
+			if {![catch {dict get $rawd EVETranslate $normchannel} Monitor]} {
+				dict set reshaped Plot Monitor $Monitor
+			}
+		}
+
 		return $reshaped
 	}
 
