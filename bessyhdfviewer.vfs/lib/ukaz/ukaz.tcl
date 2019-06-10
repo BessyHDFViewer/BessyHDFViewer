@@ -1,10 +1,14 @@
 package require snit
 package require Tk 8.6
-package provide ukaz 2.0a2
+package provide ukaz 2.1
 
 namespace eval ukaz {
 	
 	variable ns [namespace current]
+	##### General functions ###############
+	proc lremove {list element} {
+		lsearch -all -inline -not -exact $list $element
+	}
 
 	##### Functions for geometric operations (clipping) ############
 	namespace eval geometry {
@@ -411,7 +415,7 @@ namespace eval ukaz {
 	}
 
 	############ Function for automatic axis scaling ##########
-	proc compute_ticlist {min max tics log widen format} {
+	proc compute_ticlist {min max tics log widen formatcmd} {
 		# automatically compute sensible values
 		# for the tics position, if not requested otherwise
 		lassign $tics ticrequest spec
@@ -473,7 +477,7 @@ namespace eval ukaz {
 						foreach mantisse $minor {
 							set tic [expr {$mantisse*$base}]
 							if {$tic >= $min && $tic <=$max} {
-								lappend ticlist [format $format $tic] $tic
+								lappend ticlist [{*}$formatcmd $tic] $tic
 							}
 						}
 					}
@@ -486,7 +490,7 @@ namespace eval ukaz {
 							set tic [expr {$mantisse*10.0**$expmax}]
 							if {$tic >= $max} {
 								set max $tic
-								lappend ticlist [format $format $tic] $tic
+								lappend ticlist [{*}$formatcmd $tic] $tic
 								break
 							}
 						}
@@ -537,18 +541,20 @@ namespace eval ukaz {
 		for {set i $start} {$i<=$stop} {incr i} {
 			set v [expr {$i*$ticbase}]
 			# if {$log && $v<=0} { continue }
-			lappend ticlist [format $format $v] $v
+			lappend ticlist [{*}$formatcmd $v] $v
 		}
 		return [list $ticlist $min $max]		
 	}
 
 	######### Functions for parsing gnuplot style commands ###########
-	proc initparsearg {} {
-		# only checks whether args is a valid dictionary
+	proc initparsearg {{defaultdict {}}} {
+		# checks whether args is a valid dictionary
 		upvar 1 args procargs
 		if {[catch {dict size $procargs}]} {
 			return -code error -level 2 "Malformed argument list: $procargs"
 		}
+		variable parsearg_default $defaultdict
+		variable parsearg_result {}
 	}
 
 	proc parsearg {option default} {
@@ -567,24 +573,51 @@ namespace eval ukaz {
 				set success true
 			}
 		}
-		if {!$success} { set resvar $default }
+
+		variable parsearg_default
+		variable parsearg_result
+		
+		if {!$success} {
+			# set to default. First check the default dict
+			# then use the hardcoded default
+			if {[dict exists $parsearg_default $optname]} {
+				set resvar [dict get $parsearg_default $optname]
+			} else {
+				set resvar $default
+			}
+		}
+
+		dict set parsearg_result $optname $resvar
 		return $success
 	}
 
+	proc errorargs {} {
+		# call at the end to err on unknown options
+		upvar 1 args procargs
+		if {[llength $procargs] != 0} {
+			return -code error -level 2 "Unknown argument(s) $procargs"
+		}
+	}
+
+	proc parsearg_asdict {} {
+		variable parsearg_result
+		return $parsearg_result
+	}
+
 	########### Functions for drawing marks on a canvas ##############
-	proc shape-circles {can coord color size width tag} {
+	proc shape-circles {can coord color size width dash tag} {
 		set r [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
 			lappend ids [$can create oval \
 				[expr {$x-$r}] [expr {$y-$r}] \
 				[expr {$x+$r}] [expr {$y+$r}] \
-				-outline $color -fill "" -width $width -tag $tag]
+				-outline $color -fill "" -width $width -dash $dash -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-circles {can coord color size width tag} {
+	proc shape-filled-circles {can coord color size width dash tag} {
 		set r [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
@@ -596,18 +629,18 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-squares {can coord color size width tag} {
+	proc shape-squares {can coord color size width dash tag} {
 		set s [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
 		lappend ids [$can create rectangle  \
 				[expr {$x-$s}] [expr {$y-$s}] [expr {$x+$s}] [expr {$y+$s}] \
-				-outline $color -fill "" -width $width -tag $tag]
+				-outline $color -fill "" -width $width -dash $dash -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-squares {can coord color size width tag} {
+	proc shape-filled-squares {can coord color size width dash tag} {
 		set s [expr {5.0*$size}]
 		set ids {}
 		foreach {x y} $coord {
@@ -619,7 +652,7 @@ namespace eval ukaz {
 	}
 
 
-	proc shape-hexagons {can coord color size width tag} {
+	proc shape-hexagons {can coord color size width dash tag} {
 		set s [expr {5.0*$size}]
 		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
 		set ids {}
@@ -630,12 +663,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -width $width -tag $tag]
+				-outline $color -fill "" -width $width -dash $dash -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-hexagons {can coord color size width tag} {
+	proc shape-filled-hexagons {can coord color size width dash tag} {
 		set s [expr {5.0*$size}]
 		set clist {1 -0.5 0 -1.12 -1 -0.5 -1 0.5 0 1.12 1 0.5}
 		set ids {}
@@ -651,7 +684,7 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-triangles {can coord color size width tag} {
+	proc shape-triangles {can coord color size width dash tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
 		set ids {}
@@ -662,12 +695,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -width $width -tag $tag]
+				-outline $color -fill "" -width $width -dash $dash -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-triangles {can coord color size width tag} {
+	proc shape-filled-triangles {can coord color size width dash tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 +1.0 0.5 -0.5 -0.5 -0.5}
 		set ids {}
@@ -683,7 +716,7 @@ namespace eval ukaz {
 		return $ids
 	}
 
-	proc shape-uptriangles {can coord color size width tag} {
+	proc shape-uptriangles {can coord color size width dash tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
 		set ids {}
@@ -694,12 +727,12 @@ namespace eval ukaz {
 				lappend hc [expr {$yc*$s+$y}]
 			}
 			lappend ids [$can create polygon $hc \
-				-outline $color -fill "" -width $width -tag $tag]
+				-outline $color -fill "" -width $width -dash $dash -tag $tag]
 		}
 		return $ids
 	}
 	
-	proc shape-filled-uptriangles {can coord color size width tag} {
+	proc shape-filled-uptriangles {can coord color size width dash tag} {
 		set s [expr {8.0*$size}]
 		set clist {0.0 -1.0 0.5 0.5 -0.5 0.5}
 		set ids {}
@@ -743,6 +776,7 @@ namespace eval ukaz {
 
 		# backing store for plot data
 		variable plotdata {}
+		variable labeldata {}
 		variable datasetnr 0
 		variable zstack {}
 
@@ -763,6 +797,7 @@ namespace eval ukaz {
 		variable transform {1.0 0.0 1.0 0.0}
 
 		variable axisfont default
+		variable labelfont default
 
 		# store for the interactive elements (=controls)
 		variable controls {}
@@ -826,34 +861,35 @@ namespace eval ukaz {
 			parsearg {dash} ""
 			parsearg {title t} ""
 		
-			#puts "Plot config: $using $with $color $pointtype $pointsize $linewidth"
 			if {$using != {}} {
 				set data [transformdata_using $data $using]
 			}
 
 			if {$color == "auto"} {
 				set colors {red green blue black}
-				set ncolors [llength $color]
+				set ncolors [llength $colors]
 				set color [lindex $colors [expr {$datasetnr%$ncolors}]]
 			}
 			
 			set datarange [calcdatarange $data]
+			
+			set plotwith {}
 
 			set id $datasetnr
 			switch $with {
 				p -
 				points {
-					dict set plotdata $id type points 1
+					dict set plotwith points 1
 				}
 				l -
 				lines {
-					dict set plotdata $id type lines 1
+					dict set plotwith lines 1
 				}
 
 				lp -
 				linespoints {
-					dict set plotdata $id type points 1
-					dict set plotdata $id type lines 1
+					dict set plotwith points 1
+					dict set plotwith lines 1
 				}
 
 				default {
@@ -861,6 +897,16 @@ namespace eval ukaz {
 				}
 			}
 
+			
+			if {[dict exists $plotwith points]} {
+				# check that pointtype exists
+				lassign [info commands shape-$pointtype] ptproc
+				if {$ptproc ne "shape-$pointtype"} {
+					return -code error "Unknown pointtype $pointtype"
+				}
+			}
+
+			dict set plotdata $id type $plotwith
 			dict set plotdata $id data $data
 			dict set plotdata $id datarange $datarange
 			dict set plotdata $id color $color
@@ -1105,6 +1151,37 @@ namespace eval ukaz {
 			$self RedrawRequest
 		}
 
+		method {set format} {axis args} {
+			switch $axis {
+				x  { upvar 0 options(-xformat) fmtvar }
+				y  { upvar 0 options(-yformat) fmtvar }
+				default { return -code error "Unknown axis $axis" }
+			}
+			switch [llength $args] {
+				0 { 
+					# restore default
+					set fmt %g 
+				}
+				1 {
+					# one argument = "format" formatstring
+					set fmt [list numeric {*}$args]
+				}
+				2 { 
+					# two arguments = swap order for formatcmd
+					lassign $args fmtstring type
+					if {$type ni {command timedate numeric}} {
+						return -code error "Unknown formatting procedure $type"
+					}
+					set fmt [list $type $fmtstring]
+				}
+				default {
+					return -code error "Wrong # arguments ($args given): $self set format <axis> ?fmt? ?type?"
+				}
+			}
+			set fmtvar $fmt
+			$self RedrawRequest
+		}
+
 		method {set key} {args} {
 			# no argument - just enable legend
 			if {[llength $args]==0} {
@@ -1123,6 +1200,91 @@ namespace eval ukaz {
 					off  { dict set options(-key) disabled true }
 					default { return -code error "Unknown option for set key: $arg" }
 				}
+			}
+			$self RedrawRequest
+		}
+		
+		
+		proc parsemarkup {defaults args} {
+			initparsearg $defaults
+			parsearg {color lc} black
+			parsearg {pointtype pt} ""
+			parsearg {pointsize ps} 1.0
+			parsearg {linewidth lw} 1.0
+			parsearg {dash} ""
+			parsearg {text t} ""
+			parsearg {anchor} "c"
+			parsearg {boxcolor} ""
+			parsearg {boxlinewidth} 1.0
+			parsearg {boxlinecolor} ""
+			parsearg {boxdash} ""
+			parsearg {padding} 5
+			parsearg {data at} {}
+			errorargs
+
+			return [parsearg_asdict]
+			
+		}
+
+		method {set label} {args} {
+			#	?text ...?
+			initparsearg
+			parsearg {id} ""
+
+			if {$id eq ""} {
+				# create new markup id
+				set id $datasetnr
+				incr datasetnr
+				set oldldata {}
+			} else {
+				# update existing id. Fist check, if it exists
+				if {[dict exists $labeldata $id]} {
+					set oldldata [dict get $labeldata $id]
+				} else {
+					# error
+					return -code error "Unknown markup id $id"
+				}
+			}
+
+			# parse the options
+			set ldata [parsemarkup $oldldata {*}$args]
+			dict set labeldata $id $ldata
+			$self RedrawRequest
+			return $id
+
+		}
+		
+		method {highlight} {id dpnr args} {
+			#	?text ...?
+
+			initparsearg
+			
+			# update existing id. Fist check, if it exists
+			if {![dict exists $plotdata $id]} {
+				return -code error "Unknown dataset id $id"
+			}
+
+			if {[dict exists $plotdata $id highlight $dpnr]} {
+				set oldldata [dict get $plotdata $id highlight $dpnr]
+			} else {
+				set oldldata {color red pointtype circles pointsize 1.5 linewidth 2}
+			}
+
+			set ldata [parsemarkup $oldldata {*}$args]
+			dict set plotdata $id highlight $dpnr $ldata
+			
+			$self RedrawRequest
+			return $id
+
+		}
+
+		method clearhighlight {ids} {
+			if {$ids eq "all"} {
+				set ids [$self getdatasetids]
+			}
+
+			foreach id $ids {
+				dict unset plotdata $id highlight
 			}
 			$self RedrawRequest
 		}
@@ -1215,13 +1377,30 @@ namespace eval ukaz {
 			# now we have the tight range in xmin,xmax, ymin, ymax
 			# compute ticlists and round for data determined values
 			lassign [compute_ticlist $xmin $xmax $options(-xtics) \
-				$options(-logx) $xwiden $options(-xformat)] xticlist xmin xmax
+				$options(-logx) $xwiden [formatcmd $options(-xformat)]] xticlist xmin xmax
 			
 			lassign [compute_ticlist $ymin $ymax $options(-ytics) \
-				$options(-logy) $ywiden $options(-yformat)] yticlist ymin ymax
+				$options(-logy) $ywiden [formatcmd $options(-yformat)]] yticlist ymin ymax
 
 			set displayrange [dict create xmin $xmin xmax $xmax ymin $ymin ymax $ymax]
 			
+		}
+
+		proc formatcmd {fmt} {
+			# return a cmd prefix to convert 
+			# tic positions into strings
+			if {[llength $fmt]<=1} {
+				# single argument - use format
+				return [list format {*}$fmt]
+			}
+			lassign $fmt type arg
+			switch $type {
+				command { return $arg }
+				timedate { return [list apply {{fmt t}  {clock format [expr {entier($t)}] -format $fmt}} $arg] }
+				numeric { return [list format $arg] }
+				default { return -code error "Wrong tic format option" }
+			}
+			error "Shit happens"
 		}
 		
 		method calcsize {} {
@@ -1390,7 +1569,12 @@ namespace eval ukaz {
 				if {[dict exists $plotdata $id type lines]} {
 					$self drawlines $id
 				}
+				if {[dict exists $plotdata $id highlight]} {
+					$self drawhighlight $id
+				}
 			}
+
+			$self drawmarkup
 		}
 
 		method drawpoints {id} {
@@ -1408,6 +1592,7 @@ namespace eval ukaz {
 				[dict get $plotdata $id color] \
 				[dict get $plotdata $id pointsize]	\
 				[dict get $plotdata $id linewidth]	\
+				[dict get $plotdata $id dash]	\
 				$selfns
 		}
 	
@@ -1454,7 +1639,77 @@ namespace eval ukaz {
 			}
 			return $ids
 		}
-	
+		
+		method drawmarkuppoint {coords style} {
+			# draw a single label with text in a box
+			# and a data point symbol
+
+			lassign [geometry::pointclip $coords $displayrange] clipdata clipinfo
+			set transdata [$self graph2pix $clipdata]
+			if {[llength $transdata] != 2} return
+			
+			lassign $transdata x y
+			
+			dict with style {
+				if {$text ne ""} {
+					set tid [$hull create text $x $y \
+						-fill $color -anchor $anchor \
+						-tag $selfns -font $labelfont -text $text]
+
+					if {$boxcolor ne "" || $boxlinecolor ne ""} {
+						# compute size of the box
+						set bbox [$hull bbox $tid]
+						# enlarge by padding
+						lassign $bbox x1 y1 x2 y2
+						
+						set x1o [expr {$x1-$padding}]
+						set x2o [expr {$x2+$padding}]
+						set y1o [expr {$y1-$padding}]
+						set y2o [expr {$y2+$padding}]
+							
+						$hull create rectangle $x1o $y1o $x2o $y2o \
+							-fill $boxcolor -outline $boxlinecolor -dash $boxdash \
+							-width $boxlinewidth -tag $selfns
+
+						$hull raise $tid
+					}
+
+				}
+
+				if {$pointtype ne ""} {
+					set shapeproc shape-$pointtype
+					$shapeproc $hull $transdata \
+						$color \
+						$pointsize	\
+						$linewidth	\
+						$dash \
+						$selfns
+				}
+
+			}
+		}
+
+
+		method drawmarkup {} {
+			dict for {id ldata} $labeldata {
+				$self drawmarkuppoint [dict get $ldata data] $ldata
+			}
+		}
+		
+		method drawhighlight {id} {
+			set highlights [dict get $plotdata $id highlight]
+			set pdata [dict get $plotdata $id data]
+
+			dict for {dpnr ldata} $highlights {
+				set xp [lindex $pdata [expr {2*$dpnr}]]
+				set yp [lindex $pdata [expr {2*$dpnr+1}]]
+				set coords [list $xp $yp]
+					
+				$self drawmarkuppoint $coords $ldata
+			}
+		}
+
+
 		method drawlegend {} {
 			# check if legend is enabled
 			if {[dict get $options(-key) disabled]} { 
@@ -1516,7 +1771,8 @@ namespace eval ukaz {
 					$shapeproc $hull [list $sx $ycur] \
 						[dict get $plotdata $id color] \
 						[dict get $plotdata $id pointsize]	\
-						[dict get $plotdata $id linewidth] \
+						[dict get $plotdata $id linewidth]	\
+						[dict get $plotdata $id dash]	\
 						$selfns
 				}
 
@@ -1617,9 +1873,10 @@ namespace eval ukaz {
 		}
 		
 		method clear {} {
-			# $hull delete $selfns
 			set plotdata {}
+			set labeldata {}
 			set zstack {}
+			set datasetnr 0
 			$self RedrawRequest
 		}
 
