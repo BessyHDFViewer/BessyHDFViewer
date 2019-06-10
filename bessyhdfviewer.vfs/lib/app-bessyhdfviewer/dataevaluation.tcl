@@ -15,7 +15,7 @@ namespace eval DataEvaluation {
 		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
 		ArdeViewer	ardeviewer       "Show referenced TIFF in external viewer"
 		ArdeViewerHDF	ardeviewer-hdf       "open selected HDF in external viewer"
-		SpectrumViewer	mca	"Display embedded spectra"
+		OpenSpectrum	mca	"Display embedded spectra"
 	}
 
 
@@ -970,46 +970,8 @@ namespace eval DataEvaluation {
 		}
 	}
 
-	proc SpectrumViewer {} {
-		variable w
-		variable ns
-		if {[llength $BessyHDFViewer::HDFFiles] != 1} {
-			return code error "Only 1 file can be selected!"
-		}
-		if {[dict exists $BessyHDFViewer::hdfdata HDDataset]} {
-			set firstkey [lindex [dict keys [dict get $BessyHDFViewer::hdfdata HDDataset]] 0]
-			variable spectra [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]
-			variable spectrumfn [lindex $BessyHDFViewer::HDFFiles 0]
-
-			toplevel .spectrum
-			set w(SpectrumGraph) [ukaz::graph .spectrum.g]
-			pack $w(SpectrumGraph) -fill both -expand yes
-			$w(SpectrumGraph) set log y
-			BessyHDFViewer::RegisterPickCallback ${ns}::SpectrumPick
-		}
+	proc OpenSpectrum {} {
+		SpectrumViewer::Open
 	}
-
-	proc SpectrumPick {clickdata} {
-		variable spectra
-		variable spectrumfn
-		variable w
-		set dpnr [dict get $clickdata dpnr]
-		set fn [dict get $clickdata fn]
-
-		if {$fn ne $spectrumfn} { return }
-
-		set poscounter [SmallUtils::dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
-		set Pos [lindex $poscounter $dpnr]
-		
-		if {[dict exists $spectra $Pos]} {
-			set specdata [SmallUtils::enumerate [dict get $spectra $Pos]]
-			BessyHDFViewer::ClearHighlights
-			BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles color red lw 3 ps 1.5
-			$w(SpectrumGraph) clear
-			$w(SpectrumGraph) plot $specdata with lines title "Spec $Pos"
-		}
-	}
-
-	
 		
 }

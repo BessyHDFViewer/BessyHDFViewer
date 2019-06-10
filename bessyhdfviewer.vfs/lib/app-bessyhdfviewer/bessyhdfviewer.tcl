@@ -2,7 +2,7 @@ package provide app-bessyhdfviewer 1.0
 
 
 package require hdfpp
-package require ukaz 2.0
+package require ukaz 2.1
 package require Tk
 package require tooltip
 package require tablelist_tile 5.9
@@ -54,7 +54,8 @@ namespace eval BessyHDFViewer {
 
 
 	# load support modules
-	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl autocomplete.tcl dataevaluation.tcl} {
+	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl 
+		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl} {
 		namespace eval :: [list source [file join $basedir $module]]
 	}
 
@@ -252,7 +253,7 @@ namespace eval BessyHDFViewer {
 		# Graph
 		set w(Graph) [ukaz::graph $w(plotfr).graph -background white]
 		bind $w(Graph) <<MotionEvent>> [list ${ns}::UpdatePointerInfo motion %d]
-		bind $w(Graph) <<Click>> [list ${ns}::UpdatePointerInfo click %x %y]
+		bind $w(Graph) <<Click>> [list ${ns}::UpdatePointerInfo click %x %y %s]
 		
 		set w(legend) [ttk::label $w(plotfr).frame]
 		
@@ -1109,7 +1110,7 @@ namespace eval BessyHDFViewer {
 			}
 
 			click {
-				lassign $args x y
+				lassign $args x y s
 				lassign [$w(Graph) pickpoint $x $y] id dpnr xd yd
 				
 				if {$id == {}} { return }
@@ -1121,6 +1122,7 @@ namespace eval BessyHDFViewer {
 				set pointerinfo(dpnr) $dpnr
 				set pointerinfo(fn) $fn
 				set pointerinfo(id) $id
+				set pointerinfo(state) $s
 
 				if {$id != {}} {
 					set pointerinfo(clickx) $xd
@@ -1134,7 +1136,7 @@ namespace eval BessyHDFViewer {
 				
 				variable pickcallbacks
 				dict for {cmd dummy} $pickcallbacks {
-					$cmd [array get pointerinfo]
+					{*}$cmd [array get pointerinfo]
 				}
 			}
 		}
@@ -1159,21 +1161,12 @@ namespace eval BessyHDFViewer {
 		variable highlightids
 		variable w
 		set hdfid [lindex [dict keys [dict filter $HDFsshown value $hdf]] 0]
-		if {$hdfid != {}} {
-			set data [$w(Graph) getdata $hdfid data]
-			set x [lindex $data [expr {2*$dpnr}]]
-			set y [lindex $data [expr {2*$dpnr+1}]]
 
-			if {$x != {} && $y != {}} {
-				set pos [list $x $y]
-				if {[dict exists $highlightids $hdf]} {
-					lassign [dict get $highlightids $hdf] id
-					$w(Graph) update $id data $pos with points {*}$args
-				} else {
-					set id [$w(Graph) plot $pos with points {*}$args]
-				}
-				dict set highlightids $hdf [list $id $dpnr $pos $args]
-			}
+		if {$hdfid != {}} {
+			# if this HDF is shown at the moment, highlight the 
+			# corresponding data point
+			$w(Graph) highlight $hdfid $dpnr {*}$args
+			dict set highlightids $hdf $dpnr $args
 		}
 	}
 	
@@ -1182,33 +1175,22 @@ namespace eval BessyHDFViewer {
 		variable highlightids
 		variable w
 
-		set newids {}
 		dict for {hdfid hdf} $HDFsshown {
 			if {[dict exists $highlightids $hdf]} {
-				lassign [dict get $highlightids $hdf] _ dpnr pos args
-				set data [$w(Graph) getdata $hdfid data]
-				set x [lindex $data [expr {2*$dpnr}]]
-				set y [lindex $data [expr {2*$dpnr+1}]]
-
-				if {$x != {} && $y != {}} {
-					set pos [list $x $y]
-
-					set highlightid [$w(Graph) plot $pos with points {*}$args]
-					dict set newids $hdf [list $highlightid $dpnr $pos $args]
+				dict for {dpnr style} [dict get $highlightids $hdf] {
+					$w(Graph) highlight $hdfid $dpnr {*}$style
 				}
 			}
 		}
 
-		set highlightids $newids
 	}
 	
 	proc ClearHighlights {} {
+		# remove the highlights
 		variable highlightids
 		variable w
-		dict for {hdf data} $highlightids {
-			lassign $data id dpnr pos args
-			$w(Graph) remove $id
-		}
+		
+		$w(Graph) clearhighlight all
 		set highlightids {}
 	}
 
