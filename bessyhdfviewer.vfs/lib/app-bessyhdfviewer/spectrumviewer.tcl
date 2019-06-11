@@ -8,8 +8,6 @@ namespace eval SpectrumViewer {
 		
 		component Graph
 
-		variable linestyles
-		variable lsused 0
 		variable spectra
 		variable spectrumfn
 		variable spectrashown {}
@@ -84,8 +82,6 @@ namespace eval SpectrumViewer {
 			
 				if {[dict exists $spectra $fn $Pos]} {
 					set specdata [SmallUtils::enumerate [dict get $spectra $fn $Pos]]
-					set ls [lindex $linestyles $lsused]
-					incr lsused
 					
 					set ls [StyleAlloc alloc [list $fn $Pos]]
 					BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles {*}$ls lw 3 ps 1.5
@@ -139,7 +135,8 @@ namespace eval SpectrumViewer {
 
 		method free {key} {
 			set r [dict get $allocation $key]
-			dict set freeheap $r 0
+			dict unset allocation $key
+			dict set freeheap $r 1
 		}
 
 		method clear {} {
