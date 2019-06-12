@@ -97,6 +97,23 @@ namespace eval SpectrumViewer {
 		method cycle {} {
 		}
 
+		variable ROIs {}
+		variable regions {}
+
+		method AddROI {label min max} {
+			set reg [dragregion %AUTO% -orient vertical]
+			$Graph addcontrol $reg
+			$reg setPosition $min $max
+			
+			dict set regions $label $reg
+
+			puts "ROI $reg"
+		}
+
+		method AddROICmd {} {
+			# figure out a peak and add a ROI for it
+		}
+
 		destructor {
 			BessyHDFViewer::UnRegisterPickCallback [mymethod SpectrumPick]
 			BessyHDFViewer::ClearHighlights
@@ -178,7 +195,11 @@ namespace eval SpectrumViewer {
 		destructor {
 			$self untrace -minvariable
 			$self untrace -maxvariable
-			if { [info commands $canv] != {} } { $canv delete $selfns }
+			if { [info commands $canv] != {} } { 
+				$canv delete $selfns.min
+				$canv delete $selfns.max
+				$canv delete $selfns.region
+			}
 		}
 
 
@@ -228,6 +249,8 @@ namespace eval SpectrumViewer {
 			}
 		}
 
+		variable configured false
+		
 		method Configure {range} {
 			# the plot range has changed
 			set loopescape false
@@ -237,9 +260,11 @@ namespace eval SpectrumViewer {
 			set ymin [dict get $range ymin]
 			set ymax [dict get $range ymax]
 
+			set configured true
+
 			set loopescape false
 			set commandescape true
-			$self SetValue
+			$self Redraw
 		}
 
 		method SetVariable {option varname} {
@@ -269,7 +294,7 @@ namespace eval SpectrumViewer {
 			upvar #0 $options(-minvariable) vmin
 			upvar #0 $options(-maxvariable) vmax
 			if {[info exists vmin] && [info exists vmax]} {
-				catch {$self gotoCoords $vmin $vmax}
+				catch {$self setPosition $vmin $vmax} err
 				# ignore any errors if the graph is incomplete
 			}
 		}
@@ -368,13 +393,19 @@ namespace eval SpectrumViewer {
 			$self DoTraces
 		}
 
-		method gotoCoords {vmin vmax} {
+		method setPosition {vmin vmax} {
+			set pos [list $vmin $vmax]
+			$self Redraw
+		}
+
+		method Redraw {} {
+
 			if {$graph=={}} { return }
-			
+
+			lassign $pos vmin vmax
 			lassign [$graph graph2pix [list $vmin $vmin]] nxmin nymin
 			lassign [$graph graph2pix [list $vmax $vmax]] nxmax nymax
 
-			set pos [list $vmin $vmax]
 			if {$options(-orient) eq "horizontal"} {
 				set pmin $nymin
 				set pmax $nymax
@@ -389,7 +420,8 @@ namespace eval SpectrumViewer {
 		}
 
 		method drawregion {} {
-			
+			if {!$configured} { return }
+
 			lassign $pixpos pmin pmax
 
 			#	puts "pos: $pos pixpos: $pixpos"
@@ -406,6 +438,10 @@ namespace eval SpectrumViewer {
 
 			$canv raise $selfns.min
 			$canv raise $selfns.max
+		}
+
+		method getPosition {} {
+			return $pos
 		}
 	
 	}
