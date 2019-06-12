@@ -110,8 +110,50 @@ namespace eval SpectrumViewer {
 			puts "ROI $reg"
 		}
 
+		variable ROInr 0
 		method AddROICmd {} {
 			# figure out a peak and add a ROI for it
+			# fake it for now
+			$self AddROI ROI$ROInr 2000 2100
+			incr ROInr
+		}
+
+		method ComputeROIs {} {
+			set result {}
+			dict for {fn spectrum} $spectra {
+				set counter [BessyHDFViewer::SELECT {PosCounter} [list $fn] -allnan true]
+				dict set result $fn "PosCounter" $counter
+
+				dict for {name reg} $regions {
+					lassign [$reg getPosition] cmin cmax
+
+					
+					set column {}
+					foreach posc $counter {
+						lappend column [$self ROIeval $spectrum $posc $cmin $cmax]
+					}
+
+					dict set result $fn $name $column
+				}
+			}
+			
+			return $result
+		}
+
+		method ROIeval {spectrum posc cmin cmax} {
+			if {![dict exists $spectrum $posc]} { return NaN }
+			set spec [dict get $spectrum $posc]
+			
+			set indmin [expr {int($cmin+0.5)}]
+			set indmax [expr {int($cmax+0.5)}]
+			set range [lrange $spec $indmin $indmax]
+			set result [tcl::mathop::+ {*}$range]
+		
+			return $result
+		}
+
+		method SaveROIEval {} {
+			set rdata [$self ComputeROIs]
 		}
 
 		destructor {
