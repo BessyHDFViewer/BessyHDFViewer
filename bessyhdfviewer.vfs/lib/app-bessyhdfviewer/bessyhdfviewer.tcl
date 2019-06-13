@@ -2134,6 +2134,12 @@ namespace eval BessyHDFViewer {
 			default { set data [bessy_reshape_ascii $fn] 
 				dict set data {} FileFormat ASCII }
 		}
+		
+		variable extradata
+		if {[dict exists $extradata $fn]} {
+			set edata [SmallUtils::dict_getdefault $data Dataset {}]
+			dict set data Dataset [dict merge $edata [dict get $extradata $fn]]
+		}
 		return $data
 	}
 
@@ -2267,6 +2273,30 @@ namespace eval BessyHDFViewer {
 		dict set reshaped Dataset PosCounter attrs {}
 
 		return $posjoinlist
+	}
+	
+	variable extradata {}
+	proc SetExtraColumns {fn data} {
+		variable extradata
+		variable hdfdata
+		variable HDFFiles
+
+		dict for {name column} $data {
+			set oldextra [SmallUtils::dict_getdefault $extradata $fn $name {}]
+			dict set extradata $fn $name [dict merge $oldextra $column]
+		}
+
+		if {[llength $HDFFiles] == 1} {
+			# in case of caching, add the extra data 
+			# also directly to the cached data
+			lassign $HDFFiles curfn
+			if {$fn eq $curfn} {
+				set edata [SmallUtils::dict_getdefault $hdfdata Dataset {}]
+				dict set hdfdata Dataset [dict merge $edata $data]
+			}
+		}
+
+		InvalidateDisplay
 	}
 
 	proc bessy_reshape_hdf5 {fn} {

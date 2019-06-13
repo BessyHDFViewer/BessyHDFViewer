@@ -119,11 +119,10 @@ namespace eval SpectrumViewer {
 		}
 
 		method ComputeROIs {} {
-			set result {}
 			dict for {fn spectrum} $spectra {
 				set counter [BessyHDFViewer::SELECT {PosCounter} [list $fn] -allnan true]
-				dict set result $fn "PosCounter" $counter
-
+				set result {}
+				
 				dict for {name reg} $regions {
 					lassign [$reg getPosition] cmin cmax
 
@@ -133,11 +132,15 @@ namespace eval SpectrumViewer {
 						lappend column [$self ROIeval $spectrum $posc $cmin $cmax]
 					}
 
-					dict set result $fn $name $column
+					dict set result $name data $column
+					dict set result $name attrs leftMarker $cmin
+					dict set result $name attrs rightMarker $cmax
 				}
+				BessyHDFViewer::SetExtraColumns $fn $result
 			}
 			
-			return $result
+			#return $result
+			BessyHDFViewer::ReDisplay
 		}
 
 		method ROIeval {spectrum posc cmin cmax} {
