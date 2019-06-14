@@ -10,6 +10,7 @@ namespace eval SpectrumViewer {
 		component bbar
 
 		variable spectra
+		variable poscountersets {}
 		variable spectrumfn
 		variable spectrashown {}
 		variable lastselected {}
@@ -21,7 +22,11 @@ namespace eval SpectrumViewer {
 			if {[dict exists $BessyHDFViewer::hdfdata HDDataset]} {
 				set firstkey [lindex [dict keys [dict get $BessyHDFViewer::hdfdata HDDataset]] 0]
 				set spectrumfn [lindex $BessyHDFViewer::HDFFiles 0]
-				set spectra [dict create $spectrumfn [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]]
+				set thisspectrum [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]
+				set spectra [dict create $spectrumfn $thisspectrum]
+				set poscounter [SmallUtils::dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
+
+				dict set poscountersets $spectrumfn $poscounter
 
 				puts "vars: $spectrumfn $firstkey"
 				
@@ -34,9 +39,13 @@ namespace eval SpectrumViewer {
 				grid rowconfigure $win $Graph -weight 1
 				
 				
+				set cycleroibtn [ttk::button $bbar.cycle -text "Cycle" -command [mymethod cycle]]
+				set plotallbtn [ttk::button $bbar.plotall -text "Plot all" -command [mymethod plotall]]
 				set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
 				set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
 
+				pack $cycleroibtn -side left
+				pack $plotallbtn -side left
 				pack $addroibtn -side left
 				pack $computebtn -side left
 
@@ -58,7 +67,47 @@ namespace eval SpectrumViewer {
 				ResourceAllocator StyleAlloc $linestyles
 				
 				BessyHDFViewer::ClearHighlights
+				
+				# find first spectrum
+				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
+					if {[dict exists $thisspectrum $Pos]} {
+						$self showspec $spectrumfn $ind
+						set lastselected [list $spectrumfn $ind]
+						break
+					}
+				}
+
 			}
+		}
+
+		method showspec {fn dpnr} {
+			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			if {![dict exists $spectrashown $fn $Pos]} {
+				if {![dict exists $spectra $fn $Pos]} { return }
+				
+				set specdata [SmallUtils::enumerate [dict get $spectra $fn $Pos]]
+				
+				set ls [StyleAlloc alloc [list $fn $Pos]]
+				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles {*}$ls lw 3 ps 1.5
+				set id [$Graph plot $specdata with lines title "[file tail $fn] $Pos" {*}$ls]
+				dict set spectrashown $fn $Pos $id
+			}
+		}
+
+		method unshowspec {fn dpnr} {
+			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			if {[dict exists $spectrashown $fn $Pos]} {
+				set id [dict get $spectrashown $fn $Pos]
+				$Graph remove $id
+				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt ""
+				dict unset spectrashown $fn $Pos
+				StyleAlloc free [list $fn $Pos]
+			}
+		}
+
+		method specvisible {fn dpnr} {
+			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			dict exists $spectrashown $fn $Pos
 		}
 
 		method SpectrumPick {clickdata} {
@@ -80,34 +129,47 @@ namespace eval SpectrumViewer {
 
 			if {$fn ne $spectrumfn} { return }
 
-			set poscounter [SmallUtils::dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
+			set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
 			set Pos [lindex $poscounter $dpnr]
 
-			if {[dict exists $spectrashown $fn $Pos]} {
-				# toggle
-				set id [dict get $spectrashown $fn $Pos]
-				$Graph remove $id
-				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt ""
-				dict unset spectrashown $fn $Pos
-				StyleAlloc free [list $fn $Pos]
+			if {[$self specvisible $fn $dpnr]} {
+				$self unshowspec $fn $dpnr
 				set lastselected {}
 			} else {
-			
-				if {[dict exists $spectra $fn $Pos]} {
-					set specdata [SmallUtils::enumerate [dict get $spectra $fn $Pos]]
-					
-					set ls [StyleAlloc alloc [list $fn $Pos]]
-					BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles {*}$ls lw 3 ps 1.5
-					set id [$Graph plot $specdata with lines title "[file tail $fn] $Pos" {*}$ls]
-					dict set spectrashown $fn $Pos $id
-
-					set lastselected [list $fn $dpnr]
-
-				}
+				$self showspec $fn $dpnr
+				set lastselected [list $fn $dpnr]
 			}
 		}
 
 		method cycle {} {
+			lassign $lastselected fn dpnr
+			$self unshowspec $fn $dpnr
+
+			if {$fn eq {} || $dpnr eq {}} {
+				return
+			}
+			
+			incr dpnr
+			
+			set N [llength [SmallUtils::dict_getdefault $poscountersets $fn {}]]
+			if {$dpnr >= $N} { set dpnr 0 }
+
+			$self showspec $fn $dpnr
+			set lastselected [list $fn $dpnr]
+		}
+
+		method plotall {} {
+			lassign $lastselected fn dpnr
+			if {$fn ne {}} {
+				set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
+				set thisspectrum [SmallUtils::dict_getdefault $spectra $fn {}]
+				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
+					if {[dict exists $thisspectrum $Pos]} {
+						$self showspec $spectrumfn $ind
+						set lastselected [list $spectrumfn $ind]
+					}
+				}
+			}
 		}
 
 		variable ROIs {}
