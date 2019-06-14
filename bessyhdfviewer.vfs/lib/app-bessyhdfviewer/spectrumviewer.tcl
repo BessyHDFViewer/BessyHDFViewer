@@ -7,6 +7,7 @@ namespace eval SpectrumViewer {
 		hulltype toplevel
 		
 		component Graph
+		component bbar
 
 		variable spectra
 		variable spectrumfn
@@ -23,10 +24,22 @@ namespace eval SpectrumViewer {
 				set spectra [dict create $spectrumfn [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]]
 
 				puts "vars: $spectrumfn $firstkey"
-
+				
+				install bbar using ttk::frame $win.bbar
 				install Graph using ukaz::graph $win.g
+				
+				grid $bbar -sticky nsew
+				grid $Graph -sticky nsew
+				grid columnconfigure $win $Graph -weight 1
+				grid rowconfigure $win $Graph -weight 1
+				
+				
+				set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
+				set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
 
-				pack $Graph -fill both -expand yes
+				pack $addroibtn -side left
+				pack $computebtn -side left
+
 				$Graph set log y
 
 				BessyHDFViewer::RegisterPickCallback [mymethod SpectrumPick]
