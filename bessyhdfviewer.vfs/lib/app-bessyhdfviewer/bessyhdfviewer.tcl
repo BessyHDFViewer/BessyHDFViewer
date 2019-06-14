@@ -2140,6 +2140,12 @@ namespace eval BessyHDFViewer {
 			set edata [SmallUtils::dict_getdefault $data Dataset {}]
 			dict set data Dataset [dict merge $edata [dict get $extradata $fn]]
 		}
+		variable extraplotdata
+		if {[dict exists $extraplotdata $fn]} {
+			set oplot [SmallUtils::dict_getdefault $data Plot {}]
+			dict set data Plot [dict merge $oplot [dict get $extraplotdata $fn]]
+		}
+
 		return $data
 	}
 
@@ -2279,6 +2285,7 @@ namespace eval BessyHDFViewer {
 	proc SetExtraColumns {fn data} {
 		variable extradata
 		variable hdfdata
+		variable BessyClass
 		variable HDFFiles
 
 		dict for {name column} $data {
@@ -2287,17 +2294,43 @@ namespace eval BessyHDFViewer {
 		}
 
 		if {[llength $HDFFiles] == 1} {
-			# in case of caching, add the extra data 
+			# in case of caching, add the extra data
 			# also directly to the cached data
 			lassign $HDFFiles curfn
 			if {$fn eq $curfn} {
 				set edata [SmallUtils::dict_getdefault $hdfdata Dataset {}]
 				dict set hdfdata Dataset [dict merge $edata $data]
+				set BessyClass [bessy_class $hdfdata]
 			}
 		}
 
 		InvalidateDisplay
 	}
+
+	variable extraplotdata {}
+	proc SetPlotColumn {fn type name} {
+		if {$type ni {Motor Detector}} {
+			return -code error "Unknown type $type"
+		}
+
+		variable hdfdata
+		variable BessyClass
+		variable HDFFiles
+		variable extraplotdata
+
+
+		dict set extraplotdata $fn $type $name
+		if {[llength $HDFFiles] == 1} {
+			# in case of caching, add the extra data
+			# also directly to the cached data
+			lassign $HDFFiles curfn
+			if {$fn eq $curfn} {
+				dict set hdfdata Plot $type $name
+			}
+			set BessyClass [bessy_class $hdfdata]
+		}
+	}
+
 
 	proc bessy_reshape_hdf5 {fn} {
 		SmallUtils::autovar hdf H5pp -args $fn

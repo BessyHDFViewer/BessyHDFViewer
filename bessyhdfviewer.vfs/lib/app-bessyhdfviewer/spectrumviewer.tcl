@@ -119,6 +119,7 @@ namespace eval SpectrumViewer {
 		}
 
 		method ComputeROIs {} {
+			lassign [dict keys $regions] firstROIname
 			dict for {fn spectrum} $spectra {
 				set counter [BessyHDFViewer::SELECT {PosCounter} [list $fn] -allnan true]
 				set result {}
@@ -136,6 +137,8 @@ namespace eval SpectrumViewer {
 					dict set result $name attrs leftMarker $cmin
 					dict set result $name attrs rightMarker $cmax
 				}
+				
+				BessyHDFViewer::SetPlotColumn $fn Detector $firstROIname
 				BessyHDFViewer::SetExtraColumns $fn $result
 			}
 			
