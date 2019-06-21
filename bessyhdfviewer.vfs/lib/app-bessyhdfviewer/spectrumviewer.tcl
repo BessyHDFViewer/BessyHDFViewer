@@ -42,11 +42,13 @@ namespace eval SpectrumViewer {
 				set cycleroibtn [ttk::button $bbar.cycle -text "Cycle" -command [mymethod cycle]]
 				set plotallbtn [ttk::button $bbar.plotall -text "Plot all" -command [mymethod plotall]]
 				set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
+				set delroibtn [ttk::button $bbar.del -text "Delete ROI" -command [mymethod DeleteROICmd]]
 				set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
 
 				pack $cycleroibtn -side left
 				pack $plotallbtn -side left
 				pack $addroibtn -side left
+				pack $delroibtn -side left
 				pack $computebtn -side left
 
 				$Graph set log y
@@ -65,6 +67,7 @@ namespace eval SpectrumViewer {
 				}
 
 				ResourceAllocator StyleAlloc $linestyles
+				ResourceAllocator RegionColorAlloc {#FF0000 #00A000 #0000FF #800000 #005000 #000080}
 				
 				BessyHDFViewer::ClearHighlights
 				
@@ -176,13 +179,26 @@ namespace eval SpectrumViewer {
 		variable regions {}
 
 		method AddROI {label min max} {
-			set reg [ukaz::dragregion %AUTO% -orient vertical]
+			set color [RegionColorAlloc alloc $label]
+			set reg [ukaz::dragregion %AUTO% -orient vertical -label $label -color $color]
 			$Graph addcontrol $reg
 			$reg setPosition $min $max
 			
 			dict set regions $label $reg
 
 			puts "ROI $reg"
+		}
+
+		method DeleteROICmd {} {
+			set selROI [$Graph getSelectedControl]
+			set ROIname [$selROI cget -label]
+
+			if {[dict exists $regions $ROIname]} {
+				RegionColorAlloc free $ROIname
+				dict unset regions $ROIname
+			}
+			$selROI destroy
+
 		}
 
 		variable ROInr 0
