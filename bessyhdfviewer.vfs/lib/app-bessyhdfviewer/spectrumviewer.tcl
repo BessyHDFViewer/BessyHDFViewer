@@ -9,102 +9,128 @@ namespace eval SpectrumViewer {
 		component Graph
 		component bbar
 
-		variable spectra
+		variable allspectra
+		variable spectrometers {}
 		variable poscountersets {}
 		variable spectrumfn
 		variable spectrashown {}
 		variable lastselected {}
+		variable validpoints {}
 
 		constructor {} {
-			if {[llength $BessyHDFViewer::HDFFiles] != 1} {
-				return -code error "Only 1 file can be selected!"
+			
+			install bbar using ttk::frame $win.bbar
+			install Graph using ukaz::graph $win.g
+			
+			grid $bbar -sticky nsew
+			grid $Graph -sticky nsew
+			grid columnconfigure $win $Graph -weight 1
+			grid rowconfigure $win $Graph -weight 1
+			
+			
+			set cycleroibtn [ttk::button $bbar.cycle -text "Cycle" -command [mymethod cycle]]
+			set plotallbtn [ttk::button $bbar.plotall -text "Plot all" -command [mymethod plotall]]
+			set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
+			set delroibtn [ttk::button $bbar.del -text "Delete ROI" -command [mymethod DeleteROICmd]]
+			set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
+
+			pack $cycleroibtn -side left
+			pack $plotallbtn -side left
+			pack $addroibtn -side left
+			pack $delroibtn -side left
+			pack $computebtn -side left
+
+			$Graph set log y
+
+			BessyHDFViewer::RegisterPickCallback [mymethod SpectrumPick]
+			
+			set linestyles {
+				{color red}
+				{color black}
+				{color blue}
+				{color green}
+				{color red dash .}
+				{color black dash .}
+				{color blue dash .}
+				{color green dash .}
 			}
-			if {[dict exists $BessyHDFViewer::hdfdata HDDataset]} {
-				set firstkey [lindex [dict keys [dict get $BessyHDFViewer::hdfdata HDDataset]] 0]
-				set spectrumfn [lindex $BessyHDFViewer::HDFFiles 0]
-				set thisspectrum [dict get $BessyHDFViewer::hdfdata HDDataset $firstkey]
-				set spectra [dict create $spectrumfn $thisspectrum]
-				set poscounter [SmallUtils::dict_getdefault $BessyHDFViewer::hdfdata Dataset PosCounter data {}]
 
-				dict set poscountersets $spectrumfn $poscounter
+			ResourceAllocator StyleAlloc $linestyles
+			ResourceAllocator RegionColorAlloc {#FF0000 #00A000 #0000FF #800000 #005000 #000080}
+			
+			BessyHDFViewer::ClearHighlights
+		
+			$self reshape_spectra
+			puts [join $validpoints \n]
 
-				puts "vars: $spectrumfn $firstkey"
-				
-				install bbar using ttk::frame $win.bbar
-				install Graph using ukaz::graph $win.g
-				
-				grid $bbar -sticky nsew
-				grid $Graph -sticky nsew
-				grid columnconfigure $win $Graph -weight 1
-				grid rowconfigure $win $Graph -weight 1
-				
-				
-				set cycleroibtn [ttk::button $bbar.cycle -text "Cycle" -command [mymethod cycle]]
-				set plotallbtn [ttk::button $bbar.plotall -text "Plot all" -command [mymethod plotall]]
-				set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
-				set delroibtn [ttk::button $bbar.del -text "Delete ROI" -command [mymethod DeleteROICmd]]
-				set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
+			$self showspec {*}[lindex $validpoints 0]
+		}
 
-				pack $cycleroibtn -side left
-				pack $plotallbtn -side left
-				pack $addroibtn -side left
-				pack $delroibtn -side left
-				pack $computebtn -side left
-
-				$Graph set log y
-
-				BessyHDFViewer::RegisterPickCallback [mymethod SpectrumPick]
-				
-				set linestyles {
-					{color red}
-					{color black}
-					{color blue}
-					{color green}
-					{color red dash .}
-					{color black dash .}
-					{color blue dash .}
-					{color green dash .}
+		method reshape_spectra {} {	
+			# read the spectra of the displayed files
+			foreach fn $BessyHDFViewer::HDFFiles {
+				# use the cache to accelerate loading for one file
+				if {[llength $BessyHDFViewer::HDFFiles] == 1} {
+					set hdfdata $BessyHDFViewer::hdfdata
+				} else {
+					set hdfdata [BessyHDFViewer::bessy_reshape $fn
 				}
-
-				ResourceAllocator StyleAlloc $linestyles
-				ResourceAllocator RegionColorAlloc {#FF0000 #00A000 #0000FF #800000 #005000 #000080}
 				
-				BessyHDFViewer::ClearHighlights
+				if {![dict exists $hdfdata HDDataset]} { continue }
 				
-				# find first spectrum
-				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
-					if {[dict exists $thisspectrum $Pos]} {
-						$self showspec $spectrumfn $ind
-						set lastselected [list $spectrumfn $ind]
-						break
+				set poscounter [SmallUtils::dict_getdefault $hdfdata Dataset PosCounter data {}]
+				dict set poscountersets $fn $poscounter
+				set spectra [dict get $hdfdata HDDataset]
+				set devices {}
+				foreach {spectrometer data} $spectra {
+					dict set devices $spectrometer 1
+					foreach {Pos counts} $data {
+						dict set allspectra $fn $Pos $spectrometer $counts
 					}
 				}
 
+				dict set spectrometers $fn [dict keys $devices]
+
+				# check for data points with spectra
+				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
+					# check if at least one spectrometer has measured a spectrum here
+					if {[dict exists $allspectra $fn $Pos]} {
+						lappend validpoints [list $fn $ind]
+					}
+				}
 			}
 		}
 
 		method showspec {fn dpnr} {
 			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {![dict exists $spectrashown $fn $Pos]} {
-				if {![dict exists $spectra $fn $Pos]} { return }
+				if {![dict exists $allspectra $fn $Pos]} { return }
+
+				set spectra [dict get $allspectra $fn $Pos]
 				
-				set specdata [SmallUtils::enumerate [dict get $spectra $fn $Pos]]
+				set ids {}
+				foreach {spectrometer data} $spectra {
+					set specdata [SmallUtils::enumerate $data]
 				
-				set ls [StyleAlloc alloc [list $fn $Pos]]
-				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles {*}$ls lw 3 ps 1.5
-				set id [$Graph plot $specdata with lines title "[file tail $fn] $Pos" {*}$ls]
-				dict set spectrashown $fn $Pos $id
+					set ls [StyleAlloc alloc [list $fn $Pos $spectrometer]]
+					BessyHDFViewer::HighlightDataPoint $fn $dpnr pt circles {*}$ls lw 3 ps 1.5
+					lappend ids [$Graph plot $specdata with lines title "[file tail $fn] $Pos" {*}$ls]
+				}
+
+				dict set spectrashown $fn $Pos $ids
 			}
 		}
 
 		method unshowspec {fn dpnr} {
 			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {[dict exists $spectrashown $fn $Pos]} {
-				set id [dict get $spectrashown $fn $Pos]
-				$Graph remove $id
+				set ids [dict get $spectrashown $fn $Pos]
+				foreach id $ids { $Graph remove $id }
 				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt ""
 				dict unset spectrashown $fn $Pos
-				StyleAlloc free [list $fn $Pos]
+				foreach {spectrometer data} [dict get $allspectra $fn $Pos] {
+					StyleAlloc free [list $fn $Pos $spectrometer]
+				}
 			}
 		}
 
@@ -129,8 +155,6 @@ namespace eval SpectrumViewer {
 			} else {
 				set shift false
 			}
-
-			if {$fn ne $spectrumfn} { return }
 
 			set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
 			set Pos [lindex $poscounter $dpnr]
@@ -162,16 +186,8 @@ namespace eval SpectrumViewer {
 		}
 
 		method plotall {} {
-			lassign $lastselected fn dpnr
-			if {$fn ne {}} {
-				set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
-				set thisspectrum [SmallUtils::dict_getdefault $spectra $fn {}]
-				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
-					if {[dict exists $thisspectrum $Pos]} {
-						$self showspec $spectrumfn $ind
-						set lastselected [list $spectrumfn $ind]
-					}
-				}
+			foreach pt $validpoints {
+				$self showspec {*}$pt
 			}
 		}
 
@@ -210,23 +226,31 @@ namespace eval SpectrumViewer {
 		}
 
 		method ComputeROIs {} {
-			lassign [dict keys $regions] firstROIname
-			dict for {fn spectrum} $spectra {
+			
+			dict for {fn spectrum} $allspectra {
 				set counter [BessyHDFViewer::SELECT {PosCounter} [list $fn] -allnan true]
 				set result {}
 				
-				dict for {name reg} $regions {
+				set first true
+				dict for {rname reg} $regions {
 					lassign [$reg getPosition] cmin cmax
 
-					
-					set column {}
-					foreach posc $counter {
-						lappend column [$self ROIeval $spectrum $posc $cmin $cmax]
-					}
+					foreach spectrometer [dict get $spectrometers $fn] {
+						set column {}
+						foreach posc $counter {
+							lappend column [$self ROIeval $spectrum $spectrometer $posc $cmin $cmax]
+						}
 
-					dict set result $name data $column
-					dict set result $name attrs leftMarker $cmin
-					dict set result $name attrs rightMarker $cmax
+						set ROIname ${spectrometer}_${rname}
+						dict set result $ROIname data $column
+						dict set result $ROIname attrs leftMarker $cmin
+						dict set result $ROIname attrs rightMarker $cmax
+
+						if {$first} {
+							set firstROIname $ROIname
+							set first false
+						}
+					}
 				}
 				
 				BessyHDFViewer::SetPlotColumn $fn Detector $firstROIname
@@ -237,9 +261,9 @@ namespace eval SpectrumViewer {
 			BessyHDFViewer::ReDisplay
 		}
 
-		method ROIeval {spectrum posc cmin cmax} {
-			if {![dict exists $spectrum $posc]} { return NaN }
-			set spec [dict get $spectrum $posc]
+		method ROIeval {spectrum spectrometer posc cmin cmax} {
+			if {![dict exists $spectrum $posc $spectrometer]} { return NaN }
+			set spec [dict get $spectrum $posc $spectrometer]
 			
 			set indmin [expr {int($cmin+0.5)}]
 			set indmax [expr {int($cmax+0.5)}]
