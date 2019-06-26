@@ -68,7 +68,6 @@ namespace eval SpectrumViewer {
 			BessyHDFViewer::ClearHighlights
 		
 			$self reshape_spectra
-			puts [join $validpoints \n]
 
 			$self showspec 0
 		}
@@ -130,7 +129,6 @@ namespace eval SpectrumViewer {
 				dict set spectrashown $fn $Pos ids $ids
 				dict set spectrashown $fn $Pos ind $ind
 			}
-			puts $spectrashown
 		}
 
 		method unshowspec {ind} {
@@ -158,7 +156,6 @@ namespace eval SpectrumViewer {
 		method unshowall {} {
 			dict for {fn fnspec} $spectrashown {
 				dict for {Pos data} $fnspec {
-					puts $data
 					$self unshowspec [dict get $data ind]
 				}
 			}
@@ -169,14 +166,11 @@ namespace eval SpectrumViewer {
 			set fn [dict get $clickdata fn]
 			set shiftstate [dict get $clickdata state]
 
-			puts "Shift state $shiftstate"
-
 			set Shift 1
 			set Control 4
 
 			if {$shiftstate & $Shift || $shiftstate & $Control} {
 				set shift true
-				puts "Hold shift/control"
 			} else {
 				set shift false
 			}
@@ -239,8 +233,6 @@ namespace eval SpectrumViewer {
 			$reg setPosition $min $max
 			
 			dict set regions $label $reg
-
-			puts "ROI $reg"
 		}
 
 		method DeleteROICmd {} {
