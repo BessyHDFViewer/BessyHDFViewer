@@ -2343,8 +2343,6 @@ namespace eval BessyHDFViewer {
 			set EVEH5Version [dict get $rawd attrs EVEH5Version]
 		}
 
-		puts "Version of HDF-File: $EVEH5Version"
-
 		# only "real" difference: path to the datasets
 		set chain c1
 
@@ -2361,6 +2359,7 @@ namespace eval BessyHDFViewer {
 			}
 
 			4.0 -
+			5.0 -
 			6  {
 				set path [list data $chain data main data]
 				set optpath [list data $chain data snapshot data]
@@ -2368,7 +2367,8 @@ namespace eval BessyHDFViewer {
 
 
 			default {
-				error "Unknown EVE H5 data version"
+				error "Unknown EVE H5 data version: $EVEH5Version"
+
 			}
 		}
 		
@@ -2424,7 +2424,6 @@ namespace eval BessyHDFViewer {
 		dict set reshaped Unresolved $rawd
 
 		# check for single-shot data stored in alternate / snapshot
-		puts "Snapshot in $optpath"
 		if {$optpath ne {} && [catch {
 			dict for {key dset} [dict get $rawd {*}$optpath] {
 				set name [dict get $dset attrs Name]
