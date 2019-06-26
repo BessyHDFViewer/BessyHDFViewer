@@ -13,7 +13,7 @@ namespace eval SpectrumViewer {
 		variable spectrometers {}
 		variable poscountersets {}
 		variable spectrumfn
-		variable lastselected {}
+		variable lastselected -1
 		variable validpoints {}
 
 		constructor {} {
@@ -44,14 +44,22 @@ namespace eval SpectrumViewer {
 			BessyHDFViewer::RegisterPickCallback [mymethod SpectrumPick]
 			
 			set linestyles {
-				{color red}
-				{color black}
-				{color blue}
-				{color green}
-				{color red dash .}
-				{color black dash .}
-				{color blue dash .}
-				{color green dash .}
+				{color red dash {}}
+				{color black dash {}}
+				{color blue dash {}}
+				{color green dash {}}
+				{color red dash {2 6}}
+				{color black dash {2 6}}
+				{color blue dash {2 6}}
+				{color green dash {2 6}}
+				{color red dash {8 6}}
+				{color black dash {8 6}}
+				{color blue dash {8 6}}
+				{color green dash {8 6}}
+				{color red dash {8 6 2 6}}
+				{color black dash {8 6 2 6}}
+				{color blue dash {8 6 2 6}}
+				{color green dash {8 6 2 6}}
 			}
 
 			ResourceAllocator StyleAlloc $linestyles
@@ -72,7 +80,7 @@ namespace eval SpectrumViewer {
 				if {[llength $BessyHDFViewer::HDFFiles] == 1} {
 					set hdfdata $BessyHDFViewer::hdfdata
 				} else {
-					set hdfdata [BessyHDFViewer::bessy_reshape $fn
+					set hdfdata [BessyHDFViewer::bessy_reshape $fn]
 				}
 				
 				if {![dict exists $hdfdata HDDataset]} { continue }
@@ -200,9 +208,9 @@ namespace eval SpectrumViewer {
 		}
 
 		method cycle {} {
-			if {$lastselected != -1} {
-				$self unshowspec $lastselected
-			}
+			if {$lastselected == -1} { return }
+
+			$self unshowspec $lastselected
 						
 			set ind $lastselected
 			
@@ -216,8 +224,8 @@ namespace eval SpectrumViewer {
 		}
 
 		method plotall {} {
-			foreach pt $validpoints {
-				$self showspec {*}$pt
+			for {set i 0} {$i < [llength $validpoints]} {incr i} {
+				$self showspec $i
 			}
 		}
 
