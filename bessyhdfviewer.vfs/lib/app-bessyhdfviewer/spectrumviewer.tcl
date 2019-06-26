@@ -13,7 +13,6 @@ namespace eval SpectrumViewer {
 		variable spectrometers {}
 		variable poscountersets {}
 		variable spectrumfn
-		variable spectrashown {}
 		variable lastselected {}
 		variable validpoints {}
 
@@ -63,7 +62,7 @@ namespace eval SpectrumViewer {
 			$self reshape_spectra
 			puts [join $validpoints \n]
 
-			$self showspec {*}[lindex $validpoints 0]
+			$self showspec 0
 		}
 
 		method reshape_spectra {} {	
@@ -92,16 +91,19 @@ namespace eval SpectrumViewer {
 				dict set spectrometers $fn [dict keys $devices]
 
 				# check for data points with spectra
-				foreach {ind Pos}  [SmallUtils::enumerate $poscounter] {
+				foreach {dpnr Pos}  [SmallUtils::enumerate $poscounter] {
 					# check if at least one spectrometer has measured a spectrum here
 					if {[dict exists $allspectra $fn $Pos]} {
-						lappend validpoints [list $fn $ind]
+						lappend validpoints [list $fn $dpnr]
 					}
 				}
 			}
 		}
 
-		method showspec {fn dpnr} {
+		variable spectrashown {}
+		method showspec {ind} {
+			lassign [lindex $validpoints $ind] fn dpnr
+			
 			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {![dict exists $spectrashown $fn $Pos]} {
 				if {![dict exists $allspectra $fn $Pos]} { return }
@@ -117,14 +119,18 @@ namespace eval SpectrumViewer {
 					lappend ids [$Graph plot $specdata with lines title "[file tail $fn] $Pos" {*}$ls]
 				}
 
-				dict set spectrashown $fn $Pos $ids
+				dict set spectrashown $fn $Pos ids $ids
+				dict set spectrashown $fn $Pos ind $ind
 			}
+			puts $spectrashown
 		}
 
-		method unshowspec {fn dpnr} {
+		method unshowspec {ind} {
+			lassign [lindex $validpoints $ind] fn dpnr
+			
 			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {[dict exists $spectrashown $fn $Pos]} {
-				set ids [dict get $spectrashown $fn $Pos]
+				set ids [dict get $spectrashown $fn $Pos ids]
 				foreach id $ids { $Graph remove $id }
 				BessyHDFViewer::HighlightDataPoint $fn $dpnr pt ""
 				dict unset spectrashown $fn $Pos
@@ -134,9 +140,20 @@ namespace eval SpectrumViewer {
 			}
 		}
 
-		method specvisible {fn dpnr} {
+		method specvisible {ind} {
+			lassign [lindex $validpoints $ind] fn dpnr
+			
 			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
 			dict exists $spectrashown $fn $Pos
+		}
+
+		method unshowall {} {
+			dict for {fn fnspec} $spectrashown {
+				dict for {Pos data} $fnspec {
+					puts $data
+					$self unshowspec [dict get $data ind]
+				}
+			}
 		}
 
 		method SpectrumPick {clickdata} {
@@ -158,31 +175,44 @@ namespace eval SpectrumViewer {
 
 			set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
 			set Pos [lindex $poscounter $dpnr]
+			set ind [$self getSpecNr $fn $dpnr]
 
-			if {[$self specvisible $fn $dpnr]} {
-				$self unshowspec $fn $dpnr
-				set lastselected {}
+			if {$ind == -1} { return }
+
+			if {$shift} {
+				if {[$self specvisible $ind]} {
+					$self unshowspec $ind
+					set lastselected -1
+				} else {
+					$self showspec $ind
+					set lastselected $ind
+				}
 			} else {
-				$self showspec $fn $dpnr
-				set lastselected [list $fn $dpnr]
+				$self unshowall
+				$self showspec $ind
+				set lastselected $ind
 			}
 		}
 
+		method getSpecNr {fn dpnr} {
+			set ind [lsearch -exact $validpoints [list $fn $dpnr]]
+			return $ind
+		}
+
 		method cycle {} {
-			lassign $lastselected fn dpnr
-			$self unshowspec $fn $dpnr
-
-			if {$fn eq {} || $dpnr eq {}} {
-				return
+			if {$lastselected != -1} {
+				$self unshowspec $lastselected
 			}
+						
+			set ind $lastselected
 			
-			incr dpnr
-			
-			set N [llength [SmallUtils::dict_getdefault $poscountersets $fn {}]]
-			if {$dpnr >= $N} { set dpnr 0 }
+			incr ind 
+			set N [llength $validpoints]
+			if {$ind >= $N} { set ind 0 }
 
-			$self showspec $fn $dpnr
-			set lastselected [list $fn $dpnr]
+			$self showspec $ind
+
+			set lastselected $ind
 		}
 
 		method plotall {} {
@@ -227,6 +257,8 @@ namespace eval SpectrumViewer {
 
 		method ComputeROIs {} {
 			
+			set selROI [$Graph getSelectedControl]
+			
 			dict for {fn spectrum} $allspectra {
 				set counter [BessyHDFViewer::SELECT {PosCounter} [list $fn] -allnan true]
 				set result {}
@@ -235,18 +267,24 @@ namespace eval SpectrumViewer {
 				dict for {rname reg} $regions {
 					lassign [$reg getPosition] cmin cmax
 
+					set Ndevices [llength [dict get $spectrometers $fn]]
 					foreach spectrometer [dict get $spectrometers $fn] {
 						set column {}
 						foreach posc $counter {
 							lappend column [$self ROIeval $spectrum $spectrometer $posc $cmin $cmax]
 						}
-
-						set ROIname ${spectrometer}_${rname}
+						
+						if {$Ndevices == 1 } {
+							set ROIname $rname
+						} else {
+							set ROIname ${spectrometer}_${rname}
+						}
+						
 						dict set result $ROIname data $column
 						dict set result $ROIname attrs leftMarker $cmin
 						dict set result $ROIname attrs rightMarker $cmax
 
-						if {$first} {
+						if {$first && (($reg eq $selROI) || ($selROI eq ""))} {
 							set firstROIname $ROIname
 							set first false
 						}
@@ -270,7 +308,7 @@ namespace eval SpectrumViewer {
 			set range [lrange $spec $indmin $indmax]
 			set result [tcl::mathop::+ {*}$range]
 		
-			return $result
+			return [expr {double($result)}]
 		}
 
 		method SaveROIEval {} {
@@ -281,6 +319,7 @@ namespace eval SpectrumViewer {
 			BessyHDFViewer::UnRegisterPickCallback [mymethod SpectrumPick]
 			BessyHDFViewer::ClearHighlights
 			StyleAlloc destroy
+			RegionColorAlloc destroy
 		}
 	}
 
