@@ -579,7 +579,7 @@ namespace eval DataEvaluation {
 
 		# extract plot info from file, with energy and file attached
 		set rawdata [BessyHDFViewer::SELECT \
-			[list Energy HDF $BessyHDFViewer::xformat $BessyHDFViewer::yformat] \
+			[list Energy HDF $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)] \
 			$BessyHDFViewer::HDFFiles -allnan true]
 
 		lassign [$BessyHDFViewer::w(Graph) cget -xrange] thetamin thetamax
@@ -718,7 +718,7 @@ namespace eval DataEvaluation {
 			
 			lappend output "# Dataset $idx"
 			lappend output "# $title"
-			lappend output "# [BessyHDFViewer::quotedjoin [list $BessyHDFViewer::xformat $BessyHDFViewer::yformat]]"
+			lappend output "# [BessyHDFViewer::quotedjoin [list $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)]]"
 			foreach {x y} $data {
 				lappend output "$x $y"
 			}
@@ -836,7 +836,7 @@ namespace eval DataEvaluation {
 		set ptnr 0
 		variable viewdpmap {}
 		foreach hdfpath $BessyHDFViewer::HDFFiles {
-			set tiffnum [BessyHDFViewer::SELECT [list Pilatus_Tiff $BessyHDFViewer::xformat $BessyHDFViewer::yformat] \
+			set tiffnum [BessyHDFViewer::SELECT [list Pilatus_Tiff $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)] \
 				[list $hdfpath] -allnan true]
 
 			set dpnr -1
