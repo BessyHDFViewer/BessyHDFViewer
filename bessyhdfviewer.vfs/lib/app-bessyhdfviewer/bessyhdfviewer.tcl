@@ -1166,9 +1166,9 @@ namespace eval BessyHDFViewer {
 		variable HDFsshown
 		variable highlightids
 		variable w
-		set hdfid [lindex [dict keys [dict filter $HDFsshown value $hdf]] 0]
+		set hdfids [dict keys [dict filter $HDFsshown value $hdf]]
 
-		if {$hdfid != {}} {
+		foreach hdfid $hdfids {
 			# if this HDF is shown at the moment, highlight the 
 			# corresponding data point
 			$w(Graph) highlight $hdfid $dpnr {*}$args
