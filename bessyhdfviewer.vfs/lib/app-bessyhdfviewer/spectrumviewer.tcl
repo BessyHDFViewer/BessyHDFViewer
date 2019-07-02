@@ -8,6 +8,7 @@ namespace eval SpectrumViewer {
 		
 		component Graph
 		component bbar
+		component scroller
 
 		variable allspectra
 		variable spectrometers {}
@@ -21,7 +22,10 @@ namespace eval SpectrumViewer {
 			install bbar using ttk::frame $win.bbar
 			install Graph using ukaz::graph $win.g
 			
+			install scroller using ttk::scrollbar $win.scroll -orient horizontal -command [mymethod scrollview]
+			
 			grid $bbar -sticky nsew
+			grid $scroller -sticky nsew
 			grid $Graph -sticky nsew
 			grid columnconfigure $win $Graph -weight 1
 			grid rowconfigure $win $Graph -weight 1
@@ -70,6 +74,7 @@ namespace eval SpectrumViewer {
 			$self reshape_spectra
 
 			$self showspec 0
+			$self adjustScrollbar 0
 		}
 
 		method reshape_spectra {} {	
@@ -194,6 +199,8 @@ namespace eval SpectrumViewer {
 				$self showspec $ind
 				set lastselected $ind
 			}
+
+			$self adjustScrollbar $ind
 		}
 
 		method getSpecNr {fn dpnr} {
@@ -202,19 +209,51 @@ namespace eval SpectrumViewer {
 		}
 
 		method cycle {} {
-			if {$lastselected == -1} { return }
-
-			$self unshowspec $lastselected
-						
-			set ind $lastselected
-			
-			incr ind 
 			set N [llength $validpoints]
-			if {$ind >= $N} { set ind 0 }
+			set ind [expr {($lastselected+1) % $N}]
 
+			$self goto $ind
+		}
+		
+		variable curhidden {}
+		method goto {ind} {
+			if {$lastselected != -1 } {
+				$self unshowspec $lastselected
+			}
+						
 			$self showspec $ind
 
+			$self adjustScrollbar $ind
 			set lastselected $ind
+			
+			# move scrollbar
+
+		}
+
+		method adjustScrollbar {ind} {
+			set N [llength $validpoints]
+			set delta [expr {1.0/double($N)}]
+			$scroller set [expr {$ind*$delta}] [expr {($ind+1)*$delta}]
+		}
+
+		method scrollview {op args} {
+			switch $op {
+				scroll {
+					lassign $args distance units
+					set ind $lastselected
+					incr ind $distance
+					$self goto $ind
+				}
+
+				moveto {
+					lassign $args frac
+					set ind [expr {int($frac * [llength $validpoints])}]
+					$self goto $ind
+				}
+
+				default { puts "Unknown scroll command" }
+			}
+			
 		}
 
 		method plotall {} {
@@ -318,8 +357,8 @@ namespace eval SpectrumViewer {
 		destructor {
 			BessyHDFViewer::UnRegisterPickCallback [mymethod SpectrumPick]
 			BessyHDFViewer::ClearHighlights
-			StyleAlloc destroy
-			RegionColorAlloc destroy
+			catch { StyleAlloc destroy }
+			catch { RegionColorAlloc destroy }
 		}
 	}
 
