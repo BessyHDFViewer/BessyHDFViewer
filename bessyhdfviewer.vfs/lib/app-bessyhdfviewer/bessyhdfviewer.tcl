@@ -703,6 +703,7 @@ namespace eval BessyHDFViewer {
 			# or cachemiss == true, i.e. we have already read the file
 			if {!$cachemiss} {
 				# first time we have a cache miss -- try to read the file
+				set temphdfdata {}
 				if {[catch {bessy_reshape $fn} temphdfdata]} {
 					puts "Error reading hdf file $fn"
 					set temphdfdata {}
@@ -789,7 +790,8 @@ namespace eval BessyHDFViewer {
 
 			1 {
 				# focus on one single file - display this
-				variable hdfdata [bessy_reshape [lindex $files 0]]
+				variable hdfdata {} 
+				set hdfdata [bessy_reshape [lindex $files 0]]
 
 				# select the motor/det
 				set BessyClass [bessy_class $hdfdata]
@@ -1450,6 +1452,7 @@ namespace eval BessyHDFViewer {
 			if {$nfiles != 1} {
 				# for multiple files, read the content to hdfdata
 				# for single file, it's already there
+				set hdfdata {}
 				set hdfdata [bessy_reshape $fn]
 			}
 			
@@ -1900,7 +1903,8 @@ namespace eval BessyHDFViewer {
 		set firstrow 0
 		set limit [dict get $opts LIMIT]
 		foreach fn $fnlist {
-			# read HDF file 
+			# read HDF file
+			unset data
 			set data [bessy_reshape $fn]
 			
 			dict set opts -extravars HDF $fn
