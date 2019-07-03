@@ -704,7 +704,7 @@ namespace eval BessyHDFViewer {
 			if {!$cachemiss} {
 				# first time we have a cache miss -- try to read the file
 				set temphdfdata {}
-				if {[catch {bessy_reshape $fn} temphdfdata]} {
+				if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
 					puts "Error reading hdf file $fn"
 					set temphdfdata {}
 
@@ -791,7 +791,7 @@ namespace eval BessyHDFViewer {
 			1 {
 				# focus on one single file - display this
 				variable hdfdata {} 
-				set hdfdata [bessy_reshape [lindex $files 0]]
+				set hdfdata [bessy_reshape [lindex $files 0] -shallow]
 
 				# select the motor/det
 				set BessyClass [bessy_class $hdfdata]
@@ -1453,7 +1453,7 @@ namespace eval BessyHDFViewer {
 				# for multiple files, read the content to hdfdata
 				# for single file, it's already there
 				set hdfdata {}
-				set hdfdata [bessy_reshape $fn]
+				set hdfdata [bessy_reshape $fn -shallow]
 			}
 			
 			foreach {xf yf} $xyformats {
@@ -1582,7 +1582,7 @@ namespace eval BessyHDFViewer {
 		set columnconfig {0 Variables left}
 		foreach fullname $HDFFiles {
 			set shortname [file tail $fullname]
-			lappend data [bessy_reshape $fullname]
+			lappend data [bessy_reshape $fullname -shallow]
 			append columnconfig " 0 $shortname left"
 		}
 
@@ -1905,7 +1905,7 @@ namespace eval BessyHDFViewer {
 		foreach fn $fnlist {
 			# read HDF file
 			unset data
-			set data [bessy_reshape $fn]
+			set data [bessy_reshape $fn -shallow]
 			
 			dict set opts -extravars HDF $fn
 			
@@ -2166,12 +2166,12 @@ namespace eval BessyHDFViewer {
 		tkcon title "BessyHDFViewer Console"
 	}
 
-	proc bessy_reshape {fn} {
+	proc bessy_reshape {fn args} {
 		# switch on the file extension
 		switch [file extension $fn] {
 			.hdf { set data [bessy_reshape_hdf4 $fn] 
 				dict set data {} FileFormat HDF4 }
-			.h5 { set data [bessy_reshape_hdf5 $fn] 
+			.h5 { set data [bessy_reshape_hdf5 $fn {*}$args]
 				dict set data {} FileFormat HDF5 }
 			.dat { set data [bessy_reshape_ascii $fn]
 				dict set data {} FileFormat ASCII }
@@ -2376,9 +2376,21 @@ namespace eval BessyHDFViewer {
 	}
 
 
-	proc bessy_reshape_hdf5 {fn} {
+	proc bessy_reshape_hdf5 {fn {shallow {}}} {
 		SmallUtils::autovar hdf H5pp -args $fn
-		set rawd [$hdf dump]
+		switch $shallow {
+			-shallow {
+				set level 4
+			}
+
+			{} {
+				set level 0
+			}
+
+			default { return -code error "Unknown option $shallow" }
+		}
+
+		set rawd [$hdf dump $level]
 		# read version of HDF file
 		if {![dict exists $rawd attrs EVEH5Version]} {
 			# this is the original version without a version tag
@@ -2855,7 +2867,7 @@ namespace eval BessyHDFViewer {
 	proc bessy_get_keys_flist {flist {category {Detector Motor Dataset Meta}}} {
 		set allkeys {}
 		foreach fn $flist {
-			if {![catch {bessy_reshape $fn} data]} {
+			if {![catch {bessy_reshape $fn -shallow} data]} {
 				lappend allkeys {*}[bessy_get_keys $data $category]
 			}
 		}

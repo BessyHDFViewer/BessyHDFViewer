@@ -80,12 +80,7 @@ namespace eval SpectrumViewer {
 		method reshape_spectra {} {	
 			# read the spectra of the displayed files
 			foreach fn $BessyHDFViewer::HDFFiles {
-				# use the cache to accelerate loading for one file
-				if {[llength $BessyHDFViewer::HDFFiles] == 1} {
-					set hdfdata $BessyHDFViewer::hdfdata
-				} else {
-					set hdfdata [BessyHDFViewer::bessy_reshape $fn]
-				}
+				set hdfdata [BessyHDFViewer::bessy_reshape $fn]
 				
 				if {![dict exists $hdfdata HDDataset]} { continue }
 				

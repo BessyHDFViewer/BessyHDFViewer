@@ -802,7 +802,7 @@ namespace eval DataEvaluation {
 		makeArdeViewer
 		foreach fn $BessyHDFViewer::HDFFiles {
 			set pyfn [pyquote $fn]
-			set hdfdata [BessyHDFViewer::bessy_reshape $fn]
+			set hdfdata [BessyHDFViewer::bessy_reshape $fn -shallow]
 			set properties [BessyHDFViewer::bessy_class $hdfdata]
 			set fileformat [dict get $hdfdata {} FileFormat]
 			set plugin [SmallUtils::dict_getdefault {HDF4 HDF-SAXS HDF5 HDF5-SAXS} $fileformat {}]
