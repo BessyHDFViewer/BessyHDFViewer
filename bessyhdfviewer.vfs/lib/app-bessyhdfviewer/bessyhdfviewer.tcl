@@ -1904,7 +1904,7 @@ namespace eval BessyHDFViewer {
 		set limit [dict get $opts LIMIT]
 		foreach fn $fnlist {
 			# read HDF file
-			unset data
+			set data {}
 			set data [bessy_reshape $fn -shallow]
 			
 			dict set opts -extravars HDF $fn
