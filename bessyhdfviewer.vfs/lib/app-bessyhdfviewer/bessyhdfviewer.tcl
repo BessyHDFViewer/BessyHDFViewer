@@ -949,13 +949,19 @@ namespace eval BessyHDFViewer {
 				append result "# Motors:\n"
 				foreach motor $motors {
 					append result "# \t$motor:\n"
-					append result [DumpAttrib [dict get $table $motor attrs] \t\t]
+					append result [DumpAttrib [SmallUtils::dict_getdefault $table $motor attrs {}] \t\t]
 				}
 				append result "# Detectors:\n"
 				foreach detector $detectors {
 					append result "# \t$detector:\n"
-					append result [DumpAttrib [dict get $table $detector attrs] \t\t]
+					append result [DumpAttrib [SmallUtils::dict_getdefault $table $detector attrs {}] \t\t]
 				}
+				append result "# Datasets:\n"
+				foreach dataset $datasets {
+					append result "# \t$dataset:\n"
+					append result [DumpAttrib [SmallUtils::dict_getdefault $table $dataset attrs {}] \t\t]
+				}
+
 			}
 
 			if {"Columns" in $headerfmt} {
@@ -2454,9 +2460,9 @@ namespace eval BessyHDFViewer {
 
 		}
 		
-		dict_move rawd [list data $chain data meta data PosCountTimer attrs] reshaped [list Detector PosCountTimer attrs]
-		dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Detector PosCountTimer data]
-		lappend joinsets Detector PosCountTimer
+		dict_move rawd [list data $chain data meta data PosCountTimer attrs] reshaped [list Dataset PosCountTimer attrs]
+		dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Dataset PosCountTimer data]
+		lappend joinsets Dataset PosCountTimer
 
 		# now join the datasets via PosCount
 		eveH5OuterJoin reshaped $joinsets
@@ -2549,6 +2555,8 @@ namespace eval BessyHDFViewer {
 		dict set reshaped Motors {}
 		dict set reshaped Detector {}
 		dict set reshaped Detectors {}
+		dict set reshaped Dataset {}
+		dict set reshaped Datasets {}
 		
 		set columns {}
 		set attribpath {{}}
@@ -2603,6 +2611,13 @@ namespace eval BessyHDFViewer {
 			dict set reshaped Detector $detector data {}
 		}
 
+		# move the contents from Datasets to Dataset/attrs
+		dict for {detector attrs} [dict get $reshaped Datasets] {
+			dict set reshaped Dataset $detector attrs $attrs
+			dict set reshaped Dataset $detector data {}
+		}
+
+
 		set table {}
 		set NR 0
 		set maxcolnum 0
@@ -2653,7 +2668,6 @@ namespace eval BessyHDFViewer {
 
 		}
 		
-		dict set reshaped Dataset {}
 		set allsets {}
 		
 		# stick data into reshaped array
