@@ -2281,7 +2281,7 @@ namespace eval BessyHDFViewer {
 		}]
 	}
 
-	proc eveH5OuterJoin {reshapedvar joinlist} {
+	proc eveH5OuterJoin {reshapedvar joinlist extrajoinlist} {
 		upvar $reshapedvar reshaped
 		
 		# read data 
@@ -2297,9 +2297,16 @@ namespace eval BessyHDFViewer {
 		foreach ds $data {
 			foreach {Pos dummy} $ds { lappend PosList $Pos }
 		}
-		
-		# OUTER JOIN into result
 		set UniquePosList [lsort -unique -integer $PosList]
+
+		# append data from extra list
+		foreach {group dset} $extrajoinlist {
+			set ds [dict get $reshaped $group $dset data]
+			lappend data $ds
+			lappend grouplist $group
+		}
+
+		# OUTER JOIN into result
 		set result [list $UniquePosList]
 		foreach ds $data  group $grouplist {
 			set column {}
@@ -2320,7 +2327,7 @@ namespace eval BessyHDFViewer {
 			lappend result $column
 		}
 
-		set posjoinlist [list Dataset PosCounter {*}$joinlist] 
+		set posjoinlist [list Dataset PosCounter {*}$joinlist {*}$extrajoinlist]
 		# write back
 		foreach {group dset} $posjoinlist {column} $result {
 			dict set reshaped $group $dset data $column
@@ -2462,10 +2469,12 @@ namespace eval BessyHDFViewer {
 		
 		dict_move rawd [list data $chain data meta data PosCountTimer attrs] reshaped [list Dataset PosCountTimer attrs]
 		dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Dataset PosCountTimer data]
-		lappend joinsets Dataset PosCountTimer
+		#lappend joinsets Dataset PosCountTimer
 
 		# now join the datasets via PosCount
-		eveH5OuterJoin reshaped $joinsets
+		# add PosCountTimer values, but don't use them in the join
+		# this avoids empty lines for snapshot modules
+		eveH5OuterJoin reshaped $joinsets {Dataset PosCountTimer}
 
 		foreach {group name} $joinsets {
 			dict_move reshaped [list $group $name attrs unit] reshaped [list $group $name attrs Unit]
@@ -2800,20 +2809,24 @@ namespace eval BessyHDFViewer {
 				lappend values {*}[dict get $hdfdata $datakey $field data]
 			}
 		}
-
-		foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot {}} {
-			# keys that might store the field as a single value in the attrs
-			if {[dict exists $hdfdata $attrkey $field]} {
-				lappend values [dict get $hdfdata $attrkey $field]
-			}
-		}
-
-		# MCA stores values as an attribute in the main field 
-		if {[dict exists $hdfdata MCA attrs $field]} {
-			lappend values [dict get $hdfdata MCA attrs $field]
-		}
-
 		
+		if {[llength $values] == 0} {
+			# only consult the snapshot values, when nothing was found
+			# this inhibits wrong ranges from stale motor positions
+			foreach attrkey {DetectorValues MotorPositions OptionalPositions Plot {}} {
+				# keys that might store the field as a single value in the attrs
+				if {[dict exists $hdfdata $attrkey $field]} {
+					lappend values [dict get $hdfdata $attrkey $field]
+				}
+			}
+
+			# MCA stores values as an attribute in the main field
+			if {[dict exists $hdfdata MCA attrs $field]} {
+				lappend values [dict get $hdfdata MCA attrs $field]
+			}
+
+		}
+
 		if {[llength $values] <= 1} {
 			# found nothing or single value - just return that
 			return [lindex $values 0]
