@@ -2471,9 +2471,10 @@ namespace eval BessyHDFViewer {
 		foreach MPname $HDDSnames {
 			set rawmca [dict get $rawd {*}$path $MPname]
 			set name [dict get $rawmca attrs Name]
+			dict set reshaped HDDataset $name attrs [dict get $rawmca attrs]
 			dict for {Pos dataset} [dict get $rawmca data] {
-			       dict set reshaped HDDataset $name $Pos [dict get $dataset data]
-	       		}	       
+			       dict set reshaped HDDataset $name data $Pos [dict get $dataset data]
+	       		}
 			dict unset rawd {*}$path $MPname
 		}
 

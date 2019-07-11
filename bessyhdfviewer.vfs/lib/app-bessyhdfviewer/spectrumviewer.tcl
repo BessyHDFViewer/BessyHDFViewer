@@ -90,7 +90,7 @@ namespace eval SpectrumViewer {
 				set devices {}
 				foreach {spectrometer data} $spectra {
 					dict set devices $spectrometer 1
-					foreach {Pos counts} $data {
+					foreach {Pos counts} [dict get $data data] {
 						dict set allspectra $fn $Pos $spectrometer $counts
 					}
 				}

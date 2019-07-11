@@ -6,7 +6,7 @@ starpacks:
 	# create starpacks with sdx
 	#sdx wrap BessyHDFViewer_Linux32 -vfs bessyhdfviewer.vfs/ -runtime Runtime/Linux_runtime32
 	sdx wrap BessyHDFViewer_Linux64 -vfs bessyhdfviewer.vfs/ -runtime Runtime/Linux_runtime64 
-	sdx wrap BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/Windows_runtime32.exe
+	sdx wrap BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/Windows_runtime64.exe
 
 install: starpacks
 	cp -p BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
@@ -29,5 +29,5 @@ mac:
 	rm -rf dmg
 
 clean:
-	rm -rf BessyHDFViewer_Linux32 BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg 
+	rm -rf BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg 
 
