@@ -946,17 +946,25 @@ namespace eval BessyHDFViewer {
 			set variables [list {*}$motors {*}$detectors {*}$datasets]
 			# write header lines
 			if {"Attributes" in $headerfmt} {
-				append result "# Motors:\n"
+				if {[llength $motors] > 0} {
+					append result "# Motors:\n"
+				}
 				foreach motor $motors {
 					append result "# \t$motor:\n"
 					append result [DumpAttrib [SmallUtils::dict_getdefault $table $motor attrs {}] \t\t]
 				}
-				append result "# Detectors:\n"
+
+				if {[llength $detectors] > 0} {
+					append result "# Detectors:\n"
+				}
 				foreach detector $detectors {
 					append result "# \t$detector:\n"
 					append result [DumpAttrib [SmallUtils::dict_getdefault $table $detector attrs {}] \t\t]
 				}
-				append result "# Datasets:\n"
+
+				if {[llength $datasets] > 0} {
+					append result "# Datasets:\n"
+				}
 				foreach dataset $datasets {
 					append result "# \t$dataset:\n"
 					append result [DumpAttrib [SmallUtils::dict_getdefault $table $dataset attrs {}] \t\t]
@@ -1008,11 +1016,15 @@ namespace eval BessyHDFViewer {
 			-headerfmt [PreferenceGet HeaderFormat {Attributes Columns Filename}] \
 			-title "Export $nfiles files to ASCII" -parent .]
 		
-		if {$choice == {}} {
-			# dialog was cancelled
-			return
+		if {$choice != {}} {
+			# dialog was not cancelled
+			dict set choice files $HDFFiles
+			Export $choice
 		}
 
+	}
+
+	proc Export {choice} {
 		# write back settings to prefs
 		PreferenceSet ExportFormat [dict get $choice format]
 		PreferenceSet ExportGrouping [dict get $choice grouping]
@@ -1025,6 +1037,7 @@ namespace eval BessyHDFViewer {
 		set headerfmt [dict get $choice headerfmt]
 		set grouping  [dict get $choice grouping]
 		set groupby [dict get $choice groupby]
+		set files [dict get $choice files]
 		
 
 		if {$stdformat} {
@@ -1033,7 +1046,7 @@ namespace eval BessyHDFViewer {
 				SmallUtils::autofd fd [dict get $choice path] wb
 			}
 
-			foreach hdf $HDFFiles {
+			foreach hdf $files {
 				if {!$singlefile} {
 					# in case of multiple files, open separately for each 
 					# HDF input file. Path is the dirname then
@@ -1054,7 +1067,7 @@ namespace eval BessyHDFViewer {
 			if {$singlefile} {
 				SmallUtils::autofd fd [dict get $choice path] wb
 				if {"Filename" in $headerfmt} {
-					foreach hdf $HDFFiles {
+					foreach hdf $files {
 						puts $fd "# $hdf"
 					}
 				}
@@ -1070,7 +1083,7 @@ namespace eval BessyHDFViewer {
 					puts $fd "[join $format \t]"
 				}
 
-				set data [SELECT $format $HDFFiles -allnan true]
+				set data [SELECT $format $files -allnan true]
 				if {$grouping} {
 					set data [GROUP_BY $data $groupby]
 				}	
@@ -1078,7 +1091,7 @@ namespace eval BessyHDFViewer {
 
 			} else {
 				# individual files
-				foreach hdf $HDFFiles {
+				foreach hdf $files {
 					set roottail [file rootname [file tail $hdf]]
 					SmallUtils::autofd fd [file join [dict get $choice path] $roottail.dat] wb
 					if {"Filename" in $headerfmt} {
