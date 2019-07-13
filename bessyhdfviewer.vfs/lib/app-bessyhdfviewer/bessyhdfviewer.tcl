@@ -310,7 +310,7 @@ namespace eval BessyHDFViewer {
 		tooltip::tooltip $w(keepzoom) "Check to keep the plot range when switching files"
 
 		
-		set w(addrow) [ttk::button $w(axebar).addbtn -image [IconGet list-add] \
+		set w(addrow) [ttk::button $w(axebar).addbtn -image [IconGet list-add-small] \
 			-command ${ns}::AddPlotRow -style Toolbutton]
 		tooltip::tooltip $w(addrow) "Add another plot from the same file"
 

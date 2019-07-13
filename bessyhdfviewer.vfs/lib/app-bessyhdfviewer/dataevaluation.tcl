@@ -15,7 +15,7 @@ namespace eval DataEvaluation {
 		XRR-FFT	   xrr       "Perform FFT evaluation of XRR data"
 		ArdeViewer	ardeviewer       "Show referenced TIFF in external viewer"
 		ArdeViewerHDF	ardeviewer-hdf       "open selected HDF in external viewer"
-		OpenSpectrum	mca	"Display embedded spectra"
+		OpenSpectrum	spectrumviewer	"Display embedded spectra"
 	}
 
 
