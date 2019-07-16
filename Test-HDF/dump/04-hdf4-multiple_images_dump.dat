@@ -1,0 +1,216 @@
+# MessprogrammVersion	 = 6.230000019073486
+# Messplatz	 = kmc
+# Comment	 = SiN-Fenster (15x) Transmission
+# ReferenceScan	 = 0
+# MeanInterval	 = 5.0
+# StartTime	 = 20:08:13
+# StartDate	 = 05.02.2014
+# EndTime	 = 20:12:21
+# FileFormat	 = HDF4
+#
+# MotorPositions:
+# 	Time	 = 0.800000011920929
+# 	Slit_1_vert_pos	 = -1.0
+# 	Slit_1_hor_pos	 = 0.9999999999999973
+# 	Slit_2_vert_pos	 = 0.0
+# 	Slit_3_vert_pos	 = 1.1999999999999975
+# 	Slit_3_hor_pos	 = 2.800000000000002
+# 	Slit_4_vert_pos	 = -1.4993750000000001
+# 	Slit_4_hor_pos	 = 3.3300000000000005
+# 	Filter_CCD_pinholes	 = 51.5
+# 	Slit_1_up	 = 22.9
+# 	Slit_1_down	 = 14.899999999999999
+# 	Slit_1_right	 = 25.529999999999998
+# 	Slit_1_left	 = 15.040000000000003
+# 	Filter_1	 = 66.5
+# 	Filter_2	 = 99.7
+# 	Mirror_1_hor	 = 0.0
+# 	Mirror_1_vert	 = -0.4800000000000001
+# 	Mirror_1_theta	 = 7.4049264751
+# 	Mirror_1_psi	 = -1.548886225
+# 	Slit_2_up	 = 41.85
+# 	Slit_2_down	 = 21.68
+# 	Beam_pos_vert	 = 1.0
+# 	Beam_pos_hor	 = 1.0
+# 	Mono_1st_wheel	 = 33.5385
+# 	Crystal_1_phi	 = 2.3865
+# 	Crystal_2_theta	 = 8.3054997406006
+# 	Diode_in_mono	 = 90.0
+# 	Mono_2nd_wheel	 = 33.5385
+# 	Crystal_3_theta	 = 3.9576999446868903
+# 	Crystal_3_phi	 = 19.733
+# 	Crystal_4_phi	 = 4.399500000000001
+# 	Mono_cr_change	 = 0.9999858999999987
+# 	Diode_behind_mono	 = 5.0
+# 	Slit_3_up	 = 16.579999999999995
+# 	Slit_3_down	 = 42.03
+# 	Slit_3_right	 = 30.35
+# 	Slit_3_left	 = 31.549999999999997
+# 	Mirror_2_hor	 = 24.0
+# 	Mirror_2_vert	 = 1.299987500000002
+# 	Mirror_2_theta	 = 7.749969204
+# 	Slit_4_up	 = -2.6925
+# 	Slit_4_down	 = -0.7037499999999999
+# 	Slit_4_right	 = 3.3350000000000004
+# 	Slit_4_left	 = -2.125
+# 	pinhole_1_y	 = 39.1806
+# 	pinhole_1_x	 = -1.9050000000000011
+# 	Ref_Diodes	 = 1.0
+# 	Lift_table	 = 613.5699935600001
+# 	Pinhole_2_X	 = 57.35
+# 	Pinhole_2_Y	 = 4.09995
+# 	Theta	 = 0.0
+# 	2Theta	 = -8.780000000000001
+# 	Det.-X	 = -2.879999999999999
+# 	Sample-X	 = 92.5
+# 	Sample-Y	 = -2.5
+# 	Sample-Z	 = 5.0
+# 	Tilt-Z	 = -0.009999999999999981
+# 	Tilt-Y	 = 0.0
+# 	Beamstop_X	 = -1.5
+# 	Beamstop_Y	 = -3.0009999999999906
+# 	pilatus_hor	 = 2.0
+# 	pilatus_vert	 = 31.0
+# 	nomTemperature	 = 29.9
+# 	Bieger	 = 2.75
+# 	PilatusAcqTime	 = 120.0
+# 	PilatusThreshold	 = 1.7
+# 	Slit_1_vert_size	 = 3.0
+# 	Slit_1_hor_size	 = 5.0
+# 	Slit_2_vert_size	 = 30.0
+# 	Slit_3_vert_size	 = 29.0
+# 	Slit_3_hor_size	 = 35.0
+# 	Slit_4_vert_size	 = 1.30125
+# 	Slit_4_hor_size	 = 2.000000000000001
+# 	Energy	 = 2999.9999808975635
+#
+# DetectorValues:
+# 	Time	 = 0.722000002861023
+# 	K2norm	 = 1.3162699365893589e-15
+# 	nominator02	 = 3.9226e-13
+# 	denominator02	 = 298.0087815546414
+# 	normStdev02	 = 0.0
+# 	K3norm	 = -7.80231409557795e-15
+# 	nominator03	 = -2.3252e-12
+# 	denominator03	 = 298.0141495864455
+# 	normStdev03	 = 0.0
+# 	Offset_1st_wheel	 = -6.93
+# 	Offset_2nd_wheel	 = 210.27915000000002
+# 	Offset_Theta	 = 517.179
+# 	Offset_2Theta	 = 102.096
+# 	Beam_Pos	 = 0.3806055969622142
+# 	PTB_U49	 = 25.1306
+# 	Pot_Mi_1_hor	 = 3.510446336870045
+# 	Pot_Mi_1_vert	 = 3.0909917679611936
+# 	Pot_Mi_1_theta	 = 3.796268016234839
+# 	Pot_Mi_1_psi	 = 5.387862446795922
+# 	Tilt_Mi_1_theta	 = 8.269448113005623
+# 	Tilt_Mi_1_phi	 = -3.453058941628871
+# 	FCM_Diff	 = -0.0032606225474629425
+# 	Tilt_Mono_theta	 = -0.08862299183090909
+# 	Tilt_Mono_psi	 = 0.167322906803629
+# 	Therm_int	 = 29.8
+# 	Therm_ext	 = 28.3
+# 	Mono_Cu_Temp	 = 29.877164873731747
+# 	Cr_1_Cu_Bloc	 = 29.318684672312656
+# 	Cr_2_Si_Temp	 = 30.206759746700392
+# 	Mon_Gear_Temp	 = 31.677729457541933
+# 	Cr_3_Si_Temp	 = 28.767842823730092
+# 	Cr_4_InSb_Temp	 = 28.287741577632154
+# 	Pot_Mi_2_hor	 = 1.9655952542298265
+# 	Pot_Mi_2_vert	 = 9.831114234173103
+# 	Pot_Mi_2_theta	 = 3.490203103835045
+# 	Tilt_Mi_2_theta	 = 5.287722970979342
+# 	Tilt_Mi_2_phi	 = -0.33495865074109277
+# 	Pressure_Bender	 = 2.7491399534501535
+# 	Temp0	 = 33.0
+# 	Temp1	 = 28.600000381469727
+# 	Temp2	 = 9.0
+# 	Humid0	 = 20.600000381469727
+# 	Humid1	 = 26.0
+# 	Humid2	 = 0.0
+# 	Ring_1	 = 298.0087815546414
+# 	Bessy_Ringstrom	 = 298.9078018
+# 	Bessy_Lebensdauer	 = 6.221872792008978
+# 	Lebensdauer_1	 = 6.182659732094767
+#
+# OptionalPositions:
+# 	SHUTTER	 = Open
+# 	CRYSTAL_COOLING	 = InSb
+# 	SPOT_CCD_SCREEN	 = out
+# 	Thermostat	 = no fault
+# 	CrystalMots	 = Motors OK
+# 	FILTER_PINHOLES	 = Al
+# 	FILTER_1	 = 25um Be
+# 	FILTER_2	 = None
+# 	DIODE_IN_MONO	 = Out
+# 	DIODE_BEHIND_MONO	 = Out
+# 	COATING_2nd_MIR	 = MgF2
+# 	REF_DIODES	 = None
+# 	2THETA	 = Undefined
+#
+# Plot:
+# 	Motor	 = Optional
+# 	Detector	 = Pilatus_Tiff
+# 	PeakPos	 = 1.0
+# 	PeakValue	 = 376.0
+# 	CenterPos	 = 1.0
+# 	CenterPercentage	 = 50
+# 	PeakWidth	 = 0.0
+# 	Mean	 = 375.5
+# 	RelPercentStandardDeviation	 = 0.1883107273466172
+# 	StartPos	 = 1.0
+# 	EndPos	 = 1.0
+# 	NormOnReferenceScan	 = 0
+#
+# Motors:
+# 	Optional:
+# 		Unit	 = ......
+# Detectors:
+# 	Time:
+# 		Unit	 = s
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 0.0
+# 		ToleranceLimit	 = 0.0
+# 		ToleranceAttempts	 = 10
+# 	Therm_int_mean:
+# 		PV	 = HubCC:tsrv09S5intSensor
+# 		Unit	 = °C
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 0.0
+# 		ToleranceLimit	 = 0.0
+# 		ToleranceAttempts	 = 10
+# 	Therm_int_dev:
+# 		PV	 = HubCC:tsrv09S5intSensor
+# 		Unit	 = °C
+# 	Therm_ext_mean:
+# 		PV	 = HubCC:tsrv09S5extSensor
+# 		Unit	 = °C
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 0.0
+# 		ToleranceLimit	 = 0.0
+# 		ToleranceAttempts	 = 10
+# 	Therm_ext_dev:
+# 		PV	 = HubCC:tsrv09S5extSensor
+# 		Unit	 = °C
+# 	Ring_1_mean:
+# 		PV	 = bIICurrent:Mnt1
+# 		Unit	 = mA
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 0.0
+# 		ToleranceLimit	 = 0.0
+# 		ToleranceAttempts	 = 10
+# 	Ring_1_dev:
+# 		PV	 = bIICurrent:Mnt1
+# 		Unit	 = mA
+# 	Pilatus_Tiff:
+# 		PV	 = Pil1M:cam1:lastFileNr
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 0.0
+# 		ToleranceLimit	 = 0.0
+# 		ToleranceAttempts	 = 10
+# 		MamaName	 = Pilatus
+# 		MamaPV	 = <Pil1M>
+# Optional	Time	Therm_int_mean	Therm_int_dev	Therm_ext_mean	Therm_ext_dev	Ring_1_mean	Ring_1_dev	Pilatus_Tiff
+1.0	0.9570000171661377	29.91199999999999	0.06658328118479388	28.31199999999999	0.04396968652757584	297.87281083341406	0.2758853887519126	375.0
+1.0	122.59400177001953	29.907999999999987	0.02768874620972731	28.33999999999999	0.05773502691896171	298.0766410793758	0.32244819087841786	376.0

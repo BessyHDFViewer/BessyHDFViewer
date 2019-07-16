@@ -108,7 +108,7 @@ namespace eval BessyHDFViewer {
 		InitCache
 		InitGUI
 
-		if {[llength $argv] != 0 && [tk windowingsystem] != "aqua"} {
+		if {[llength $argv] != 0} {
 			# start arguments
 			OpenArgument $argv
 		}
@@ -1804,7 +1804,17 @@ namespace eval BessyHDFViewer {
 		variable w
 		# take a number of absolute file names
 		# navigate to top dir and display
-		if {[llength $files]<1} { return }	
+		if {[llength $files]<1} { return }
+
+		# check if "Test" is the first argument. In that case, 
+		# run the test suite instead of opening the file
+
+		lassign $files Test folder
+
+		if {$Test eq "Test"} {
+			RunTest $folder
+			exit
+		}
 		
 		# find common ancestor
 		set ancestor [SmallUtils::file_common_dir $files]
@@ -2913,6 +2923,57 @@ namespace eval BessyHDFViewer {
 			}
 		}
 		return [lsort -uniq $allkeys]
+	}
+
+	proc RunTest {folder} {
+		# open all .hdf .h5 and .dat files in the given folder
+		# compare with the ASCII dump in the dump folder
+		package require fileutil
+
+		set files [lsort [glob -directory $folder *.hdf *.h5 *.dat]]
+		set errors {}
+		set diffs  {}
+		set success 0
+		set failed 0
+		foreach fn $files {
+			puts "Testing $fn"
+			set rootname [file rootname [file tail $fn]]
+
+			if {[catch {
+				set hdfdata [bessy_reshape $fn]
+				set dump [Dump $hdfdata]
+				set refdump [fileutil::cat -encoding utf-8 -translation binary $folder/dump/${rootname}_dump.dat]
+
+				set diff [SmallUtils::difftext $refdump $dump]
+
+				} _ errdict]} {
+				# got an error
+				set error [dict get $errdict -errorinfo]
+				dict set errors $fn $error
+				incr failed
+				puts "Test failed with error: $fn"
+				puts $error
+			} else {
+				if {$diff ne {}} {
+					dict set $diffs $fn $diff
+					puts "Test failed $fn: Result was different"
+					puts $diff
+
+					# write result into file in the dumps dir
+					fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_failedresult.dat $dump
+					incr failed
+				} else {
+					incr success
+				}
+			}
+			
+		}
+
+		set nerrors [dict size $errors]
+		set ndiffs [dict size $diffs]
+
+		puts "Result: $failed failed $success successful total [expr {$success+$failed}]"
+
 	}
 
 

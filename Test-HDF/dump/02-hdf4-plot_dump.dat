@@ -1,0 +1,221 @@
+# MessprogrammVersion	 = 6.21999979019165
+# Messplatz	 = kmc
+# ReferenceScan	 = 0
+# MeanInterval	 = 5.0
+# StartTime	 = 13:34:58
+# StartDate	 = 07.09.2012
+# EndTime	 = 13:35:47
+# FileFormat	 = HDF4
+#
+# MotorPositions:
+# 	Time	 = 8.66100025177002
+# 	Slit_3_vert_pos	 = -0.5
+# 	Slit_3_hor_pos	 = -2.3
+# 	Slit_4_vert_pos	 = -0.12000000000000022
+# 	Slit_4_hor_pos	 = 0.94
+# 	Slit_1_vert_pos	 = -0.71
+# 	Slit_1_hor_pos	 = 0.09999999999999876
+# 	Slit_2_vert_pos	 = 0.0
+# 	Filter_CCD_pinholes	 = 51.5
+# 	Slit_1_up	 = 23.165
+# 	Slit_1_down	 = 15.556249999999999
+# 	Slit_1_right	 = 30.875
+# 	Slit_1_left	 = 20.075000000000003
+# 	Filter_1	 = 33.5
+# 	Filter_2	 = 99.1
+# 	Mirror_1_hor	 = 0.0
+# 	Mirror_1_vert	 = -0.4800000000000003
+# 	Mirror_1_theta	 = 7.4003079291762885
+# 	Mirror_1_psi	 = -0.3003182179793159
+# 	Slit_2_up	 = 13.83625
+# 	Slit_2_down	 = 38.31125
+# 	Beam_pos_vert	 = 0.0
+# 	Beam_pos_hor	 = 0.10000000000000142
+# 	Mono_1st_wheel	 = 12.69145
+# 	Crystal_1_phi	 = 2.1236250000000005
+# 	Crystal_2_theta	 = 8.069249740600588
+# 	Crystal_2_phi	 = 3.8558000000000003
+# 	Diode_in_mono	 = 90.0
+# 	Mono_2nd_wheel	 = 12.69145000000001
+# 	Crystal_3_theta	 = 3.5731999446868903
+# 	Crystal_3_phi	 = 19.900000000000002
+# 	Crystal_4_phi	 = 4.252000000000001
+# 	Mono_cr_change	 = 54.0000848
+# 	Diode_behind_mono	 = 5.0
+# 	Ref_Diodes	 = 15.000000000000004
+# 	Slit_3_up	 = 14.475
+# 	Slit_3_down	 = 40.075
+# 	Slit_3_right	 = 27.1
+# 	Slit_3_left	 = 34.1
+# 	Mirror_2_hor	 = 0.0
+# 	Mirror_2_vert	 = 1.3000000000000014
+# 	Mirror_2_theta	 = 7.639961505
+# 	Lift_table	 = 613.21640212
+# 	Slit_4_up	 = -2.74
+# 	Slit_4_down	 = -0.6099999999999999
+# 	Slit_4_right	 = -0.27
+# 	Slit_4_left	 = -0.9500000000000001
+# 	Theta	 = 0.0
+# 	2Theta	 = 0.0
+# 	Det.-X	 = 0.0
+# 	Sample-X	 = 85.5
+# 	Sample-Y	 = 2.299999999999997
+# 	Sample-Z	 = 0.0
+# 	Tilt-Z	 = 0.0
+# 	Tilt-Y	 = 0.0
+# 	Pinhole_Y	 = -0.35812500000000114
+# 	Pinhole_X	 = 50.932249999999996
+# 	Screen	 = 72.000072
+# 	BeamStop_X	 = 5.600144
+# 	BeamStop_Y	 = 9.299944400000001
+# 	VacSampleX	 = 103.0
+# 	Diode	 = 90.0
+# 	SAXS_X1	 = 26.8
+# 	SAXS_X2	 = 42.0
+# 	HubAchse1	 = -1.2
+# 	HubAchse2	 = -3.7
+# 	BalgSystem	 = 3.1
+# 	Det_SAXS	 = 3450.0000226
+# 	nomTemperature	 = 29.9
+# 	Bieger	 = 2.2
+# 	PilatusAcqTime	 = 30.0
+# 	PilatusThreshold	 = 4.0
+# 	SAXS_angle	 = -0.025464755811845555
+# 	Slit_3_vert_size	 = 25.000000000000004
+# 	Slit_3_hor_size	 = 35.0
+# 	Slit_4_vert_size	 = 0.8000000000000003
+# 	Slit_4_hor_size	 = 1.1999999999999997
+# 	Slit_1_vert_size	 = 3.0
+# 	Slit_1_hor_size	 = 6.0
+# 	Slit_2_vert_size	 = 20.0
+# 	Energy	 = 9000.030036731794
+#
+# DetectorValues:
+# 	Time	 = 46.60200119018555
+# 	Mono_Cu_Temp	 = 28.352
+# 	Cr_1_Cu_Bloc	 = 29.281
+# 	Cr_2_Si_Temp	 = 30.297
+# 	Mon_Gear_Temp	 = 31.927
+# 	Cr_3_Si_Temp	 = 28.625
+# 	Cr_4_InSb_Temp	 = 28.201
+# 	K7001	 = 0.0
+# 	Offset_1st_wheel	 = -7.1015000000000015
+# 	Offset_2nd_wheel	 = 209.98690000000002
+# 	Offset_Theta	 = 156.786
+# 	Offset_2Theta	 = 63.539
+# 	Keithley1	 = -9.1694e-12
+# 	Keithley2	 = 7.45e-15
+# 	Keithley3	 = 1.8836e-11
+# 	Keithley4	 = 1.8102e-11
+# 	Beam_Pos	 = 0.49959036556302183
+# 	PTB_U49	 = 25.4115
+# 	Beam_current	 = 175.8905318555843
+# 	Beam_Lifetime	 = 15.160861436315447
+# 	Pot_Mi_1_hor	 = 3.5042040659074116
+# 	Pot_Mi_1_vert	 = 3.085389280871913
+# 	Pot_Mi_1_theta	 = 3.788194908384253
+# 	Pot_Mi_1_psi	 = 5.35835032485652
+# 	Tilt_Mi_1_theta	 = 8.249790335671777
+# 	Tilt_Mi_1_phi	 = -3.486439094563342
+# 	FCM_Diff	 = 3.5592032206871593
+# 	Tilt_Mono_theta	 = -0.07578658582237063
+# 	Tilt_Mono_psi	 = 0.1729995961032129
+# 	Therm_int	 = 34.0
+# 	Therm_ext	 = 29.9
+# 	Pot_Mi_2_hor	 = 8.855087205869363
+# 	Pot_Mi_2_vert	 = 9.824440528132518
+# 	Pot_Mi_2_theta	 = 3.474624638427797
+# 	Tilt_Mi_2_theta	 = 5.128053562042023
+# 	Tilt_Mi_2_phi	 = -0.6065522024481543
+# 	MarPosition	 = 142.274
+# 	Ring_1	 = 175.9002086321153
+# 	Ring_2	 = 176.10428684777088
+# 	Bessy_Ringstrom	 = 176.30417844349074
+# 	Bessy_Lebensdauer	 = 15.31204241469361
+# 	Lebensdauer_1	 = 15.160861436315447
+# 	Lebensdauer_2	 = 15.129006062243775
+#
+# OptionalPositions:
+# 	FILTER_PINHOLES	 = Al
+# 	FILTER_1	 = 125um Be
+# 	FILTER_2	 = None
+# 	DIODE_IN_MONO	 = Out
+# 	DIODE_BEHIND_MONO	 = Out
+# 	REF_DIODES	 = None
+# 	SHUTTER	 = Open
+# 	CRYSTAL_COOLING	 = Si
+# 	SPOT_CCD_SCREEN	 = out
+# 	Thermostat	 = no fault
+# 	COATING_2nd_MIR	 = Pt
+#
+# Plot:
+# 	Motor	 = Sample-Y
+# 	Detector	 = Keithley3
+# 	Monitor	 = Beam_current
+# 	PeakPos	 = 2.559999942779541
+# 	PeakValue	 = 8.103399617986895e-10
+# 	CenterPos	 = 2.5592202776176824
+# 	CenterPercentage	 = 50
+# 	PeakWidth	 = 0.24316384788343237
+# 	Mean	 = 3.460091532831855e-10
+# 	RelPercentStandardDeviation	 = 87.29550532291897
+# 	StartPos	 = 2.299999952316284
+# 	EndPos	 = 2.859999895095825
+# 	NormOnReferenceScan	 = 0
+#
+# Motors:
+# 	Sample-Y:
+# 		Unit	 = mm
+# 		PV	 = OMS58:io1500002
+# Detectors:
+# 	Keithley3:
+# 		PV	 = K0617:22728
+# 		Unit	 = A
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 1.0
+# 		ToleranceLimit	 = 5e-13
+# 		ToleranceAttempts	 = 10
+# 		zeroChk	 = zCheckOff
+# 		display	 = Electrometer
+# 		function	 = Amps
+# 		blSupp	 = bSuppOff
+# 		vsMode	 = vSourceOff
+# 		range	 = Auto
+# 		zeroCor	 = zCorrOff
+# 	Beam_current:
+# 		PV	 = ringCurrent1
+# 		Unit	 = mA
+# 		MesPerPos	 = 1
+# 		Tolerance	 = 1.0
+# 		ToleranceLimit	 = 5e-14
+# 		ToleranceAttempts	 = 10
+# Sample-Y	Keithley3	Beam_current
+2.299999999999997	1.45825e-9	176.01286998870702
+2.319999999999993	3.8057e-9	176.00332651325016
+2.3399999999999963	8.1668e-9	175.997104496758
+2.3599999999999994	1.51053e-8	175.99516942704622
+2.3799999999999955	2.572e-8	175.99129936030116
+2.3999999999999986	3.851e-8	175.98742927352728
+2.4199999999999946	5.4871e-8	175.98549418581024
+2.4399999999999977	7.3528e-8	175.98366910312805
+2.4599999999999937	9.1472e-8	175.9798132481194
+2.479999999999997	1.0796e-7	175.97788439287515
+2.499999999999993	1.22783e-7	175.97402812018274
+2.519999999999996	1.33604e-7	175.97145159096806
+2.539999999999999	1.40474e-7	175.96951832080728
+2.559999999999995	1.42592e-7	175.96565223692275
+2.5799999999999983	1.40165e-7	175.96371776092658
+2.5999999999999943	1.33602e-7	175.9598515506791
+2.6199999999999974	1.2274e-7	175.95791831761497
+2.6399999999999935	1.08569e-7	175.9541955577514
+2.6599999999999966	9.0765e-8	175.9522671566365
+2.6799999999999926	7.204e-8	175.94840906357857
+2.6999999999999957	5.3851e-8	175.94648064497056
+2.719999999999999	3.647e-8	175.94360160284478
+2.739999999999995	2.2286e-8	175.93972927394188
+2.759999999999998	1.23714e-8	175.9377929027545
+2.779999999999994	6.7615e-9	175.93391951249166
+2.799999999999997	3.7034e-9	175.9300459981463
+2.819999999999993	1.74033e-9	175.92799693913378
+2.8399999999999963	5.3344e-10	175.92220278134437
+2.8599999999999994	4.301e-11	175.91833994216108

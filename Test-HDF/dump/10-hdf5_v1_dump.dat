@@ -1,0 +1,45 @@
+# Comment	 = Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird
+# Version	 = 1.9
+# XMLversion	 = 2.2
+# Location	 = TEST
+# StartTime	 = 13:44:25
+# StartDate	 = 08.02.2013
+# FileFormat	 = HDF5
+#
+# Motors:
+# 	PP_Motor1:
+# 		XML-ID	 = PPSMC:gw23715000
+# 		Name	 = PP_Motor1
+# 		Access	 = ca:PPSMC:gw23715000
+# 		DeviceType	 = Axis
+# 		Position	 = 5
+# 		Unit	 = mm
+# Detectors:
+# 	DWL20-C-EUVR-K617-1:
+# 		XML-ID	 = K0617:gw22126chan1
+# 		Name	 = DWL20-C-EUVR-K617-1
+# 		Access	 = ca:K0617:gw22126.VAL
+# 		DeviceType	 = Channel
+# 		Unit	 = A
+# 	Channel00:
+# 		XML-ID	 = P5000:gw2370700
+# 		Name	 = Channel00
+# 		Access	 = ca:P5000:gw2370700.VAL
+# 		DeviceType	 = Channel
+# 		Unit	 = V=
+# 	Ring_1:
+# 		XML-ID	 = bIICurrent:Mnt1chan1
+# 		Name	 = Ring_1
+# 		Access	 = ca:bIICurrent:Mnt1.VAL
+# 		DeviceType	 = Channel
+# 		Unit	 = mA
+# Datasets:
+# 	PosCountTimer:
+# 		unit	 = msecs
+# 	PosCounter:
+# PP_Motor1	DWL20-C-EUVR-K617-1	Channel00	Ring_1	PosCountTimer	PosCounter
+5.0	6.437000000000001e-14	0.1039058	298.4814683310819	3617	1
+5.25	6.352e-14	0.1028099	298.45249277506827	6202	2
+5.5	6.56e-14	0.1029641	298.36476886913	14317	3
+5.75	6.47e-14	0.1028593	298.2480499876271	25221	4
+6.0	6.536e-14	0.1018755	298.49300596457215	34247	5

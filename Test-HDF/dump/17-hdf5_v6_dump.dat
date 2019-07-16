@@ -1,0 +1,103 @@
+# EVEH5Version	 = 6
+# Comment	 = NewRef @ PGM-Fokus
+# Version	 = 1.30.0
+# XMLversion	 = 6.0
+# Location	 = PGM
+# SCML-Name	 = template_2019_pgm.scml
+# SCML-Author	 = lcibik@odo
+# StartTimeISO	 = 2019-01-07T10:18:01
+# StartTime	 = 10:18:01
+# StartDate	 = 07.01.2019
+# EndTimeISO	 = 2019-01-07T10:18:37
+# FileFormat	 = HDF5
+#
+# MotorPositions:
+# 	Counter	 = 0
+# 	Offset_Theta	 = -533.286
+# 	Offset_2Theta	 = 107.757
+# 	Sample-Z	 = 0.0
+# 	Tilt-Z	 = 0.0
+# 	Sample-Y	 = -1.4210854715202004e-14
+# 	Tilt-Y	 = 0.0
+# 	Theta	 = 1.1368683772161603e-13
+# 	2Theta	 = -12.799999999999997
+# 	Det.-X	 = 0.0
+# 	Sample-X	 = 76.85
+# 	date Timer	 = 2019-01-07T10:18:19.160+01:00
+# 	Timer	 = 0.001
+# 	msec Timer	 = 0
+# 	bsdd6_PreLifeTime	 = 0.0
+# 	bsdd6_PreRealTime	 = 0.0
+#
+# DetectorValues:
+# 	Bessy_Ringstrom	 = 77.39645439
+# 	Bessy_Lebensdauer	 = 13.869375335520429
+# 	Offset_Theta	 = -533.286
+# 	Offset_2Theta	 = 107.757
+# 	SM-Counter	 = 2
+# 	date Time	 = 2019-01-07T10:18:19.171+01:00
+# 	Time	 = 17.689
+# 	msec Time	 = 17689
+# 	Ring_1	 = 77.47900987087452
+# 	Lebensdauer_1	 = 13.471044862584593
+# 	TopupState	 = decay
+# 	Ring_2	 = 77.22791031641545
+# 	Lebensdauer_2	 = 10.304589492030557
+#
+# Plot:
+# 	Motor	 = Sample-X
+# 	Detector	 = PGM_K617_3
+# 	Monitor	 = Ring_2
+#
+# Motors:
+# 	Sample-X:
+# 		XML-ID	 = OMS58:io1501003
+# 		Name	 = Sample-X
+# 		Access	 = ca:OMS58:io1501003
+# 		Unit	 = mm
+# 		DeviceType	 = Axis
+# Detectors:
+# 	PGM_K617_1:
+# 		XML-ID	 = K0617:gw22225chan1
+# 		Name	 = PGM_K617_1
+# 		Access	 = ca:K0617:gw22225.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	PGM_K617_3:
+# 		XML-ID	 = K0617:gw22227chan1
+# 		Name	 = PGM_K617_3
+# 		Access	 = ca:K0617:gw22227.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	PGM_KMonitor_4:
+# 		XML-ID	 = K0617:gw22228chan1
+# 		Name	 = PGM_KMonitor_4
+# 		Access	 = ca:K0617:gw22228.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Ring_1:
+# 		XML-ID	 = bIICurrent:Mnt1chan1
+# 		Name	 = Ring_1
+# 		Access	 = ca:bIICurrent:Mnt1.VAL
+# 		Unit	 = mA
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Ring_2:
+# 		XML-ID	 = bIICurrent:Mnt2chan1
+# 		Name	 = Ring_2
+# 		Access	 = ca:bIICurrent:Mnt2.VAL
+# 		Unit	 = mA
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# Datasets:
+# 	PosCountTimer:
+# 		Unit	 = msecs
+# 	PosCounter:
+# Sample-X	PGM_K617_1	PGM_K617_3	PGM_KMonitor_4	Ring_1	Ring_2	PosCountTimer	PosCounter
+87.0	1.90094e-12	5.7418e-12	8.166e-14	77.46760724109237	77.21764671030238	17713	4
+88.0	1.8408e-12	5.7724e-12	8.201e-14	77.46117068920793	77.21069850368382	27927	5
+89.0	1.83909e-12	5.7139e-12	8.159e-14	77.45548218815189	77.20443165566043	31398	6
+90.0	1.83835e-12	5.7332e-12	8.285e-14	77.44908143373961	77.20034081780996	34939	7

@@ -301,7 +301,7 @@ namespace eval SmallUtils {
 				append result "---\n"
 			}
 			if {$nrightdiff > 0} {
-				append result "[join [lmap line $rightdiff  { string cat "< " $line }] \n]\n"
+				append result "[join [lmap line $rightdiff  { string cat "> " $line }] \n]\n"
 			}
 		}
 
