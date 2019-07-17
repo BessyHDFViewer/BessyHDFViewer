@@ -29,7 +29,7 @@ if {[tk windowingsystem]=="aqua"} {
 
 	# trigger opening of files from Mac OSX signal
 	proc ::tk::mac::OpenDocument {args} {
-		OpenArgument $args
+		BessyHDFViewer::OpenArgument $args
 	}
 } else {
 	interp alias {} tk_busy {} tk busy
@@ -894,6 +894,15 @@ namespace eval BessyHDFViewer {
 			append result "# ${indent}${key}\t = ${val}\n"
 		}
 		return $result
+	}
+
+	proc DumpFields {hdfdata} {
+		# functional style, yeah
+		set fieldlist {}
+		dict for {field value} [bessy_get_all_fields $hdfdata] {
+			lappend fieldlist "[list $field] $value"
+		}
+		join $fieldlist \n
 	}
 
 	proc Dump {hdfdata {headerfmt {Attributes Columns}}} {
@@ -2870,6 +2879,17 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	proc bessy_get_all_fields {hdfdata} {
+		# return a dictionary which describes the datafile
+		# inefficient but .. hey
+		set result {}
+		set allkeys [bessy_get_keys $hdfdata]
+		foreach key $allkeys {
+			dict set result $key [bessy_get_field $hdfdata $key]
+		}
+		return $result
+	}
+
 	proc bessy_get_keys {hdfdata {category {Detector Motor Dataset Meta}}} {
 		set datakeys {}
 		set attrkeys {}
@@ -2942,9 +2962,14 @@ namespace eval BessyHDFViewer {
 			if {[catch {
 				set hdfdata [bessy_reshape $fn]
 				set dump [Dump $hdfdata]
+				set fielddump [DumpFields $hdfdata]
+				
 				set refdump [fileutil::cat -encoding utf-8 -translation binary $folder/dump/${rootname}_dump.dat]
+				set reffdump [fileutil::cat -encoding utf-8 -translation binary $folder/dump/${rootname}_fields.dat]
+
 
 				set diff [SmallUtils::difftext $refdump $dump]
+				set fdiff [SmallUtils::difftext $reffdump $fielddump]
 
 				} _ errdict]} {
 				# got an error
@@ -2954,13 +2979,22 @@ namespace eval BessyHDFViewer {
 				puts "Test failed with error: $fn"
 				puts $error
 			} else {
-				if {$diff ne {}} {
+				if {$diff ne {} || $fdiff ne {}} {
 					dict set $diffs $fn $diff
 					puts "Test failed $fn: Result was different"
 					puts $diff
+					puts $fdiff
 
-					# write result into file in the dumps dir
-					fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_failedresult.dat $dump
+					catch { 
+						# write result into file in the dumps dir
+						fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_failedresult.dat $dump 
+					}
+
+					catch { 
+						# write fields into file in the dumps dir
+						fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_failedfields.dat $fielddump 
+					}
+
 					incr failed
 				} else {
 					incr success
@@ -2972,7 +3006,7 @@ namespace eval BessyHDFViewer {
 		set nerrors [dict size $errors]
 		set ndiffs [dict size $diffs]
 
-		puts "Result: $failed failed $success successful total [expr {$success+$failed}]"
+		puts "Result: failed $failed, successful $success,  total [expr {$success+$failed}]"
 
 	}
 

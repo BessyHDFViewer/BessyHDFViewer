@@ -1,0 +1,47 @@
+2Theta -12.799999999999997
+Bessy_Lebensdauer 13.869375335520429
+Bessy_Ringstrom 77.39645439
+Comment {NewRef @ PGM-Fokus}
+Counter 0
+Det.-X 0.0
+Detector PGM_K617_3
+EVEH5Version 6
+EndTimeISO 2019-01-07T10:18:37
+FileFormat HDF5
+Lebensdauer_1 13.471044862584593
+Lebensdauer_2 10.304589492030557
+Location PGM
+Monitor Ring_2
+Motor Sample-X
+Offset_2Theta 107.757
+Offset_Theta -533.286
+PGM_K617_1 1.83835e-12 1.90094e-12
+PGM_K617_3 5.7139e-12 5.7724e-12
+PGM_KMonitor_4 8.159e-14 8.285e-14
+PosCountTimer 17713 34939
+PosCounter 4 7
+Ring_1 77.44908143373961 77.46760724109237
+Ring_2 77.20034081780996 77.21764671030238
+SCML-Author lcibik@odo
+SCML-Name template_2019_pgm.scml
+SM-Counter 2
+Sample-X 87.0 90.0
+Sample-Y -1.4210854715202004e-14
+Sample-Z 0.0
+StartDate 07.01.2019
+StartTime 10:18:01
+StartTimeISO 2019-01-07T10:18:01
+Theta 1.1368683772161603e-13
+Tilt-Y 0.0
+Tilt-Z 0.0
+Time 17.689
+Timer 0.001
+TopupState decay
+Version 1.30.0
+XMLversion 6.0
+bsdd6_PreLifeTime 0.0
+bsdd6_PreRealTime 0.0
+{date Time} 2019-01-07T10:18:19.171+01:00
+{date Timer} 2019-01-07T10:18:19.160+01:00
+{msec Time} 17689
+{msec Timer} 0

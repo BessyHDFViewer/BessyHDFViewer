@@ -1,0 +1,24 @@
+Comment {calibration of tower with Leica AT401
+}
+Detector Lasertracker_X
+EVEH5Version 4.0
+FileFormat HDF5
+Lasertracker_X 1971.6587273078792 2990.533869977081
+Lasertracker_X_std 0.00010212402160369563 0.011597301343822343
+Lasertracker_Y 11.226046412255316 46.75776150559736
+Lasertracker_Y_std 5.160961001380619e-5 0.040395400520589535
+Lasertracker_Z -46.81195601343869 772.07442002027
+Lasertracker_Z_std 0.00012024946069511303 0.03943068971773233
+Location XPBF2
+Motor Tower_Z
+PosCountTimer 3 29128858
+PosCounter 1 546
+RB_Tower_Y -0.01 1035.01
+SCML-Author muellerp@split
+SCML-Name TowerMapping_with_Lasertracker.scml
+StartDate 09.01.2017
+StartTime 15:28:21
+Tower_2Theta 4.328714903883979e-11 5.000004105198515
+Tower_Z 11399.99930023841 12400.000712904295
+Version 1.27.0
+XMLversion 5.0

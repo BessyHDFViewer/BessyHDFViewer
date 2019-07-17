@@ -316,6 +316,10 @@ namespace eval SmallUtils {
 
 		set i 0
 		set j 0
+		set p 0
+		set q 0
+		set leftdiff {}
+		set rightdiff {}
 
 		lassign [McIlroy $lines1 $lines2] x1 x2
 

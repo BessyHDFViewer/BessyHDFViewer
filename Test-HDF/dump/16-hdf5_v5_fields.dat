@@ -1,0 +1,135 @@
+2Theta 0.0
+Beam_pos_hor 1.0
+Beam_pos_vert 1.0
+Bessy_Lebensdauer 3.781576653773066
+Bessy_Ringstrom 2.231242505
+Bieger 2.7
+COATING_2nd_MIR MgF2
+Cr_1_Cu_Bloc 30.719462882429394
+Cr_2_Si_Temp 31.708247501335325
+Cr_3_Si_Temp 29.68409466040725
+Cr_4_InSb_Temp 29.5612524519861
+Crystal_1_phi 2.3865
+Crystal_2_phi 2.7994999999999997
+Crystal_2_theta 8.3039997406006
+Crystal_3_phi 19.733
+Crystal_3_theta 3.9499999446868905
+Crystal_4_phi 4.400000000000001
+DIODE_BEHIND_MONO In
+DIODE_IN_MONO Out
+Det.-X 0.0
+Detector Keysight4
+Diode_behind_mono 51.0
+Diode_in_mono 90.0
+EVEH5Version 5.0
+Energy 3499.997444722681
+FCM_Diff 0.0008753093722199747
+FILTER_1 {25um Be}
+FILTER_2 None
+FILTER_PINHOLES Al
+FileFormat HDF5
+Filter_1 66.5
+Filter_2 99.7
+Filter_CCD_pinholes 51.5
+Keithley_3 1.626e-14
+Keysight1 2.3585e-12 2.55288e-12
+Keysight2 1.17458e-13 1.27526e-13
+Keysight3 2.93796e-13 3.38307e-13
+Keysight4 2.211e-10 6.72816e-8
+Lebensdauer_1 -2.661167379055075
+Lebensdauer_2 -2.7647398008378197
+Lift_table 613.8699925399999
+Location KMC
+Mirror_1_hor 0.0
+Mirror_1_psi -1.4995624412
+Mirror_1_theta 7.5003845146999994
+Mirror_1_vert -0.4800000000000001
+Mirror_2_hor 24.0
+Mirror_2_theta 7.90015398
+Mirror_2_vert -1.7299999999999986
+Mon_Gear_Temp 34.84855420767547
+Monitor Ring_1
+Mono_1st_wheel 28.265651
+Mono_2nd_wheel 28.19999999999999 28.291949999999986
+Mono_Cu_Temp 32.66651407644787
+Mono_cr_change 0.9999858999999987
+Motor Mono_2nd_wheel
+NewRef_S5_HorPos 0.0
+NewRef_S5_HorSize 5.0
+NewRef_S5_VertPos -6.661338147750939e-16
+NewRef_S5_VertSize 4.999999999999999
+NewRef_S5_down 2.3099999999999987
+NewRef_S5_left 2.25
+NewRef_S5_right 2.25
+NewRef_S5_up 2.31
+Offset_1st_wheel -6.923999
+Offset_2Theta 107.748
+Offset_2nd_wheel 210.298
+Offset_Theta -533.682
+Pinhole_1_x -1.4210854715202004e-14
+Pinhole_1_y -0.0007999999999981355
+Pinhole_2_X 9.999709999999993
+Pinhole_2_Y 5.5
+PosCountTimer 1491 92111
+PosCounter 3 49
+Pot_Mi_1_hor 3.5076025933487434
+Pot_Mi_1_psi 5.378556270752787
+Pot_Mi_1_theta 3.7807943217058098
+Pot_Mi_1_vert 3.088612386973475
+Pot_Mi_2_hor 1.9687378117799548
+Pot_Mi_2_theta 3.5115495754573827
+Pressure_Bender 2.6815997329666823
+REF_DIODES {Thin diode}
+Ref_Diodes 55.5
+Ring_1 2.2140597427298223 2.217265684449762
+Ring_2 2.1754250183760164
+SAMPLE-X Undefined
+SCML-Author fcm@roe
+SCML-Name template_new_all.scml
+Sample-X 70.0
+Sample-Y -1.4210854715202004e-14
+Sample-Z 0.0
+Slit_1_down 17.4
+Slit_1_hor_pos 8.881784197001252e-16
+Slit_1_hor_size 40.000000000099995
+Slit_1_left 32.195
+Slit_1_right 40.685
+Slit_1_up 23.4
+Slit_1_vert_pos -2.0
+Slit_1_vert_size 6.0
+Slit_2_down 13.879999999999999
+Slit_2_up 34.650000000000006
+Slit_2_vert_pos 0.3000000000000025
+Slit_2_vert_size 15.0
+Slit_3_down 18.75
+Slit_3_hor_pos 1.5000000000000044
+Slit_3_hor_size 40.0
+Slit_3_left 34.699999999999996
+Slit_3_right 33.300000000000004
+Slit_3_up 20.55
+Slit_3_vert_pos 5.4
+Slit_3_vert_size 29.999999999999996
+Slit_4_down 11.0
+Slit_4_hor_pos 3.85
+Slit_4_hor_size 16.045
+Slit_4_left 5.4
+Slit_4_right 11.9
+Slit_4_up 11.9
+Slit_4_vert_pos -0.05499999999999983
+Slit_4_vert_size 12.9
+StartDate 30.10.2018
+StartTime 11:41:08
+Theta 0.0
+Tilt-Y 0.0
+Tilt-Z 0.0
+Tilt_Mi_1_phi -3.5644286409713626
+Tilt_Mi_1_theta 8.292461812449947
+Tilt_Mi_2_phi -0.33822328576223
+Tilt_Mi_2_theta 5.15491006134102
+Tilt_Mono_psi 0.16471425578300117
+Tilt_Mono_theta -0.08275610613112537
+Time 4.599 90.807
+Version 1.29.2
+XMLversion 6.0
+{date Time} 2018-10-30T11:41:08.977+01:00
+{msec Time} 64

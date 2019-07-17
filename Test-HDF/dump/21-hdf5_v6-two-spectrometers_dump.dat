@@ -10,14 +10,14 @@
 #
 # MotorPositions:
 # 	Counter	 = 0
-# 	FILTER_1	 = {25um Be}
+# 	FILTER_1	 = 25um Be
 # 	FILTER_2	 = None
 # 	FILTER_PINHOLES	 = Al
 # 	REF_DIODES	 = None
 # 	DIODE_IN_MONO	 = Out
 # 	DIODE_BEHIND_MONO	 = Out
 # 	COATING_2nd_MIR	 = MgF2
-# 	NRFA-2ThetaTYdiscr	 = {SXUV 100(09-06)}
+# 	NRFA-2ThetaTYdiscr	 = SXUV 100(09-06)
 # 	NRFA-Diode2discr	 = Undefined
 # 	Energy	 = 2489.998857469151
 # 	Mono_1st_wheel	 = 52.57145

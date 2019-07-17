@@ -12,10 +12,10 @@
 # MotorPositions:
 # 	Counter	 = 0
 # 	SAMPLE_X	 = Undefined
-# 	FILTER_1	 = {25um Be}
+# 	FILTER_1	 = 25um Be
 # 	FILTER_2	 = None
 # 	FILTER_PINHOLES	 = Al
-# 	REF_DIODES	 = {Thin diode}
+# 	REF_DIODES	 = Thin diode
 # 	DIODE_IN_MONO	 = Out
 # 	DIODE_BEHIND_MONO	 = Out
 # 	COATING_2nd_MIR	 = MgF2
@@ -97,7 +97,7 @@
 # 	Cr_4_InSb_Temp	 = 28.910499487121932 28.919491518135672
 # 	Therm_ext	 = 28.3 28.4
 # 	Therm_int	 = 30.0 29.9
-# 	Thermostat	 = {no fault} {no fault}
+# 	Thermostat	 = no fault
 # 	Keithley_1	 = 5.355e-14 5.409e-14
 # 	Keithley_2	 = 5.57e-15 6.08e-15
 # 	Keithley_3	 = 0.0 0.0

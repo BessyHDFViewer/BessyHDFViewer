@@ -1,0 +1,180 @@
+AGNRFA_01_Theta 0.0
+AGNRFA_02_Chi 0.0
+AGNRFA_03_Phi 0.0
+AGNRFA_04_Probe_X 0.0
+AGNRFA_05_Probe_Y 0.0
+AGNRFA_06_Probe_Z 0.0
+AGNRFA_07_2Theta 0.0
+AGNRFA_08_2ThetaTY 0.0
+AGNRFA_09_BlendeTY 0.0
+AGNRFA_10_Probe 0.0
+Beam_pos_hor 1.0
+Beam_pos_vert 1.0
+Bessy_Lebensdauer 7.608632509923964
+Bessy_Ringstrom 248.9964523
+Bias_K1 0.0
+Bias_K3 0.0
+Bieger 2.1
+COATING_2nd_MIR MgF2
+Counter 0
+Cr_1_Cu_Bloc 31.097886625467467
+Cr_2_Si_Temp 32.00732433051058
+Cr_3_Si_Temp 29.731508338281554
+Cr_4_InSb_Temp 30.11535069791991
+Crystal_1_phi 2.123625
+Crystal_2_phi 3.8558
+Crystal_2_theta 8.0626997406006
+Crystal_3_phi 19.900000000000002
+Crystal_3_theta 3.57124056968689
+Crystal_4_phi 4.201250000000001
+DIODE_BEHIND_MONO Out
+DIODE_IN_MONO Out
+Detector bsdd3_Roi1
+Diode_behind_mono 5.0
+Diode_in_mono 90.0
+EVEH5Version 5.0
+Energy 2466.9986402230475 2490.0005210512354
+FCM_Diff -0.0010015977692916888
+FILTER_1 {25um Be}
+FILTER_2 None
+FILTER_PINHOLES Al
+FileFormat HDF5
+Filter_1 66.5
+Filter_2 99.7
+Filter_CCD_pinholes 51.5
+Keithley_1 -0.002
+Keithley_3 4.948566666666666e-13 9.704249999999999e-13
+Keysight1 -2.17312e-13
+Keysight2 -3.42168 0.498895
+Keysight3 -1.0365e-15 3.2303333333333337e-15
+Keysight4 -1.0274e-14
+Lebensdauer_1 7.366661901098147
+Lebensdauer_2 7.3259872196439755
+Lift_table 614.2499950199999
+Location KMC
+Mirror_1_hor 0.0
+Mirror_1_psi -1.3499999999999999
+Mirror_1_theta 7.5003845146999994
+Mirror_1_vert -0.4800000000000001
+Mirror_2_hor 24.0
+Mirror_2_theta 7.582217081
+Mirror_2_vert -1.7299999999999986
+Mon_Gear_Temp 34.51895933470682
+Mono_1st_wheel 52.57145
+Mono_2nd_wheel 52.571409999999986
+Mono_Cu_Temp 32.718394750896636
+Mono_cr_change 54.0
+Motor Energy
+NRFA-2ThetaTYdiscr {SXUV 100(09-06)}
+NRFA-Diode2discr Undefined
+NRFA_2Theta 0.0
+NRFA_2ThetaTY 25.910600000000002
+NRFA_BlendeTY 66.0
+NRFA_Chi 90.0
+NRFA_Diode2 75.65785
+NRFA_Diode43_TX -0.4
+NRFA_Diode43_TY 195.0
+NRFA_P1_Kammer_kap -5.5
+NRFA_P2_Kammer 4.593e-7
+NRFA_P3_Schleuse_kap -2.4
+NRFA_P4_Schleuse 3.3009999999999997e-7
+NRFA_P5_Vorpumpe 0.3119
+NRFA_P6_postbeamline 0.0
+NRFA_Phi 90.0
+NRFA_Probe_X -14.9
+NRFA_Probe_Y 1.8
+NRFA_Probe_Z -2.2725
+NRFA_Theta 45.0
+NRFA_X 2.47375
+NRFA_Y -3.085
+NRFA_rot -1.4729999999999999
+Offset_1st_wheel -7.108999999999999
+Offset_2nd_wheel 210.01246
+PTB_U49 23.2562
+Pinhole_1_x 1.9000000000000057
+Pinhole_1_y 5.0
+PosCountTimer 5284 685417
+PosCounter 3 104
+Pot_Mi_1_hor 3.5057708018289846
+Pot_Mi_1_psi 5.363773050953516
+Pot_Mi_1_theta 3.777352010679021
+Pot_Mi_1_vert 3.087891799460549
+Pot_Mi_2_hor 1.9695451031246414
+Pot_Mi_2_theta 3.4719687734591327
+Pressure_Bender 2.095169712707725
+REF_DIODES None
+Ref_Diodes 1.0
+Ring_1 247.53409471453182 248.93594418056165
+Ring_2 248.560724887658
+SCML-Author u49pgm@roe
+SCML-Name CZ_ISIBAT.scml
+SM-Counter 3
+Scanner Can500A
+{Scanner Channel} 1.0
+Slit_1_down 13.899999999999999
+Slit_1_hor_pos 0.9999999999999947
+Slit_1_hor_size 5.999999999999993
+Slit_1_left 15.540000000000001
+Slit_1_right 26.02999999999999
+Slit_1_up 23.9
+Slit_1_vert_pos 0.0
+Slit_1_vert_size 3.0
+Slit_2_down 13.879999999999999
+Slit_2_up 34.650000000000006
+Slit_2_vert_pos 0.3000000000000025
+Slit_2_vert_size 15.0
+Slit_3_down 6.15
+Slit_3_hor_pos 2.2
+Slit_3_hor_size 15.0
+Slit_3_left 21.5
+Slit_3_right 21.5
+Slit_3_up 7.55
+Slit_3_vert_pos 5.199999999999999
+Slit_3_vert_size 4.399999999999999
+Slit_4_down -1.71875
+Slit_4_hor_pos 2.64
+Slit_4_hor_size 2.0
+Slit_4_left -0.4125000000000001
+Slit_4_right 3.6675
+Slit_4_up -0.9087500000000001
+Slit_4_vert_pos -0.10000000000000003
+Slit_4_vert_size 2.0000000000000004
+StartDate 25.05.2018
+StartTime 17:40:29
+Tilt_Mi_1_phi -3.532598015639218
+Tilt_Mi_1_theta 8.315463121057661
+Tilt_Mi_2_phi -0.33741118732020653
+Tilt_Mi_2_theta 5.49797357040583
+Tilt_Mono_psi 0.1725664385675061
+Tilt_Mono_theta -0.09241452318582703
+Time 11.571 685.417
+Timer 0.0
+TopupState decay
+Version 1.29.1
+XMLversion 6.0
+bruckersdd3enc 144.5
+bsdd2_PreLifeTime 1.5 3.5
+bsdd2_PreRealTime 0.0
+bsdd2_Roi0 1483.0 3497.0
+bsdd2_Roi1 610.0 34446.0
+bsdd2_Roi2 59.0 240.0
+bsdd2_Roi3 17.0 120.0
+bsdd2_Roi4 2.0 96.0
+bsdd2_Roi5 74.0 222.0
+bsdd2_prelifeTime 10.0
+bsdd2_prerealTime 0.0
+bsdd3_PreLifeTime 1.5 3.5
+bsdd3_PreRealTime 0.0
+bsdd3_Roi0 1546.0 3666.0
+bsdd3_Roi1 559.0 48444.0
+bsdd3_Roi2 50.0 246.0
+bsdd3_Roi3 2.0 106.0
+bsdd3_Roi4 1.0 66.0
+bsdd3_Roi5 84.0 286.0
+bsdd3_prelifeTime 10.0
+bsdd3_prerealTime 0.0
+{date Time} 2018-05-25T17:40:29.797+02:00
+{date Timer} 2018-05-25T17:40:29.758+02:00
+{msec Time} 73
+{msec Timer} 0
+nomTemperature 29.9

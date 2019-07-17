@@ -10,10 +10,10 @@
 #
 # MotorPositions:
 # 	SAMPLE-X	 = Undefined
-# 	FILTER_1	 = {25um Be}
+# 	FILTER_1	 = 25um Be
 # 	FILTER_2	 = None
 # 	FILTER_PINHOLES	 = Al
-# 	REF_DIODES	 = {Thin diode}
+# 	REF_DIODES	 = Thin diode
 # 	DIODE_IN_MONO	 = Out
 # 	DIODE_BEHIND_MONO	 = In
 # 	COATING_2nd_MIR	 = MgF2

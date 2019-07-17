@@ -14,10 +14,10 @@
 # MotorPositions:
 # 	Counter	 = 0
 # 	DIODES_1	 = None
-# 	FILTER_1	 = {125um Be}
+# 	FILTER_1	 = 125um Be
 # 	FILTER_2	 = None
 # 	FILTER_PINHOLES	 = Al
-# 	REF_DIODES	 = {Thin diode}
+# 	REF_DIODES	 = Thin diode
 # 	DIODE_IN_MONO	 = Out
 # 	DIODE_BEHIND_MONO	 = Out
 # 	COATING_2nd_MIR	 = Pt
@@ -156,7 +156,7 @@
 # 	PTB_U49	 = 17.0682 17.0679
 # 	Ring_1	 = 248.72763907127938 247.8892451520854
 # 	Lebensdauer_1	 = 7.241964163999337 7.190439895276551
-# 	TopupState	 = decay decay
+# 	TopupState	 = decay
 # 	Ring_2	 = 248.64282498723577 247.8216688741119
 # 	Lebensdauer_2	 = 7.161211560674987 7.07398090434038
 # 	Pot_Mi_1_hor	 = 3.5000381507636638 3.4986627932697303
