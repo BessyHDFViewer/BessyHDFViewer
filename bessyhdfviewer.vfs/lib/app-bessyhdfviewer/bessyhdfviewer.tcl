@@ -544,9 +544,23 @@ namespace eval BessyHDFViewer {
 
 		if {!$HDFCacheDirty || ($HDFCacheFile == {})} { return }
 		
+		# check if we need to cut down the cache
+		# the cache grows rapidly, avoid hittin the 2GB string limit
+		set maxsize [PreferenceGet MaxCache 1000]
+		set cursize [dict size $HDFCache]
+		puts "Cache size: $cursize of $maxsize"
+		if {$cursize > $maxsize} {
+			# cut down cache to half the size
+			# leave last entries
+			set startindex [expr {$cursize - $maxsize/2}]
+			set i 0
+			set HDFCache [dict filter $HDFCache script {_v _k} {incr i; expr {$i > $startindex}}]
+			puts "Cache size reduced: [dict size $HDFCache]"
+		}
+
 		if {[catch {
 			set fd [open $HDFCacheFile w]
-			fconfigure $fd -translation binary -encoding binary
+			fconfigure $fd -translation binary -encoding utf-8
 			puts -nonewline $fd $HDFCache
 			close $fd
 		}]} {
@@ -561,7 +575,7 @@ namespace eval BessyHDFViewer {
 		variable HDFCacheFile
 		if {[catch {
 			set fd [open $HDFCacheFile r]
-			fconfigure $fd -translation binary -encoding binary
+			fconfigure $fd -translation binary -encoding utf-8
 			set HDFCache [read $fd]
 			close $fd
 		}]} {
@@ -711,12 +725,17 @@ namespace eval BessyHDFViewer {
 				}
 				
 				dict_assign [bessy_class $temphdfdata] class motor detector nrows
+				set allvalues [bessy_get_all_fields $temphdfdata]
+				set cached [dict merge $cached $allvalues]
 				
+				# mark cache dirty and write back value
+				variable HDFCacheDirty true
+				dict set HDFCache $fn $cached
 				# don't check cache for this file any longer
 				set cachemiss true
 			}
 
-			# 3. try to get the value from temphdfdata and feed back to cache
+			# 3. get the value from the cache
 
 			switch $col {
 				Motor {
@@ -736,7 +755,7 @@ namespace eval BessyHDFViewer {
 				}
 
 				default {
-					set value [bessy_get_field $temphdfdata $col]
+					set value [SmallUtils::dict_getdefault $cached $col {}]
 				}
 			}
 
@@ -745,6 +764,7 @@ namespace eval BessyHDFViewer {
 			# mark cache dirty and write back value
 			variable HDFCacheDirty true
 			dict set HDFCache $fn $col $value
+
 		}
 
 		if {$cachemiss} {
@@ -2738,7 +2758,15 @@ namespace eval BessyHDFViewer {
 
 	proc bessy_class {data} {
 		# classify dataset into Images, Plot and return plot axes
-		set images [dict exists $data Detector Pilatus_Tiff data]
+		set images false
+		foreach imagekey [PreferenceGet ImageDetectors {}] {
+			if {[dict exists $data Detector $imagekey data]} {
+				set images true
+				# keep imagekey to read the images later
+				break
+			}
+		}
+
 		set mca [dict exists $data MCA]
 		set hdds [dict exists $data HDDataset]
 		set fileformat [SmallUtils::dict_getdefault $data {} FileFormat {}]
@@ -2790,8 +2818,8 @@ namespace eval BessyHDFViewer {
 			set length [llength [dict get $data MCA data]]
 			set class MCA
 		} elseif {$images} {
-			# file contains Pilatus images. Check for one or more
-			set length [llength [dict get $data Detector Pilatus_Tiff data]]
+			# file contains images. Check for one or more
+			set length [llength [dict get $data Detector $imagekey data]]
 			if {$length == 1} {
 				set class SINGLE_IMG
 			}

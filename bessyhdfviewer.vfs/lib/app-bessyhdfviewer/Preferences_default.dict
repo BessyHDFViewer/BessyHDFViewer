@@ -500,3 +500,16 @@ PlotStyles {
 	{linespoints color green dash - pt filled-uptriangles }
 
 }
+
+ImageDetectors {
+	Pilatus_Tiff
+	Pilatus_Trigger
+	Pilatus_filename
+	WAXS_Tiff
+	WAXS_Trigger
+	WAXS_filename
+	XCCD_file_number
+	ANDOR_04_file_number
+}
+
+MaxCache 30000
