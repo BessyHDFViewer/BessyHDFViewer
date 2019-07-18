@@ -33,9 +33,9 @@ Detector bsdd3_Roi1
 Diode_behind_mono 5.0
 Diode_in_mono 90.0
 EVEH5Version 5.0
-Energy 2466.9986402230475 2490.0005210512354
+Energy {2466.9986402230475 2490.0005210512354}
 FCM_Diff -0.0010015977692916888
-FILTER_1 {25um Be}
+FILTER_1 {{25um Be}}
 FILTER_2 None
 FILTER_PINHOLES Al
 FileFormat HDF5
@@ -43,10 +43,10 @@ Filter_1 66.5
 Filter_2 99.7
 Filter_CCD_pinholes 51.5
 Keithley_1 -0.002
-Keithley_3 4.948566666666666e-13 9.704249999999999e-13
+Keithley_3 {4.948566666666666e-13 9.704249999999999e-13}
 Keysight1 -2.17312e-13
-Keysight2 -3.42168 0.498895
-Keysight3 -1.0365e-15 3.2303333333333337e-15
+Keysight2 {-3.42168 0.498895}
+Keysight3 {-1.0365e-15 3.2303333333333337e-15}
 Keysight4 -1.0274e-14
 Lebensdauer_1 7.366661901098147
 Lebensdauer_2 7.3259872196439755
@@ -65,7 +65,7 @@ Mono_2nd_wheel 52.571409999999986
 Mono_Cu_Temp 32.718394750896636
 Mono_cr_change 54.0
 Motor Energy
-NRFA-2ThetaTYdiscr {SXUV 100(09-06)}
+NRFA-2ThetaTYdiscr {{SXUV 100(09-06)}}
 NRFA-Diode2discr Undefined
 NRFA_2Theta 0.0
 NRFA_2ThetaTY 25.910600000000002
@@ -93,8 +93,8 @@ Offset_2nd_wheel 210.01246
 PTB_U49 23.2562
 Pinhole_1_x 1.9000000000000057
 Pinhole_1_y 5.0
-PosCountTimer 5284 685417
-PosCounter 3 104
+PosCountTimer {5284 685417}
+PosCounter {3 104}
 Pot_Mi_1_hor 3.5057708018289846
 Pot_Mi_1_psi 5.363773050953516
 Pot_Mi_1_theta 3.777352010679021
@@ -104,7 +104,7 @@ Pot_Mi_2_theta 3.4719687734591327
 Pressure_Bender 2.095169712707725
 REF_DIODES None
 Ref_Diodes 1.0
-Ring_1 247.53409471453182 248.93594418056165
+Ring_1 {247.53409471453182 248.93594418056165}
 Ring_2 248.560724887658
 SCML-Author u49pgm@roe
 SCML-Name CZ_ISIBAT.scml
@@ -147,30 +147,30 @@ Tilt_Mi_2_phi -0.33741118732020653
 Tilt_Mi_2_theta 5.49797357040583
 Tilt_Mono_psi 0.1725664385675061
 Tilt_Mono_theta -0.09241452318582703
-Time 11.571 685.417
+Time {11.571 685.417}
 Timer 0.0
 TopupState decay
 Version 1.29.1
 XMLversion 6.0
 bruckersdd3enc 144.5
-bsdd2_PreLifeTime 1.5 3.5
+bsdd2_PreLifeTime {1.5 3.5}
 bsdd2_PreRealTime 0.0
-bsdd2_Roi0 1483.0 3497.0
-bsdd2_Roi1 610.0 34446.0
-bsdd2_Roi2 59.0 240.0
-bsdd2_Roi3 17.0 120.0
-bsdd2_Roi4 2.0 96.0
-bsdd2_Roi5 74.0 222.0
+bsdd2_Roi0 {1483.0 3497.0}
+bsdd2_Roi1 {610.0 34446.0}
+bsdd2_Roi2 {59.0 240.0}
+bsdd2_Roi3 {17.0 120.0}
+bsdd2_Roi4 {2.0 96.0}
+bsdd2_Roi5 {74.0 222.0}
 bsdd2_prelifeTime 10.0
 bsdd2_prerealTime 0.0
-bsdd3_PreLifeTime 1.5 3.5
+bsdd3_PreLifeTime {1.5 3.5}
 bsdd3_PreRealTime 0.0
-bsdd3_Roi0 1546.0 3666.0
-bsdd3_Roi1 559.0 48444.0
-bsdd3_Roi2 50.0 246.0
-bsdd3_Roi3 2.0 106.0
-bsdd3_Roi4 1.0 66.0
-bsdd3_Roi5 84.0 286.0
+bsdd3_Roi0 {1546.0 3666.0}
+bsdd3_Roi1 {559.0 48444.0}
+bsdd3_Roi2 {50.0 246.0}
+bsdd3_Roi3 {2.0 106.0}
+bsdd3_Roi4 {1.0 66.0}
+bsdd3_Roi5 {84.0 286.0}
 bsdd3_prelifeTime 10.0
 bsdd3_prerealTime 0.0
 {date Time} 2018-05-25T17:40:29.797+02:00

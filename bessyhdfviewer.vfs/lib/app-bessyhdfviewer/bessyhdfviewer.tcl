@@ -900,7 +900,7 @@ namespace eval BessyHDFViewer {
 		# functional style, yeah
 		set fieldlist {}
 		dict for {field value} [bessy_get_all_fields $hdfdata] {
-			lappend fieldlist "[list $field] $value"
+			lappend fieldlist [list $field $value]
 		}
 		join $fieldlist \n
 	}
@@ -935,76 +935,72 @@ namespace eval BessyHDFViewer {
 
 			return $result
 		}
+		
+		set checkkeys {Motor Detector Dataset MotorPositions DetectorValues OptionalPositions Plot}
+		# if at least one of the above keys exists, it is a PTB HDF file
 
-		if {[dict exists $hdfdata Motor]} {
-			# usual scan
-			foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
-				if {[dict exists $hdfdata $key] && "Attributes" in $headerfmt} {
-					append result "# $key:\n"
-					append result [DumpAttrib [dict get $hdfdata $key] \t]
-					append result "#\n"
-				}
-			}
-
-			dict_assign [bessy_class $hdfdata] motors detectors datasets
-			set table [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]] 
-			if {[dict exists $hdfdata Dataset]} {
-				set table [dict merge $table [dict get $hdfdata Dataset]]
-			}
-			
-			set variables [list {*}$motors {*}$detectors {*}$datasets]
-			# write header lines
-			if {"Attributes" in $headerfmt} {
-				if {[llength $motors] > 0} {
-					append result "# Motors:\n"
-				}
-				foreach motor $motors {
-					append result "# \t$motor:\n"
-					append result [DumpAttrib [SmallUtils::dict_getdefault $table $motor attrs {}] \t\t]
-				}
-
-				if {[llength $detectors] > 0} {
-					append result "# Detectors:\n"
-				}
-				foreach detector $detectors {
-					append result "# \t$detector:\n"
-					append result [DumpAttrib [SmallUtils::dict_getdefault $table $detector attrs {}] \t\t]
-				}
-
-				if {[llength $datasets] > 0} {
-					append result "# Datasets:\n"
-				}
-				foreach dataset $datasets {
-					append result "# \t$dataset:\n"
-					append result [DumpAttrib [SmallUtils::dict_getdefault $table $dataset attrs {}] \t\t]
-				}
-
-			}
-
-			if {"Columns" in $headerfmt} {
-				append result "# [quotedjoin $variables \t]\n"
-			}
-			if {"BareColumns" in $headerfmt} {
-				append result "[quotedjoin $variables \t]\n"
-			}
-			# compute maximum length for each data column - might be different due to BESSY_INF trimming
-			set maxlength 0
-			dict for {var entry} $table {
-				set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
-			}
-			for {set i 0} {$i<$maxlength} {incr i} {
-				set line {}
-				foreach {var entry} $table {
-					lappend line [lindex [dict get $entry data] $i]
-				}
-				append result "[join $line \t]\n"
-			}
-
-			return $result
+		set measurementfile [tcl::mathop::+ {*}[lmap key $checkkeys {dict exists $hdfdata $key}]]
+		
+		if {!$measurementfile} {
+			# if it is not a measurement file
+			# dump the internal representation in a human readable format
+			return [hformat $hdfdata]
 		}
 
-		# if we are here, it is not a BESSY HDF file. Dump the internal representation
-		hformat $hdfdata
+		foreach key {MotorPositions DetectorValues OptionalPositions Plot} {
+			if {[dict exists $hdfdata $key] && "Attributes" in $headerfmt} {
+				append result "# $key:\n"
+				append result [DumpAttrib [dict get $hdfdata $key] \t]
+				append result "#\n"
+			}
+		}
+
+		dict_assign [bessy_class $hdfdata] motors detectors datasets
+		
+		set table {}
+		foreach key {Motor Detector Dataset} {
+			set table [dict merge $table [SmallUtils::dict_getdefault $hdfdata $key {}]]
+		}
+		
+		set variables [list {*}$motors {*}$detectors {*}$datasets]
+		# write header lines
+
+		if {"Attributes" in $headerfmt} {
+			
+			foreach {category keys} \
+				[list Motors $motors Detectors $detectors Datasets $datasets] {
+
+				if {[llength $keys] > 0} {
+					append result "# $category:\n"
+				}
+				foreach key $keys {
+					append result "# \t$key:\n"
+					append result [DumpAttrib [SmallUtils::dict_getdefault $table $key attrs {}] \t\t]
+				}
+			}
+		}
+
+		if {"Columns" in $headerfmt} {
+			append result "# [quotedjoin $variables \t]\n"
+		}
+		if {"BareColumns" in $headerfmt} {
+			append result "[quotedjoin $variables \t]\n"
+		}
+		
+		# compute maximum length for each data column - might be different due to BESSY_INF trimming
+		set maxlength 0
+		dict for {var entry} $table {
+			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+		}
+		for {set i 0} {$i<$maxlength} {incr i} {
+			set line {}
+			foreach {var entry} $table {
+				lappend line [lindex [dict get $entry data] $i]
+			}
+			append result "[join $line \t]\n"
+		}
+
+		return $result
 	}
 		
 	proc ExportCmd {} {
@@ -2987,7 +2983,7 @@ namespace eval BessyHDFViewer {
 
 					catch { 
 						# write result into file in the dumps dir
-						fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_failedresult.dat $dump 
+						fileutil::writeFile -encoding utf-8 -translation binary $folder/dump/${rootname}_faileddump.dat $dump 
 					}
 
 					catch { 
