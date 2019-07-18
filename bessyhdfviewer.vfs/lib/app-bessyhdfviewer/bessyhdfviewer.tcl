@@ -548,7 +548,7 @@ namespace eval BessyHDFViewer {
 		# the cache grows rapidly, avoid hittin the 2GB string limit
 		set maxsize [PreferenceGet MaxCache 1000]
 		set cursize [dict size $HDFCache]
-		puts "Cache size: $cursize of $maxsize"
+		# puts "Cache size: $cursize of $maxsize"
 		if {$cursize > $maxsize} {
 			# cut down cache to half the size
 			# leave last entries
