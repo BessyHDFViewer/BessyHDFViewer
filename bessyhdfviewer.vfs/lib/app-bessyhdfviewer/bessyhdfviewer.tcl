@@ -821,17 +821,17 @@ namespace eval BessyHDFViewer {
 		variable hdfdata 
 
 		variable plotdata
-		variable tbldata
-		variable tblheader 
+		variable tbldata {}
+		variable tblheader {}
 		
 		if {[dict get $BessyClass class] == "MCA"} {
 			set plotdata [list MCA [dict get $hdfdata MCA]]
 		} else {
 			# insert available axes into plotdata
 			if {[catch {
-				set plotdata [dict merge [dict get $hdfdata Motor] [dict get $hdfdata Detector]]
-				if {[dict exists $hdfdata Dataset]} {
-					set plotdata [dict merge $plotdata [dict get $hdfdata Dataset]]
+				set plotdata {}
+				foreach key {Motor Detector Dataset} {
+					set plotdata [dict merge $plotdata [SmallUtils::dict_getdefault $hdfdata $key {}]]
 				}
 			} err]} {
 				# could not get sensible plot axes - not BESSY hdf?
