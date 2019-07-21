@@ -36,7 +36,7 @@ EndPos 2.859999895095825
 EndTime 13:35:47
 Energy 9000.030036731794
 FCM_Diff 3.5592032206871593
-FILTER_1 {125um Be}
+FILTER_1 {{125um Be}}
 FILTER_2 None
 FILTER_PINHOLES Al
 FileFormat HDF4
@@ -140,7 +140,7 @@ StartPos 2.299999952316284
 StartTime 13:34:58
 Therm_ext 29.9
 Therm_int 34.0
-Thermostat {no fault}
+Thermostat {{no fault}}
 Theta 0.0
 Tilt-Y 0.0
 Tilt-Z 0.0

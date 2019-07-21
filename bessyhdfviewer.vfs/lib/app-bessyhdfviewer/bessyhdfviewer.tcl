@@ -916,13 +916,24 @@ namespace eval BessyHDFViewer {
 		return $result
 	}
 
+	proc DumpData {data {indent ""}} {
+		set result ""
+		dict for {key val} $data {
+			if {[dict exists $val data]} {
+				set values [dict get $val data]
+				append result "# ${indent}${key}\t = ${values}\n"
+			}
+		}
+		return $result
+	}
+
 	proc DumpFields {hdfdata} {
 		# functional style, yeah
 		set fieldlist {}
 		dict for {field value} [bessy_get_all_fields $hdfdata] {
-			lappend fieldlist [list $field $value]
+			append fieldlist "[list $field $value]\n"
 		}
-		join $fieldlist \n
+		return $fieldlist
 	}
 
 	proc Dump {hdfdata {headerfmt {Attributes Columns}}} {
@@ -956,7 +967,7 @@ namespace eval BessyHDFViewer {
 			return $result
 		}
 		
-		set checkkeys {Motor Detector Dataset MotorPositions DetectorValues OptionalPositions Plot}
+		set checkkeys {Motor Detector Dataset MotorPositions DetectorValues OptionalPositions Plot SnapshotValues}
 		# if at least one of the above keys exists, it is a PTB HDF file
 
 		set measurementfile [tcl::mathop::+ {*}[lmap key $checkkeys {dict exists $hdfdata $key}]]
@@ -972,6 +983,17 @@ namespace eval BessyHDFViewer {
 				append result "# $key:\n"
 				append result [DumpAttrib [dict get $hdfdata $key] \t]
 				append result "#\n"
+			}
+		}
+
+		# check Snapshot 
+		if {[dict exists $hdfdata SnapshotValues]} {
+			append result "# SnapshotValues:\n"
+			foreach category {Motor Detector Meta} {
+				if {[dict exists $hdfdata SnapshotValues $category]} {
+					append result "# \t${category}:\n"
+					append result [DumpData [dict get $hdfdata SnapshotValues $category] \t\t]
+				}
 			}
 		}
 
@@ -2548,16 +2570,42 @@ namespace eval BessyHDFViewer {
 			dict for {key dset} [dict get $rawd {*}$optpath] {
 				set name [dict get $dset attrs Name]
 				set dtype [dict get $dset attrs DeviceType]
-				set data [lmap {pos val} [dict get $dset data] {set val}]
-				switch $dtype {
-					Axis {
-						dict set reshaped MotorPositions $name $data
-					}
-					Channel {
-						dict set reshaped DetectorValues $name $data
+				set ndata [dict get $dset ndata]
+
+				# a single data point goes to the traditional fields
+				# MotorPositions, DetectorValues, OptionalPositions
+				# 
+				# multiple positions go to the new fields SnapshotValues
+				# with timestamps
+				switch $ndata {
+					0 { continue }
+					1 {
+						lassign [dict get $dset data] timeval data
+						
+						switch $dtype {
+							Axis {
+								dict set reshaped MotorPositions $name $data
+							}
+							Channel {
+								dict set reshaped DetectorValues $name $data
+							}
+							default {
+								dict set reshaped OptionalPositions $name $data
+							}
+						}
 					}
 					default {
-						dict set reshaped OptionalPositions $name $data
+						switch $dtype {
+							Axis {
+								dict set reshaped SnapshotValues Motor $name $dset
+							}
+							Channel {
+								dict set reshaped SnapshotValues Detector $name $dset
+							}
+							default {
+								dict set reshaped SnapshotValues Meta $name $dset
+							}
+						}
 					}
 				}
 			}
@@ -2875,6 +2923,12 @@ namespace eval BessyHDFViewer {
 					lappend values [dict get $hdfdata $attrkey $field]
 				}
 			}
+			
+			foreach category {Detector Motor Meta} {
+				if {[dict exists $hdfdata SnapshotValues $category $field data]} {
+					lappend values {*}[lmap {_ val} [dict get $hdfdata SnapshotValues $category $field data] {set val}]
+				}
+			}
 
 			# MCA stores values as an attribute in the main field
 			if {[dict exists $hdfdata MCA attrs $field]} {
@@ -2885,13 +2939,18 @@ namespace eval BessyHDFViewer {
 
 		if {[llength $values] <= 1} {
 			# found nothing or single value - just return that
-			return [lindex $values 0]
+			return $values
 		}
 
 		# if more than one value is found, compute range 
 		# first try sorting as numbers, then try dictionary (works always)
 		if {[catch {lsort -real [filternan $values]} sortedvalues]} {
 			set sortedvalues [lsort -dictionary $values]
+		}
+		
+		if {[llength $sortedvalues] == 0} {
+			# all values were NaN and kicked out
+			return [list NaN]
 		}
 
 		set minval [lindex $sortedvalues 0]
@@ -2917,20 +2976,24 @@ namespace eval BessyHDFViewer {
 	proc bessy_get_keys {hdfdata {category {Detector Motor Dataset Meta}}} {
 		set datakeys {}
 		set attrkeys {}
+		
 		foreach catkey $category {
 			switch $catkey {
 				Detector {
-					lappend datakeys Detector 
-					lappend attrkeys DetectorValues 
+					lappend datakeys Detector
+					lappend datakeys {SnapshotValues Detector}
+					lappend attrkeys DetectorValues
 				}
 				Motor {
-					lappend datakeys Motor 
+					lappend datakeys Motor
+					lappend datakeys {SnapshotValues Motor}
 					lappend attrkeys MotorPositions OptionalPositions
 				}
 				Dataset {
 					lappend datakeys Dataset
 				}
 				Meta {
+					lappend datakeys {SnapshotValues Meta}
 					lappend attrkeys Plot {}
 				}
 				Axes {
@@ -2945,8 +3008,8 @@ namespace eval BessyHDFViewer {
 		set keys {}
 		foreach datakey $datakeys {
 			# keys that are tried to find data
-			if {[dict exists $hdfdata $datakey]} {
-				lappend keys {*}[dict keys [dict get $hdfdata $datakey]]
+			if {[dict exists $hdfdata {*}$datakey]} {
+				lappend keys {*}[dict keys [dict get $hdfdata {*}$datakey]]
 			}
 		}
 

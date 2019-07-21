@@ -1,5 +1,5 @@
 Channel00 {0.1018755 0.1039058}
-Comment {Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird}
+Comment {{Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird}}
 DWL20-C-EUVR-K617-1 {6.352e-14 6.56e-14}
 FileFormat HDF5
 Location TEST

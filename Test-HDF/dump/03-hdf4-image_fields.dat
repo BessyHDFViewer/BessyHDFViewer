@@ -12,12 +12,12 @@ COATING_2nd_MIR MgF2
 CRYSTAL_COOLING InSb
 CenterPercentage 50
 CenterPos 1.0
-Comment {SiN-Fenster (15x) Transmission}
+Comment {{SiN-Fenster (15x) Transmission}}
 Cr_1_Cu_Bloc 29.318684672312656
 Cr_2_Si_Temp 30.228122377355767
 Cr_3_Si_Temp 28.759101091700476
 Cr_4_InSb_Temp 28.275931314950956
-CrystalMots {Motors OK}
+CrystalMots {{Motors OK}}
 Crystal_1_phi 2.3865
 Crystal_2_theta 8.3054997406006
 Crystal_3_phi 19.733
@@ -33,7 +33,7 @@ EndPos 1.0
 EndTime 19:16:18
 Energy 2200.000479831471
 FCM_Diff -0.0009413748655880963
-FILTER_1 {25um Be}
+FILTER_1 {{25um Be}}
 FILTER_2 None
 FILTER_PINHOLES Al
 FileFormat HDF4
@@ -139,7 +139,7 @@ Therm_ext_mean 28.092307692307696
 Therm_int 29.9
 Therm_int_dev 3.697781635498623e-15
 Therm_int_mean 29.899999999999995
-Thermostat {no fault}
+Thermostat {{no fault}}
 Theta 0.0
 Tilt-Y 0.0
 Tilt-Z -0.009999999999999981

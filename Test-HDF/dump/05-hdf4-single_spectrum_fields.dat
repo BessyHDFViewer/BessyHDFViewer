@@ -13,12 +13,12 @@ COATING_2nd_MIR Pt
 CRYSTAL_COOLING Si
 CenterPercentage 50
 CenterPos 0.0
-Comment {Rubber List (Latex+PU)}
+Comment {{Rubber List (Latex+PU)}}
 Cr_1_Cu_Bloc 30.157930876630964
 Cr_2_Si_Temp 31.16807812619227
 Cr_3_Si_Temp 29.56950217926358
 Cr_4_InSb_Temp 29.06516834085567
-CrystalMots {Motors OK}
+CrystalMots {{Motors OK}}
 Crystal_1_phi 2.123625
 Crystal_2_theta 8.0663434906006
 Crystal_3_phi 19.900000000000002
@@ -36,7 +36,7 @@ EndPos 0.0
 EndTime 10:48:48
 Energy 4000.006119309948
 FCM_Diff -0.0017825010449085662
-FILTER_1 {125um Be}
+FILTER_1 {{125um Be}}
 FILTER_2 None
 FILTER_PINHOLES Al
 FileFormat HDF4
@@ -96,7 +96,7 @@ Pot_Mi_2_hor 8.863139096081595
 Pot_Mi_2_theta 3.479115806361597
 Pot_Mi_2_vert 9.834675678750934
 Pressure_Bender 2.18354753196617
-REF_DIODES {Thin diode}
+REF_DIODES {{Thin diode}}
 RefSampleX 0.0
 Ref_Diodes 53.6
 ReferenceScan 0
@@ -151,7 +151,7 @@ Temp1 29.700000762939453
 Temp2 9.100000381469727
 Therm_ext 28.8
 Therm_int 30.0
-Thermostat {no fault}
+Thermostat {{no fault}}
 Theta -15.0
 Tilt-Y 0.0
 Tilt-Z 0.0

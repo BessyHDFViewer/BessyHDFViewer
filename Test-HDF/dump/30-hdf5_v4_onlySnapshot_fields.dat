@@ -6,7 +6,7 @@ Beam_pos_hor 1.0
 Beam_pos_vert 1.0
 Bieger 2.1
 COATING_2nd_MIR Pt
-Comment {Find Sample Position}
+Comment {{Find Sample Position}}
 Counter 0
 Crystal_1_phi 2.123625
 Crystal_2_phi 3.8558
