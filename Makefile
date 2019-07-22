@@ -1,6 +1,6 @@
 INSTALLDIR=/soft/prog/BessyHDFViewer/
 
-all: install
+all: starpacks
 
 starpacks:
 	# create starpacks with sdx
@@ -29,5 +29,11 @@ mac:
 	rm -rf dmg
 
 clean:
-	rm -rf BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg 
+	rm -rf BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg
+
+test:
+	Runtime/Linux_runtime64 bessyhdfviewer.vfs/main.tcl Test Test-HDF/
+
+run:
+	Runtime/Linux_runtime64 bessyhdfviewer.vfs/main.tcl
 
