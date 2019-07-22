@@ -1932,26 +1932,29 @@ namespace eval BessyHDFViewer {
 		# try to do sensible formatting
 		# what might be a two-element list for min/max
 		if {[string is list $what]} {
-			# two-element list for min/max
-			if {[llength $what] ==2} {
-				lassign $what min max
-				if {![string is double -strict $min] || ![string is double -strict $max]} {
-					return "$min \u2014 $max"
+			switch [llength $what] {
+				2 {
+					# two-element list for min/max
+					lassign $what min max
+					if {![string is double -strict $min] || ![string is double -strict $max]} {
+						return "$min \u2014 $max"
+					}
+					return [format "$formatString \u2014 $formatString" $min $max]
 				}
-				return "[ListFormat $formatString $min] \u2014 [ListFormat $formatString $max]"
-			}
 
-			# single double value
-			if {[string is double -strict $what]} {
-				if {[catch {format $formatString $what} formatresult]} {
-					return $what;# error formatting, return string rep
-				} else {
-					return $formatresult
+				1 {
+					# single value
+					lassign $what value
+					if {[catch {format $formatString $value} formatresult]} {
+						# error formatting, return string rep
+						return $value
+					} else {
+						return $formatresult
+					}
 				}
-			}
 
-			# string
-			return $what
+				default { return $what }
+			}
 		} else {
 			return $what
 		}
