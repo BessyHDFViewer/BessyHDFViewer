@@ -1,0 +1,213 @@
+# EVEH5Version	 = 6
+# Comment	 = HZB Grating 1713 XM Mono 2000 Andrey Sokolov
+# Version	 = 1.31.0
+# XMLversion	 = 7.0
+# Location	 = KMC
+# SCML-Name	 = Justage_FCM_2019.scml
+# SCML-Author	 = fcm@roe
+# StartTimeISO	 = 2019-07-13T18:55:17
+# StartTime	 = 18:55:17
+# StartDate	 = 13.07.2019
+# EndTimeISO	 = 2019-07-13T18:55:25
+# FileFormat	 = HDF5
+#
+# MotorPositions:
+# 	Counter	 = 0
+# 	FILTER_1	 = 25um Be
+# 	FILTER_2	 = None
+# 	FILTER_PINHOLES	 = Al
+# 	REF_DIODES	 = None
+# 	DIODE_IN_MONO	 = Out
+# 	DIODE_BEHIND_MONO	 = Out
+# 	COATING_2nd_MIR	 = MgF2
+# 	Energy	 = 2500.0
+# 	Mono_1st_wheel	 = 41.529415835078716
+# 	Mono_2nd_wheel	 = 41.52941583507871
+# 	Mono_cr_change	 = 0.9999858999999987
+# 	Offset_Theta	 = -535.001
+# 	Offset_2Theta	 = 107.766
+# 	Bieger	 = 2.74
+# 	Sample-Z	 = 5.0
+# 	Tilt-Z	 = -0.04999999999999716
+# 	Sample-Y	 = 1.1740000000000066
+# 	Tilt-Y	 = 5.75
+# 	Theta	 = 3.0
+# 	2Theta	 = 8.0
+# 	Det.-X	 = 0.0
+# 	Sample-X	 = 75.0
+# 	Pinhole_2_Y	 = 0.930499999999995
+# 	Filter_1	 = 66.5
+# 	Filter_2	 = 99.7
+# 	Mirror_1_hor	 = 0.0
+# 	Mirror_1_vert	 = -0.4800000000000001
+# 	Mirror_1_theta	 = 7.5003845146999994
+# 	Mirror_1_psi	 = -1.4001193287
+# 	Beam_pos_vert	 = 1.0
+# 	Beam_pos_hor	 = 1.0
+# 	Slit_1_up	 = 25.259999999999998
+# 	Slit_1_down	 = 14.599999999999998
+# 	Slit_1_right	 = 27.72
+# 	Slit_1_left	 = 12.100000000000001
+# 	Slit_2_up	 = 37.150000000000006
+# 	Slit_2_down	 = 16.378749999999997
+# 	Filter_CCD_pinholes	 = 39.0
+# 	Ref_Diodes	 = 1.0
+# 	Crystal_2_theta	 = 8.302759115600601
+# 	Crystal_3_theta	 = 3.95589994468689
+# 	Crystal_2_phi	 = 2.7994999999999997
+# 	Crystal_1_phi	 = 2.3865
+# 	Crystal_3_phi	 = 19.733
+# 	Crystal_4_phi	 = 4.331
+# 	Diode_in_mono	 = 90.0
+# 	Diode_behind_mono	 = 5.0
+# 	Slit_3_up	 = 8.270000000000001
+# 	Slit_3_down	 = 25.380000000000003
+# 	Slit_3_right	 = 12.49
+# 	Slit_3_left	 = 17.46
+# 	Mirror_2_hor	 = 24.0
+# 	Mirror_2_vert	 = -1.7299999999999986
+# 	Mirror_2_theta	 = 7.6099307089999995
+# 	Lift_table	 = 614.1669902799999
+# 	Slit_4_up	 = 0.10250000000000004
+# 	Slit_4_down	 = 7.5275
+# 	Slit_4_right	 = 4.473750000000001
+# 	Slit_4_left	 = -1.7187500000000002
+# 	Pinhole_1_y	 = 5.0
+# 	Pinhole_1_x	 = 2.539999999999992
+# 	Pinhole_2_X	 = 9.999629999999996
+# 	NewRef_S5_up	 = 0.3499999999999999
+# 	NewRef_S5_down	 = 0.34999999999999964
+# 	NewRef_S5_right	 = 0.75
+# 	NewRef_S5_left	 = 0.75
+# 	Slit_1_vert_pos	 = -0.33
+# 	Slit_1_vert_size	 = -0.06
+# 	Slit_1_hor_pos	 = -3.565
+# 	Slit_1_hor_size	 = -0.25
+# 	Slit_2_vert_pos	 = 0.0
+# 	Slit_2_vert_size	 = 0.0
+# 	Slit_3_vert_pos	 = 5.355
+# 	Slit_3_vert_size	 = -20.35
+# 	Slit_3_hor_pos	 = -1.115
+# 	Slit_3_hor_size	 = 1.05
+# 	Slit_4_vert_pos	 = 4.0675
+# 	Slit_4_vert_size	 = -11.7575
+# 	Slit_4_hor_pos	 = -2.64625
+# 	Slit_4_hor_size	 = 5.0
+# 	NewRef_S5_VertPos	 = -1.3877787807814457e-16
+# 	NewRef_S5_HorPos	 = 0.0
+# 	NewRef_S5_VertSize	 = 0.6999999999999995
+# 	NewRef_S5_HorSize	 = 1.5
+# 	date Timer	 = 2019-07-13T18:55:22.286+02:00
+# 	Timer	 = 0.0
+# 	msec Timer	 = 0
+#
+# SnapshotValues:
+# 	Detector:
+# 		Keysight1	 = 2 3.04413e-10 4 3.05721e-10
+# 		Keysight2	 = 2 2.9418e-14 4 2.9482e-14
+# 		Keysight3	 = 2 6.22572e-13 4 6.35234e-13
+# 		Keysight4	 = 2 4.35517e-13 4 4.36602e-13
+# 		Mono_Cu_Temp	 = 2 32.00732433051058 4 32.00732433051058
+# 		Cr_1_Cu_Bloc	 = 2 29.94735637445655 4 29.94735637445655
+# 		Cr_2_Si_Temp	 = 2 30.887312123293054 4 30.887312123293054
+# 		Mon_Gear_Temp	 = 2 32.91676203555369 4 32.89845120927765
+# 		Cr_3_Si_Temp	 = 2 28.840096894607733 4 28.842543757676413
+# 		Cr_4_InSb_Temp	 = 2 28.851590801244996 4 28.854386640413836
+# 		Keithley_3	 = 2 12.1983 4 12.1983
+# 		Bessy_Ringstrom	 = 2 0.167 4 0.167
+# 		Bessy_Lebensdauer	 = 2 -Inf 4 -Inf
+# 		Offset_1st_wheel	 = 2 -6.917784164921287 4 -6.917784164921287
+# 		Offset_2nd_wheel	 = 2 210.32666583507873 4 210.32666583507873
+# 		Offset_Theta	 = 2 -535.001 4 -535.001
+# 		Offset_2Theta	 = 2 107.766 4 107.766
+# 		date Time	 = 2 2019-07-13T18:55:22.334+02:00 4 2019-07-13T18:55:24.878+02:00
+# 		Time	 = 2 5.107 4 7.651
+# 		msec Time	 = 2 5107 4 7651
+# 		PTB_U49	 = 2 29.4772 4 29.4772
+# 		Ring_1	 = 2 NaN 4 NaN
+# 		Lebensdauer_1	 = 2 NaN 4 NaN
+# 		TopupState	 = 2 decay 4 decay
+# 		Ring_2	 = 2 0.17340415562401573 4 0.17342229885787233
+# 		Lebensdauer_2	 = 2 -5.3096964390105965 4 -5.3096964390105965
+# 		Pot_Mi_1_hor	 = 2 3.4979391960134234 4 3.4977538653776823
+# 		Pot_Mi_1_vert	 = 2 3.0945646481296474 4 3.0951646784307894
+# 		Pot_Mi_1_theta	 = 2 3.777549891514487 4 3.7775030355051897
+# 		Pot_Mi_1_psi	 = 2 5.368860466362275 4 5.369122508832503
+# 		Tilt_Mi_1_theta	 = 2 8.311570533331057 4 8.314582548442683
+# 		Tilt_Mi_1_phi	 = 2 -3.5306425095357397 4 -3.5307615291608823
+# 		FCM_Diff	 = 2 3.5460821578174344 4 3.5440631966224445
+# 		Tilt_Mono_theta	 = 2 -0.06715697066300287 4 -0.06534883024287647
+# 		Tilt_Mono_psi	 = 2 0.1668835404243246 4 0.16813389656594013
+# 		Pot_Mi_2_hor	 = 2 1.967797589553517 4 1.9667257746337674
+# 		Pot_Mi_2_theta	 = 2 3.4746223992737972 4 3.4737239089961376
+# 		Tilt_Mi_2_theta	 = 2 5.450453309287977 4 5.4502088422678305
+# 		Tilt_Mi_2_phi	 = 2 -0.34193480749836536 4 -0.34108140810721427
+# 		Pressure_Bender	 = 2 2.744973313336005 4 2.724079315000641
+# Detectors:
+# 	Keysight1:
+# 		XML-ID	 = A2980:22702chan1
+# 		Name	 = Keysight1
+# 		Access	 = ca:A2980:22702.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight2:
+# 		XML-ID	 = A2980:22703chan1
+# 		Name	 = Keysight2
+# 		Access	 = ca:A2980:22703.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight3:
+# 		XML-ID	 = A2980:22704chan1
+# 		Name	 = Keysight3
+# 		Access	 = ca:A2980:22704.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight4:
+# 		XML-ID	 = A2980:22705chan1
+# 		Name	 = Keysight4
+# 		Access	 = ca:A2980:22705.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Time:
+# 		XML-ID	 = Timer1-det-double
+# 		Name	 = Time
+# 		Access	 = local:Timer
+# 		Unit	 = secs
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Ring_1:
+# 		XML-ID	 = bIICurrent:Mnt1chan1
+# 		Name	 = Ring_1
+# 		Access	 = ca:bIICurrent:Mnt1.VAL
+# 		Unit	 = mA
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	WAXS_Trigger:
+# 		XML-ID	 = pilatus02:cam1:chan1
+# 		Name	 = WAXS_Trigger
+# 		Access	 = ca:pilatus02:cam1:FileNumber_RBV
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	WAXS_Tiff:
+# 		XML-ID	 = pilatus02:cam1:lastFileNr
+# 		Name	 = WAXS_Tiff
+# 		Access	 = ca:pilatus02:cam1:lastFileNr
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	WAXS_filename:
+# 		XML-ID	 = pilatus02:cam1FullFilename
+# 		Name	 = WAXS_filename
+# 		Access	 = ca:pilatus02:cam1:FullFileName_RBV
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 		longString	 = true
+# Datasets:
+# 	PosCountTimer:
+# 		Unit	 = msecs
+# 	PosCounter:
+# Keysight1	Keysight2	Keysight3	Keysight4	Time	Ring_1	WAXS_Trigger	WAXS_Tiff	WAXS_filename	PosCountTimer	PosCounter
+3.05123e-10	2.9695e-14	6.12788e-13	4.30428e-13	6.508	NaN	10	9.0	/messung/kmc/daten/2019/3Q/WAXS_201907__00009.tif	5965	3

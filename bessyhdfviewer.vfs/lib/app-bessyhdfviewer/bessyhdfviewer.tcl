@@ -1863,9 +1863,20 @@ namespace eval BessyHDFViewer {
 			exit
 		}
 		
+		if {[llength $files] == 1} {
+			# check if the argument is a directory
+			lassign $files dir
+			if {[file isdirectory $dir]} {
+				set absdir [file normalize $dir]
+				$w(filelist) display $absdir
+				DirChanged $absdir
+				return
+			}
+		}
 		# find common ancestor
 		set ancestor [SmallUtils::file_common_dir $files]
 		$w(filelist) display $ancestor
+		DirChanged [file normalize $ancestor]
 		$w(filelist) selectfiles $files
 		set fileabs [lmap x $files {file normalize $x}]
 		PreviewFile $fileabs
@@ -2692,6 +2703,7 @@ namespace eval BessyHDFViewer {
 					lappend attribpath $key
 				}
 
+				dict set reshaped {*}$attribpath {}
 				continue
 			}
 			 # not an attribute or folder name
@@ -2787,6 +2799,10 @@ namespace eval BessyHDFViewer {
 				dict set reshaped Detector $c data $data
 				continue
 			}
+			if {[dict exists $reshaped Dataset $c]} {
+				dict set reshaped Dataset $c data $data
+				continue
+			}
 			# if not found in either motor or detector array
 			# set path to Datasets
 			
@@ -2799,7 +2815,19 @@ namespace eval BessyHDFViewer {
 		}
 
 		dict set reshaped Dataset [dict merge [dict get $reshaped Dataset] $allsets]
-
+		
+		# reshape SnapshotValues
+		foreach category {Motor Detector Meta} {
+			if {[dict exists $reshaped SnapshotValues $category]} {
+				set keys [dict keys [dict get $reshaped SnapshotValues $category]]
+				foreach key $keys {
+					set data [dict get $reshaped SnapshotValues $category $key]
+					dict unset reshaped SnapshotValues $category $key
+					dict set reshaped SnapshotValues $category $key data $data
+				}
+			}
+		}
+		
 		return $reshaped
 
 	}

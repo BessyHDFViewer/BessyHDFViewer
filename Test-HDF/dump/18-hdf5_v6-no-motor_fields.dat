@@ -1,0 +1,143 @@
+2Theta 8.0
+Beam_pos_hor 1.0
+Beam_pos_vert 1.0
+Bessy_Lebensdauer -Inf
+Bessy_Ringstrom 0.167
+Bieger 2.74
+COATING_2nd_MIR MgF2
+Comment {{HZB Grating 1713 XM Mono 2000 Andrey Sokolov}}
+Counter 0
+Cr_1_Cu_Bloc 29.94735637445655
+Cr_2_Si_Temp 30.887312123293054
+Cr_3_Si_Temp {28.840096894607733 28.842543757676413}
+Cr_4_InSb_Temp {28.851590801244996 28.854386640413836}
+Crystal_1_phi 2.3865
+Crystal_2_phi 2.7994999999999997
+Crystal_2_theta 8.302759115600601
+Crystal_3_phi 19.733
+Crystal_3_theta 3.95589994468689
+Crystal_4_phi 4.331
+DIODE_BEHIND_MONO Out
+DIODE_IN_MONO Out
+Det.-X 0.0
+Diode_behind_mono 5.0
+Diode_in_mono 90.0
+EVEH5Version 6
+EndTimeISO 2019-07-13T18:55:25
+Energy 2500.0
+FCM_Diff {3.5440631966224445 3.5460821578174344}
+FILTER_1 {{25um Be}}
+FILTER_2 None
+FILTER_PINHOLES Al
+FileFormat HDF5
+Filter_1 66.5
+Filter_2 99.7
+Filter_CCD_pinholes 39.0
+Keithley_3 12.1983
+Keysight1 3.05123e-10
+Keysight2 2.9695e-14
+Keysight3 6.12788e-13
+Keysight4 4.30428e-13
+Lebensdauer_1 NaN
+Lebensdauer_2 -5.3096964390105965
+Lift_table 614.1669902799999
+Location KMC
+Mirror_1_hor 0.0
+Mirror_1_psi -1.4001193287
+Mirror_1_theta 7.5003845146999994
+Mirror_1_vert -0.4800000000000001
+Mirror_2_hor 24.0
+Mirror_2_theta 7.6099307089999995
+Mirror_2_vert -1.7299999999999986
+Mon_Gear_Temp {32.89845120927765 32.91676203555369}
+Mono_1st_wheel 41.529415835078716
+Mono_2nd_wheel 41.52941583507871
+Mono_Cu_Temp 32.00732433051058
+Mono_cr_change 0.9999858999999987
+NewRef_S5_HorPos 0.0
+NewRef_S5_HorSize 1.5
+NewRef_S5_VertPos -1.3877787807814457e-16
+NewRef_S5_VertSize 0.6999999999999995
+NewRef_S5_down 0.34999999999999964
+NewRef_S5_left 0.75
+NewRef_S5_right 0.75
+NewRef_S5_up 0.3499999999999999
+Offset_1st_wheel -6.917784164921287
+Offset_2Theta 107.766
+Offset_2nd_wheel 210.32666583507873
+Offset_Theta -535.001
+PTB_U49 29.4772
+Pinhole_1_x 2.539999999999992
+Pinhole_1_y 5.0
+Pinhole_2_X 9.999629999999996
+Pinhole_2_Y 0.930499999999995
+PosCountTimer 5965
+PosCounter 3
+Pot_Mi_1_hor {3.4977538653776823 3.4979391960134234}
+Pot_Mi_1_psi {5.368860466362275 5.369122508832503}
+Pot_Mi_1_theta {3.7775030355051897 3.777549891514487}
+Pot_Mi_1_vert {3.0945646481296474 3.0951646784307894}
+Pot_Mi_2_hor {1.9667257746337674 1.967797589553517}
+Pot_Mi_2_theta {3.4737239089961376 3.4746223992737972}
+Pressure_Bender {2.724079315000641 2.744973313336005}
+REF_DIODES None
+Ref_Diodes 1.0
+Ring_1 NaN
+Ring_2 {0.17340415562401573 0.17342229885787233}
+SCML-Author fcm@roe
+SCML-Name Justage_FCM_2019.scml
+Sample-X 75.0
+Sample-Y 1.1740000000000066
+Sample-Z 5.0
+Slit_1_down 14.599999999999998
+Slit_1_hor_pos -3.565
+Slit_1_hor_size -0.25
+Slit_1_left 12.100000000000001
+Slit_1_right 27.72
+Slit_1_up 25.259999999999998
+Slit_1_vert_pos -0.33
+Slit_1_vert_size -0.06
+Slit_2_down 16.378749999999997
+Slit_2_up 37.150000000000006
+Slit_2_vert_pos 0.0
+Slit_2_vert_size 0.0
+Slit_3_down 25.380000000000003
+Slit_3_hor_pos -1.115
+Slit_3_hor_size 1.05
+Slit_3_left 17.46
+Slit_3_right 12.49
+Slit_3_up 8.270000000000001
+Slit_3_vert_pos 5.355
+Slit_3_vert_size -20.35
+Slit_4_down 7.5275
+Slit_4_hor_pos -2.64625
+Slit_4_hor_size 5.0
+Slit_4_left -1.7187500000000002
+Slit_4_right 4.473750000000001
+Slit_4_up 0.10250000000000004
+Slit_4_vert_pos 4.0675
+Slit_4_vert_size -11.7575
+StartDate 13.07.2019
+StartTime 18:55:17
+StartTimeISO 2019-07-13T18:55:17
+Theta 3.0
+Tilt-Y 5.75
+Tilt-Z -0.04999999999999716
+Tilt_Mi_1_phi {-3.5307615291608823 -3.5306425095357397}
+Tilt_Mi_1_theta {8.311570533331057 8.314582548442683}
+Tilt_Mi_2_phi {-0.34193480749836536 -0.34108140810721427}
+Tilt_Mi_2_theta {5.4502088422678305 5.450453309287977}
+Tilt_Mono_psi {0.1668835404243246 0.16813389656594013}
+Tilt_Mono_theta {-0.06715697066300287 -0.06534883024287647}
+Time 6.508
+Timer 0.0
+TopupState decay
+Version 1.31.0
+WAXS_Tiff 9.0
+WAXS_Trigger 10
+WAXS_filename /messung/kmc/daten/2019/3Q/WAXS_201907__00009.tif
+XMLversion 7.0
+{date Time} {2019-07-13T18:55:22.334+02:00 2019-07-13T18:55:24.878+02:00}
+{date Timer} 2019-07-13T18:55:22.286+02:00
+{msec Time} {5107 7651}
+{msec Timer} 0

@@ -701,11 +701,11 @@ namespace eval dirViewer {} {
 				}
 
 				set part [lindex $fns end]
-				puts "$part"
+				# puts "$part"
 				set keylist [$tbl childkeys $curnode]
-				puts "$keylist"
+				# puts "$keylist"
 				foreach key $keylist {
-					puts [$tbl get $key]
+					# puts [$tbl get $key]
 					if {[lindex [$tbl get $key] 0 1]==$part} {
 						lappend selectkeys $key
 						break
@@ -713,7 +713,7 @@ namespace eval dirViewer {} {
 				}
 			}
 		
-			puts "$tbl selection set \{$selectkeys\}"
+			# puts "$tbl selection set \{$selectkeys\}"
 			$tbl selection set $selectkeys
 		}
 
