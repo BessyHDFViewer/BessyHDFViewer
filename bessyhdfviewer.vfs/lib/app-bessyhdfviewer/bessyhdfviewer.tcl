@@ -2934,7 +2934,8 @@ namespace eval BessyHDFViewer {
 	}
 
 	proc bessy_get_field {hdfdata field} {
-		# try to read a single value from dictionaries
+		# return min/max for a given field of the data
+		# or empty string, if the field is not found
 		
 		set values {}
 
@@ -2968,9 +2969,12 @@ namespace eval BessyHDFViewer {
 
 		}
 
-		if {[llength $values] <= 1} {
-			# found nothing or single value - just return that
-			return $values
+		if {[llength $values] == 0} { return {} }
+
+		if {[llength $values] == 1} {
+			# only a single value - min and max are equal
+			lassign $values value
+			return [list $value $value]
 		}
 
 		# if more than one value is found, compute range 
@@ -2981,16 +2985,12 @@ namespace eval BessyHDFViewer {
 		
 		if {[llength $sortedvalues] == 0} {
 			# all values were NaN and kicked out
-			return [list NaN]
+			return [list NaN NaN]
 		}
 
 		set minval [lindex $sortedvalues 0]
 		set maxval [lindex $sortedvalues end]
-		if {$minval == $maxval} {
-			return [list $minval]
-		} else {
-			return [list $minval $maxval]
-		}
+		return [list $minval $maxval]
 	}
 
 	proc bessy_get_all_fields {hdfdata} {
