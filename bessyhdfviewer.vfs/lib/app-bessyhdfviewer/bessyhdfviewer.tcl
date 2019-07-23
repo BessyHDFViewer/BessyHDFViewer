@@ -90,6 +90,22 @@ namespace eval BessyHDFViewer {
 			Energy {
 				FormatString %.5g
 			}
+
+			Motor {
+				Display { -sortmode dictionary }
+			}
+
+			Detector {
+				Display { -sortmode dictionary }
+			}
+
+			NRows {
+				Display { -sortmode integer }
+			}
+
+			class {
+				Display {}
+			}
 		}
 
 		# initialize iconlist
@@ -1933,17 +1949,35 @@ namespace eval BessyHDFViewer {
 		# what might be a two-element list for min/max
 		if {[string is list $what]} {
 			switch [llength $what] {
+				0 { return {} }
+				
 				2 {
 					# two-element list for min/max
 					lassign $what min max
-					if {![string is double -strict $min] || ![string is double -strict $max]} {
-						return "$min \u2014 $max"
+					if {$min eq $max} {
+						# single value
+						if {[catch {format $formatString $min} formatresult]} {
+							# error formatting, return string rep
+							return $min
+						} else {
+							return $formatresult
+						}
 					}
-					return [format "$formatString \u2014 $formatString" $min $max]
+
+					if {[catch {format $formatString $min} minformatted]} {
+						set minformatted $min
+					}
+
+					if {[catch {format $formatString $max} maxformatted]} {
+						set maxformatted $max
+					}
+
+					return "$minformatted \u2014 $maxformatted"
 				}
 
 				1 {
 					# single value
+					puts stderr "Shouldn'be: single value in ListFormat $what"
 					lassign $what value
 					if {[catch {format $formatString $value} formatresult]} {
 						# error formatting, return string rep
@@ -1953,9 +1987,13 @@ namespace eval BessyHDFViewer {
 					}
 				}
 
-				default { return $what }
+				default { 
+					puts stderr "Multiple values in ListFormat $what"
+					return $what
+				}
 			}
 		} else {
+			puts stderr "Not a list in ListFormat: $what"
 			return $what
 		}
 	}

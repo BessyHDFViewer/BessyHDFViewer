@@ -1,6 +1,6 @@
-EndTime 10:48:42
-FileFormat HDF4
-Messplatz kmc
-MessprogrammVersion 6.230000019073486
-StartDate 19.03.2014
-StartTime 10:38:09
+EndTime {10:48:42 10:48:42}
+FileFormat {HDF4 HDF4}
+Messplatz {kmc kmc}
+MessprogrammVersion {6.230000019073486 6.230000019073486}
+StartDate {19.03.2014 19.03.2014}
+StartTime {10:38:09 10:38:09}

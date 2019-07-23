@@ -1,65 +1,65 @@
-2Theta -1.4210854715202004e-14
-Beam_pos_hor 1.0
-Beam_pos_vert 1.0
+2Theta {-1.4210854715202004e-14 -1.4210854715202004e-14}
+Beam_pos_hor {1.0 1.0}
+Beam_pos_vert {1.0 1.0}
 Bessy_Lebensdauer {-0.377765097158867 -0.13005435967181547}
 Bessy_Ringstrom {0.0645370924 0.06579995379999998}
-Bieger 2.75
-COATING_2nd_MIR MgF2
-Comment {{Test1 Sample-X intro basics}}
-Counter 0
+Bieger {2.75 2.75}
+COATING_2nd_MIR {MgF2 MgF2}
+Comment {{Test1 Sample-X intro basics} {Test1 Sample-X intro basics}}
+Counter {0 0}
 Cr_1_Cu_Bloc {29.877164873731747 29.898527504387122}
-Cr_2_Si_Temp 30.719462882429394
+Cr_2_Si_Temp {30.719462882429394 30.719462882429394}
 Cr_3_Si_Temp {28.919308558362193 28.91996487810346}
 Cr_4_InSb_Temp {28.910499487121932 28.919491518135672}
-Crystal_1_phi 2.3865
-Crystal_2_phi 2.7994999999999997
-Crystal_2_theta 8.305999740600601
-Crystal_3_phi 19.733
-Crystal_3_theta 3.9582999446868903
-Crystal_4_phi 4.396999999999999
-DIODE_BEHIND_MONO Out
-DIODE_IN_MONO Out
-Det.-X 8.881784197001252e-16
-Detector Keithley_1
-Diode_behind_mono 5.0
-Diode_in_mono 90.0
-EVEH5Version 4.0
-Energy 3499.9975583772684
+Crystal_1_phi {2.3865 2.3865}
+Crystal_2_phi {2.7994999999999997 2.7994999999999997}
+Crystal_2_theta {8.305999740600601 8.305999740600601}
+Crystal_3_phi {19.733 19.733}
+Crystal_3_theta {3.9582999446868903 3.9582999446868903}
+Crystal_4_phi {4.396999999999999 4.396999999999999}
+DIODE_BEHIND_MONO {Out Out}
+DIODE_IN_MONO {Out Out}
+Det.-X {8.881784197001252e-16 8.881784197001252e-16}
+Detector {Keithley_1 Keithley_1}
+Diode_behind_mono {5.0 5.0}
+Diode_in_mono {90.0 90.0}
+EVEH5Version {4.0 4.0}
+Energy {3499.9975583772684 3499.9975583772684}
 FCM_Diff {-0.0033376844039662195 -0.0028350344360987}
-FILTER_1 {{25um Be}}
-FILTER_2 None
-FILTER_PINHOLES Al
-FileFormat HDF5
-Filter_1 66.5
-Filter_2 99.7
-Filter_CCD_pinholes 51.5
+FILTER_1 {{25um Be} {25um Be}}
+FILTER_2 {None None}
+FILTER_PINHOLES {Al Al}
+FileFormat {HDF5 HDF5}
+Filter_1 {66.5 66.5}
+Filter_2 {99.7 99.7}
+Filter_CCD_pinholes {51.5 51.5}
 Keithley_1 {5.256e-14 5.496e-14}
 Keithley_2 {5.57e-15 6.08e-15}
-Keithley_3 0.0
+Keithley_3 {0.0 0.0}
 Keithley_4 {2.047e-14 2.347e-14}
 Lebensdauer_1 {-0.2618294186780328 0.8418000514394076}
 Lebensdauer_2 {-0.6441641834540104 4.386841352885033}
-Lift_table 614.9999982999999
-Location KMC
-Mirror_1_hor 0.0
-Mirror_1_psi -1.5003579861
-Mirror_1_theta 7.5003845146999994
-Mirror_1_vert -0.4800000000000001
-Mirror_2_hor 24.0
-Mirror_2_theta 7.5352578779999995
-Mirror_2_vert -1.7299999999999986
+Lift_table {614.9999982999999 614.9999982999999}
+Location {KMC KMC}
+Mirror_1_hor {0.0 0.0}
+Mirror_1_psi {-1.5003579861 -1.5003579861}
+Mirror_1_theta {7.5003845146999994 7.5003845146999994}
+Mirror_1_vert {-0.4800000000000001 -0.4800000000000001}
+Mirror_2_hor {24.0 24.0}
+Mirror_2_theta {7.5352578779999995 7.5352578779999995}
+Mirror_2_vert {-1.7299999999999986 -1.7299999999999986}
 Mon_Gear_Temp {33.179217212176866 33.19752803845291}
-Monitor Keithley_4
-Mono_1st_wheel 28.26565
-Mono_2nd_wheel 28.265600000000006
-Mono_Cu_Temp 31.47936217288488
-Mono_cr_change 0.9999858999999987
-Motor Sample-Y
-Offset_1st_wheel -6.911999999999999
-Offset_2Theta 88.722
-Offset_2nd_wheel 210.32535000000001
-Offset_Theta -533.79
-PTB_U49 100.00460000000001
+Monitor {Keithley_4 Keithley_4}
+Mono_1st_wheel {28.26565 28.26565}
+Mono_2nd_wheel {28.265600000000006 28.265600000000006}
+Mono_Cu_Temp {31.47936217288488 31.47936217288488}
+Mono_cr_change {0.9999858999999987 0.9999858999999987}
+Motor {Sample-Y Sample-Y}
+Offset_1st_wheel {-6.911999999999999 -6.911999999999999}
+Offset_2Theta {88.722 88.722}
+Offset_2nd_wheel {210.32535000000001 210.32535000000001}
+Offset_Theta {-533.79 -533.79}
+PTB_U49 {100.00460000000001 100.00460000000001}
 PosCountTimer {4255 492522}
 PosCounter {3 123}
 Pot_Mi_1_hor {3.5014078479589203 3.506607600479736}
@@ -70,54 +70,54 @@ Pot_Mi_2_hor {1.966582624554378 1.969213375402551}
 Pot_Mi_2_theta {3.4644980370590615 3.4647214084423337}
 Pot_Mi_2_vert {-9.776721292294104 -8.684896451330209}
 Pressure_Bender {2.73055941300824 2.768953188778583}
-REF_DIODES {{Thin diode}}
-Ref_Diodes 55.5
+REF_DIODES {{Thin diode} {Thin diode}}
+Ref_Diodes {55.5 55.5}
 Ring_1 {-0.12896247287120757 -0.1278651211445709}
 Ring_2 {0.24522415128757505 0.24613382674663603}
-SAMPLE_X Undefined
-SCML-Author fcm@fuenf
-SCML-Name scanTemplateInner.scml
+SAMPLE_X {Undefined Undefined}
+SCML-Author {fcm@fuenf fcm@fuenf}
+SCML-Name {scanTemplateInner.scml scanTemplateInner.scml}
 Sample-X {80.0 90.0}
 Sample-Y {-10.0 -8.0}
-Sample-Z 0.0
-Scanner {{#58}}
-{Scanner Motor} 1.0
-Slit_1_down 12.899999999999999
-Slit_1_hor_pos 8.881784197001252e-16
-Slit_1_hor_size 10.0
-Slit_1_left 18.54
-Slit_1_right 27.03
-Slit_1_up 22.900000000000002
-Slit_1_vert_pos 1.7763568394002505e-15
-Slit_1_vert_size 1.0
-Slit_2_down 13.780000000000001
-Slit_2_up 34.75
-Slit_2_vert_pos 0.3999999999999986
-Slit_2_vert_size 15.0
-Slit_3_down 16.4
-Slit_3_hor_pos -3.8000000000000016
-Slit_3_hor_size 35.00000000000001
-Slit_3_left 32.45
-Slit_3_right 29.45
-Slit_3_up 17.900000000000002
-Slit_3_vert_pos 5.250000000000002
-Slit_3_vert_size 24.999999999999996
-Slit_4_down -0.5387499999999998
-Slit_4_hor_pos 3.25
-Slit_4_hor_size 8.0
-Slit_4_left 0.9775
-Slit_4_right 6.2775
-Slit_4_up 0.91125
-Slit_4_vert_pos 0.21999999999999986
-Slit_4_vert_size 5.000000000000001
-StartDate 04.07.2017
-StartTime 10:14:08
+Sample-Z {0.0 0.0}
+Scanner {{#58} #58}
+{Scanner Motor} {1.0 1.0}
+Slit_1_down {12.899999999999999 12.899999999999999}
+Slit_1_hor_pos {8.881784197001252e-16 8.881784197001252e-16}
+Slit_1_hor_size {10.0 10.0}
+Slit_1_left {18.54 18.54}
+Slit_1_right {27.03 27.03}
+Slit_1_up {22.900000000000002 22.900000000000002}
+Slit_1_vert_pos {1.7763568394002505e-15 1.7763568394002505e-15}
+Slit_1_vert_size {1.0 1.0}
+Slit_2_down {13.780000000000001 13.780000000000001}
+Slit_2_up {34.75 34.75}
+Slit_2_vert_pos {0.3999999999999986 0.3999999999999986}
+Slit_2_vert_size {15.0 15.0}
+Slit_3_down {16.4 16.4}
+Slit_3_hor_pos {-3.8000000000000016 -3.8000000000000016}
+Slit_3_hor_size {35.00000000000001 35.00000000000001}
+Slit_3_left {32.45 32.45}
+Slit_3_right {29.45 29.45}
+Slit_3_up {17.900000000000002 17.900000000000002}
+Slit_3_vert_pos {5.250000000000002 5.250000000000002}
+Slit_3_vert_size {24.999999999999996 24.999999999999996}
+Slit_4_down {-0.5387499999999998 -0.5387499999999998}
+Slit_4_hor_pos {3.25 3.25}
+Slit_4_hor_size {8.0 8.0}
+Slit_4_left {0.9775 0.9775}
+Slit_4_right {6.2775 6.2775}
+Slit_4_up {0.91125 0.91125}
+Slit_4_vert_pos {0.21999999999999986 0.21999999999999986}
+Slit_4_vert_size {5.000000000000001 5.000000000000001}
+StartDate {04.07.2017 04.07.2017}
+StartTime {10:14:08 10:14:08}
 Therm_ext {28.3 28.4}
 Therm_int {29.9 30.0}
-Thermostat {{no fault}}
-Theta 0.0
-Tilt-Z 0.0
-Tilt-y -3.552713678800501e-15
+Thermostat {{no fault} {no fault}}
+Theta {0.0 0.0}
+Tilt-Z {0.0 0.0}
+Tilt-y {-3.552713678800501e-15 -3.552713678800501e-15}
 Tilt_Mi_1_phi {-3.5607180183106384 -3.560101376252751}
 Tilt_Mi_1_theta {8.31140361837112 8.314199205603112}
 Tilt_Mi_2_phi {-0.3532235331467942 -0.3519205418017472}
@@ -125,11 +125,11 @@ Tilt_Mi_2_theta {5.554067899004909 5.557828223063285}
 Tilt_Mono_psi {0.17052059783027468 0.1734478451935782}
 Tilt_Mono_theta {-0.07232386372077419 -0.07097992463168216}
 Time {0.058 494.059}
-Timer 0.0
-Version 1.27.2
-XMLversion 5.0
+Timer {0.0 0.0}
+Version {1.27.2 1.27.2}
+XMLversion {5.0 5.0}
 {date Time} {2017-07-04T10:14:08.178+02:00 2017-07-04T10:22:22.180+02:00}
-{date Timer} 2017-07-04T10:14:08.140+02:00
+{date Timer} {2017-07-04T10:14:08.140+02:00 2017-07-04T10:14:08.140+02:00}
 {msec Time} {57 494059}
-{msec Timer} 0
-nomTemperature 29.9
+{msec Timer} {0 0}
+nomTemperature {29.9 29.9}

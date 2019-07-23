@@ -1,163 +1,163 @@
-2THETA Undefined
-2Theta -8.780000000000001
-Beam_Pos 0.3806055969622142
-Beam_pos_hor 1.0
-Beam_pos_vert 1.0
-Beamstop_X -1.5
-Beamstop_Y -3.0009999999999906
-Bessy_Lebensdauer 6.221872792008978
-Bessy_Ringstrom 298.9078018
-Bieger 2.75
-COATING_2nd_MIR MgF2
-CRYSTAL_COOLING InSb
-CenterPercentage 50
-CenterPos 1.0
-Comment {{SiN-Fenster (15x) Transmission}}
-Cr_1_Cu_Bloc 29.318684672312656
-Cr_2_Si_Temp 30.206759746700392
-Cr_3_Si_Temp 28.767842823730092
-Cr_4_InSb_Temp 28.287741577632154
-CrystalMots {{Motors OK}}
-Crystal_1_phi 2.3865
-Crystal_2_theta 8.3054997406006
-Crystal_3_phi 19.733
-Crystal_3_theta 3.9576999446868903
-Crystal_4_phi 4.399500000000001
-DIODE_BEHIND_MONO Out
-DIODE_IN_MONO Out
-Det.-X -2.879999999999999
-Detector Pilatus_Tiff
-Diode_behind_mono 5.0
-Diode_in_mono 90.0
-EndPos 1.0
-EndTime 20:12:21
-Energy 2999.9999808975635
-FCM_Diff -0.0032606225474629425
-FILTER_1 {{25um Be}}
-FILTER_2 None
-FILTER_PINHOLES Al
-FileFormat HDF4
-Filter_1 66.5
-Filter_2 99.7
-Filter_CCD_pinholes 51.5
-Humid0 20.600000381469727
-Humid1 26.0
-Humid2 0.0
-K2norm 1.3162699365893589e-15
-K3norm -7.80231409557795e-15
-Lebensdauer_1 6.182659732094767
-Lift_table 613.5699935600001
-Mean 375.5
-MeanInterval 5.0
-Messplatz kmc
-MessprogrammVersion 6.230000019073486
-Mirror_1_hor 0.0
-Mirror_1_psi -1.548886225
-Mirror_1_theta 7.4049264751
-Mirror_1_vert -0.4800000000000001
-Mirror_2_hor 24.0
-Mirror_2_theta 7.749969204
-Mirror_2_vert 1.299987500000002
-Mon_Gear_Temp 31.677729457541933
-Mono_1st_wheel 33.5385
-Mono_2nd_wheel 33.5385
-Mono_Cu_Temp 29.877164873731747
-Mono_cr_change 0.9999858999999987
-Motor Optional
-NormOnReferenceScan 0
-Offset_1st_wheel -6.93
-Offset_2Theta 102.096
-Offset_2nd_wheel 210.27915000000002
-Offset_Theta 517.179
-Optional 1.0
-PTB_U49 25.1306
-PeakPos 1.0
-PeakValue 376.0
-PeakWidth 0.0
-PilatusAcqTime 120.0
-PilatusThreshold 1.7
+2THETA {Undefined Undefined}
+2Theta {-8.780000000000001 -8.780000000000001}
+Beam_Pos {0.3806055969622142 0.3806055969622142}
+Beam_pos_hor {1.0 1.0}
+Beam_pos_vert {1.0 1.0}
+Beamstop_X {-1.5 -1.5}
+Beamstop_Y {-3.0009999999999906 -3.0009999999999906}
+Bessy_Lebensdauer {6.221872792008978 6.221872792008978}
+Bessy_Ringstrom {298.9078018 298.9078018}
+Bieger {2.75 2.75}
+COATING_2nd_MIR {MgF2 MgF2}
+CRYSTAL_COOLING {InSb InSb}
+CenterPercentage {50 50}
+CenterPos {1.0 1.0}
+Comment {{SiN-Fenster (15x) Transmission} {SiN-Fenster (15x) Transmission}}
+Cr_1_Cu_Bloc {29.318684672312656 29.318684672312656}
+Cr_2_Si_Temp {30.206759746700392 30.206759746700392}
+Cr_3_Si_Temp {28.767842823730092 28.767842823730092}
+Cr_4_InSb_Temp {28.287741577632154 28.287741577632154}
+CrystalMots {{Motors OK} {Motors OK}}
+Crystal_1_phi {2.3865 2.3865}
+Crystal_2_theta {8.3054997406006 8.3054997406006}
+Crystal_3_phi {19.733 19.733}
+Crystal_3_theta {3.9576999446868903 3.9576999446868903}
+Crystal_4_phi {4.399500000000001 4.399500000000001}
+DIODE_BEHIND_MONO {Out Out}
+DIODE_IN_MONO {Out Out}
+Det.-X {-2.879999999999999 -2.879999999999999}
+Detector {Pilatus_Tiff Pilatus_Tiff}
+Diode_behind_mono {5.0 5.0}
+Diode_in_mono {90.0 90.0}
+EndPos {1.0 1.0}
+EndTime {20:12:21 20:12:21}
+Energy {2999.9999808975635 2999.9999808975635}
+FCM_Diff {-0.0032606225474629425 -0.0032606225474629425}
+FILTER_1 {{25um Be} {25um Be}}
+FILTER_2 {None None}
+FILTER_PINHOLES {Al Al}
+FileFormat {HDF4 HDF4}
+Filter_1 {66.5 66.5}
+Filter_2 {99.7 99.7}
+Filter_CCD_pinholes {51.5 51.5}
+Humid0 {20.600000381469727 20.600000381469727}
+Humid1 {26.0 26.0}
+Humid2 {0.0 0.0}
+K2norm {1.3162699365893589e-15 1.3162699365893589e-15}
+K3norm {-7.80231409557795e-15 -7.80231409557795e-15}
+Lebensdauer_1 {6.182659732094767 6.182659732094767}
+Lift_table {613.5699935600001 613.5699935600001}
+Mean {375.5 375.5}
+MeanInterval {5.0 5.0}
+Messplatz {kmc kmc}
+MessprogrammVersion {6.230000019073486 6.230000019073486}
+Mirror_1_hor {0.0 0.0}
+Mirror_1_psi {-1.548886225 -1.548886225}
+Mirror_1_theta {7.4049264751 7.4049264751}
+Mirror_1_vert {-0.4800000000000001 -0.4800000000000001}
+Mirror_2_hor {24.0 24.0}
+Mirror_2_theta {7.749969204 7.749969204}
+Mirror_2_vert {1.299987500000002 1.299987500000002}
+Mon_Gear_Temp {31.677729457541933 31.677729457541933}
+Mono_1st_wheel {33.5385 33.5385}
+Mono_2nd_wheel {33.5385 33.5385}
+Mono_Cu_Temp {29.877164873731747 29.877164873731747}
+Mono_cr_change {0.9999858999999987 0.9999858999999987}
+Motor {Optional Optional}
+NormOnReferenceScan {0 0}
+Offset_1st_wheel {-6.93 -6.93}
+Offset_2Theta {102.096 102.096}
+Offset_2nd_wheel {210.27915000000002 210.27915000000002}
+Offset_Theta {517.179 517.179}
+Optional {1.0 1.0}
+PTB_U49 {25.1306 25.1306}
+PeakPos {1.0 1.0}
+PeakValue {376.0 376.0}
+PeakWidth {0.0 0.0}
+PilatusAcqTime {120.0 120.0}
+PilatusThreshold {1.7 1.7}
 Pilatus_Tiff {375.0 376.0}
-Pinhole_2_X 57.35
-Pinhole_2_Y 4.09995
-Pot_Mi_1_hor 3.510446336870045
-Pot_Mi_1_psi 5.387862446795922
-Pot_Mi_1_theta 3.796268016234839
-Pot_Mi_1_vert 3.0909917679611936
-Pot_Mi_2_hor 1.9655952542298265
-Pot_Mi_2_theta 3.490203103835045
-Pot_Mi_2_vert 9.831114234173103
-Pressure_Bender 2.7491399534501535
-REF_DIODES None
-Ref_Diodes 1.0
-ReferenceScan 0
-RelPercentStandardDeviation 0.1883107273466172
-Ring_1 298.0087815546414
+Pinhole_2_X {57.35 57.35}
+Pinhole_2_Y {4.09995 4.09995}
+Pot_Mi_1_hor {3.510446336870045 3.510446336870045}
+Pot_Mi_1_psi {5.387862446795922 5.387862446795922}
+Pot_Mi_1_theta {3.796268016234839 3.796268016234839}
+Pot_Mi_1_vert {3.0909917679611936 3.0909917679611936}
+Pot_Mi_2_hor {1.9655952542298265 1.9655952542298265}
+Pot_Mi_2_theta {3.490203103835045 3.490203103835045}
+Pot_Mi_2_vert {9.831114234173103 9.831114234173103}
+Pressure_Bender {2.7491399534501535 2.7491399534501535}
+REF_DIODES {None None}
+Ref_Diodes {1.0 1.0}
+ReferenceScan {0 0}
+RelPercentStandardDeviation {0.1883107273466172 0.1883107273466172}
+Ring_1 {298.0087815546414 298.0087815546414}
 Ring_1_dev {0.2758853887519126 0.32244819087841786}
 Ring_1_mean {297.87281083341406 298.0766410793758}
-SHUTTER Open
-SPOT_CCD_SCREEN out
-Sample-X 92.5
-Sample-Y -2.5
-Sample-Z 5.0
-Slit_1_down 14.899999999999999
-Slit_1_hor_pos 0.9999999999999973
-Slit_1_hor_size 5.0
-Slit_1_left 15.040000000000003
-Slit_1_right 25.529999999999998
-Slit_1_up 22.9
-Slit_1_vert_pos -1.0
-Slit_1_vert_size 3.0
-Slit_2_down 21.68
-Slit_2_up 41.85
-Slit_2_vert_pos 0.0
-Slit_2_vert_size 30.0
-Slit_3_down 42.03
-Slit_3_hor_pos 2.800000000000002
-Slit_3_hor_size 35.0
-Slit_3_left 31.549999999999997
-Slit_3_right 30.35
-Slit_3_up 16.579999999999995
-Slit_3_vert_pos 1.1999999999999975
-Slit_3_vert_size 29.0
-Slit_4_down -0.7037499999999999
-Slit_4_hor_pos 3.3300000000000005
-Slit_4_hor_size 2.000000000000001
-Slit_4_left -2.125
-Slit_4_right 3.3350000000000004
-Slit_4_up -2.6925
-Slit_4_vert_pos -1.4993750000000001
-Slit_4_vert_size 1.30125
-StartDate 05.02.2014
-StartPos 1.0
-StartTime 20:08:13
-Temp0 33.0
-Temp1 28.600000381469727
-Temp2 9.0
-Therm_ext 28.3
+SHUTTER {Open Open}
+SPOT_CCD_SCREEN {out out}
+Sample-X {92.5 92.5}
+Sample-Y {-2.5 -2.5}
+Sample-Z {5.0 5.0}
+Slit_1_down {14.899999999999999 14.899999999999999}
+Slit_1_hor_pos {0.9999999999999973 0.9999999999999973}
+Slit_1_hor_size {5.0 5.0}
+Slit_1_left {15.040000000000003 15.040000000000003}
+Slit_1_right {25.529999999999998 25.529999999999998}
+Slit_1_up {22.9 22.9}
+Slit_1_vert_pos {-1.0 -1.0}
+Slit_1_vert_size {3.0 3.0}
+Slit_2_down {21.68 21.68}
+Slit_2_up {41.85 41.85}
+Slit_2_vert_pos {0.0 0.0}
+Slit_2_vert_size {30.0 30.0}
+Slit_3_down {42.03 42.03}
+Slit_3_hor_pos {2.800000000000002 2.800000000000002}
+Slit_3_hor_size {35.0 35.0}
+Slit_3_left {31.549999999999997 31.549999999999997}
+Slit_3_right {30.35 30.35}
+Slit_3_up {16.579999999999995 16.579999999999995}
+Slit_3_vert_pos {1.1999999999999975 1.1999999999999975}
+Slit_3_vert_size {29.0 29.0}
+Slit_4_down {-0.7037499999999999 -0.7037499999999999}
+Slit_4_hor_pos {3.3300000000000005 3.3300000000000005}
+Slit_4_hor_size {2.000000000000001 2.000000000000001}
+Slit_4_left {-2.125 -2.125}
+Slit_4_right {3.3350000000000004 3.3350000000000004}
+Slit_4_up {-2.6925 -2.6925}
+Slit_4_vert_pos {-1.4993750000000001 -1.4993750000000001}
+Slit_4_vert_size {1.30125 1.30125}
+StartDate {05.02.2014 05.02.2014}
+StartPos {1.0 1.0}
+StartTime {20:08:13 20:08:13}
+Temp0 {33.0 33.0}
+Temp1 {28.600000381469727 28.600000381469727}
+Temp2 {9.0 9.0}
+Therm_ext {28.3 28.3}
 Therm_ext_dev {0.04396968652757584 0.05773502691896171}
 Therm_ext_mean {28.31199999999999 28.33999999999999}
-Therm_int 29.8
+Therm_int {29.8 29.8}
 Therm_int_dev {0.02768874620972731 0.06658328118479388}
 Therm_int_mean {29.907999999999987 29.91199999999999}
-Thermostat {{no fault}}
-Theta 0.0
-Tilt-Y 0.0
-Tilt-Z -0.009999999999999981
-Tilt_Mi_1_phi -3.453058941628871
-Tilt_Mi_1_theta 8.269448113005623
-Tilt_Mi_2_phi -0.33495865074109277
-Tilt_Mi_2_theta 5.287722970979342
-Tilt_Mono_psi 0.167322906803629
-Tilt_Mono_theta -0.08862299183090909
+Thermostat {{no fault} {no fault}}
+Theta {0.0 0.0}
+Tilt-Y {0.0 0.0}
+Tilt-Z {-0.009999999999999981 -0.009999999999999981}
+Tilt_Mi_1_phi {-3.453058941628871 -3.453058941628871}
+Tilt_Mi_1_theta {8.269448113005623 8.269448113005623}
+Tilt_Mi_2_phi {-0.33495865074109277 -0.33495865074109277}
+Tilt_Mi_2_theta {5.287722970979342 5.287722970979342}
+Tilt_Mono_psi {0.167322906803629 0.167322906803629}
+Tilt_Mono_theta {-0.08862299183090909 -0.08862299183090909}
 Time {0.9570000171661377 122.59400177001953}
-denominator02 298.0087815546414
-denominator03 298.0141495864455
-nomTemperature 29.9
-nominator02 3.9226e-13
-nominator03 -2.3252e-12
-normStdev02 0.0
-normStdev03 0.0
-pilatus_hor 2.0
-pilatus_vert 31.0
-pinhole_1_x -1.9050000000000011
-pinhole_1_y 39.1806
+denominator02 {298.0087815546414 298.0087815546414}
+denominator03 {298.0141495864455 298.0141495864455}
+nomTemperature {29.9 29.9}
+nominator02 {3.9226e-13 3.9226e-13}
+nominator03 {-2.3252e-12 -2.3252e-12}
+normStdev02 {0.0 0.0}
+normStdev03 {0.0 0.0}
+pilatus_hor {2.0 2.0}
+pilatus_vert {31.0 31.0}
+pinhole_1_x {-1.9050000000000011 -1.9050000000000011}
+pinhole_1_y {39.1806 39.1806}

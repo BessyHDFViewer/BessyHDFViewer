@@ -1,13 +1,13 @@
 Channel00 {0.1018755 0.1039058}
-Comment {{Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird}}
+Comment {{Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird} {Dieser Testscan macht einen Scan bei dem ein Prema Kanal auf den Ringstrom normiert wird}}
 DWL20-C-EUVR-K617-1 {6.352e-14 6.56e-14}
-FileFormat HDF5
-Location TEST
+FileFormat {HDF5 HDF5}
+Location {TEST TEST}
 PP_Motor1 {5.0 6.0}
 PosCountTimer {3617 34247}
 PosCounter {1 5}
 Ring_1 {298.2480499876271 298.49300596457215}
-StartDate 08.02.2013
-StartTime 13:44:25
-Version 1.9
-XMLversion 2.2
+StartDate {08.02.2013 08.02.2013}
+StartTime {13:44:25 13:44:25}
+Version {1.9 1.9}
+XMLversion {2.2 2.2}
