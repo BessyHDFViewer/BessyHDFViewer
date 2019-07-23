@@ -6,6 +6,7 @@ package require ukaz 2.1
 package require Tk
 package require tooltip
 package require tablelist_tile 5.9
+package require sqlite3
 
 if {[tk windowingsystem]=="x11"} {
 	ttk::setTheme default
@@ -539,67 +540,81 @@ namespace eval BessyHDFViewer {
 
 
 	proc InitCache {} {
-		variable HDFCache {}
-		variable HDFCacheFile {}
-		variable HDFCacheDirty false
 		variable profiledir
 
 		if {$profiledir == {} } {
-			set HDFCacheFile {}
-			puts "No persistent Cache"
+			sqlite3 HDFCache :memory:
+			puts stderr "No persistent Cache"
 		} else {
-			set HDFCacheFile [file join $profiledir HDFClassCache.dict]
-			ReadCache
+			set HDFCacheFile [file join $profiledir HDFCache.db]
+			sqlite3 HDFCache $HDFCacheFile
+		}
+		HDFCache eval {
+			CREATE TABLE IF NOT EXISTS HDFFiles (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, 
+				mtime INTEGER NOT NULL, class TEXT NOT NULL, motor TEXT NOT NULL, detector TEXT NOT NULL, nrows INTEGER NOT NULL);
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_filename ON HDFFiles(path);
+			CREATE TABLE IF NOT EXISTS Fields (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+			CREATE TABLE IF NOT EXISTS FieldValues (hdfid INTEGER, fieldid INTEGER, minimum REAL, maximum REAL,
+				PRIMARY KEY (hdfid, fieldid),
+				FOREIGN KEY (hdfid) REFERENCES HDFFiles(id)
+				ON DELETE CASCADE ON UPDATE CASCADE,
+				FOREIGN KEY (fieldid) REFERENCES Fields(id)
+				ON DELETE CASCADE ON UPDATE CASCADE
+			);
+		}
+
+
+	}
+
+	proc UpdateCache {fn mtime class motor detector nrows fields} {
+		HDFCache eval BEGIN
+		HDFCache eval {
+			INSERT OR REPLACE INTO HDFFiles (id, path, mtime, class, motor, detector, nrows) 
+				SELECT id, :fn, :mtime, :class, :motor, :detector, :nrows 
+				FROM ( SELECT NULL ) LEFT JOIN ( SELECT * FROM HDFFiles WHERE path = :fn );
+		}
+
+		foreach {name value} $fields {
+			lassign $value minimum maximum
+			HDFCache eval {
+				INSERT OR IGNORE INTO Fields (name) VALUES(:name);
+				INSERT OR REPLACE INTO FieldValues(hdfid, fieldid, minimum, maximum) 
+					SELECT HDFFiles.id, Fields.id, :minimum, :maximum FROM HDFFiles, Fields
+						WHERE HDFFiles.path = :fn AND Fields.name = :name ;
+			}
+
+		}
+		HDFCache eval COMMIT
+	}
+
+	proc QueryCache {fn field} {
+		HDFCache eval {
+			SELECT  FieldValues.minimum, FieldValues.maximum FROM HDFFiles, Fields, FieldValues 
+				WHERE FieldValues.hdfid = HDFFiles.id AND FieldValues.fieldid = Fields.id 
+				AND HDFFiles.path = :fn AND Fields.name = :field
 		}
 	}
 
-	proc SaveCache {} {
-		variable HDFCache
-		variable HDFCacheFile
-		variable HDFCacheDirty
-
-		if {!$HDFCacheDirty || ($HDFCacheFile == {})} { return }
-		
-		# check if we need to cut down the cache
-		# the cache grows rapidly, avoid hittin the 2GB string limit
-		set maxsize [PreferenceGet MaxCache 1000]
-		set cursize [dict size $HDFCache]
-		# puts "Cache size: $cursize of $maxsize"
-		if {$cursize > $maxsize} {
-			# cut down cache to half the size
-			# leave last entries
-			set startindex [expr {$cursize - $maxsize/2}]
-			set i 0
-			set HDFCache [dict filter $HDFCache script {_v _k} {incr i; expr {$i > $startindex}}]
-			puts "Cache size reduced: [dict size $HDFCache]"
+	proc GetCachedFields {fn} {
+		set result {}
+		HDFCache eval {
+			SELECT  Fields.name AS name, FieldValues.minimum AS minimum, FieldValues.maximum AS maximum FROM HDFFiles, Fields, FieldValues 
+				WHERE FieldValues.hdfid = HDFFiles.id AND FieldValues.fieldid = Fields.id 
+				AND HDFFiles.path = :fn
+		} {
+			dict set result $name [list $minimum $maximum]
 		}
 
-		if {[catch {
-			set fd [open $HDFCacheFile w]
-			fconfigure $fd -translation binary -encoding utf-8
-			puts -nonewline $fd $HDFCache
-			close $fd
-		}]} {
-			# error - maybe cleanup fd
-			if {[info exists fd]} { catch {close $fd} }
-			set HDFCacheFile {}
-		}	
+		return $result
 	}
 
-	proc ReadCache {} {
-		variable HDFCache
-		variable HDFCacheFile
-		if {[catch {
-			set fd [open $HDFCacheFile r]
-			fconfigure $fd -translation binary -encoding utf-8
-			set HDFCache [read $fd]
-			close $fd
-		}]} {
-			# error - maybe cleanup fd
-			# cache file remains valid - maybe simply didn't exist
-			if {[info exists fd]} { catch {close $fd} }
-		}	
+	proc FindCache {fn mtime} {
+		HDFCache eval {
+			SELECT class, motor, detector, nrows FROM HDFFiles 
+			WHERE HDFFiles.path = :fn AND HDFFiles.mtime = :mtime
+		}
 	}
+
 
 	proc ChooseColumns {columns} {
 		variable w
@@ -684,7 +699,6 @@ namespace eval BessyHDFViewer {
 
 	proc ClassifyHDF {type fn} {
 		variable w
-		variable HDFCache
 		variable ActiveColumns
 		variable IconClassMap
 		variable filterexpression
@@ -711,89 +725,40 @@ namespace eval BessyHDFViewer {
 		}
 
 
-		set cachemiss false
 		# check cache
-		if {[dict exists $HDFCache $fn Modified] && $mtime == [dict get $HDFCache $fn Modified] } {
-			set cached [dict get $HDFCache $fn]
-			set class [dict get $cached class]
-		} else {
-			set cached {}
-		}
-
-		# loop over requested columns. 
-		set result {}
-		foreach col $ActiveColumns {
-			# 1. check cache
-			if {[dict exists $cached $col] && !$cachemiss} {
-				lappend result [dict get $cached $col]
-				continue
-			}
-
-			# 2. if we get here, either the value could not be found in the cache 
-			# or cachemiss == true, i.e. we have already read the file
-			if {!$cachemiss} {
-				# first time we have a cache miss -- try to read the file
+		set metainfo [FindCache $fn $mtime]
+		if {[llength $metainfo] == 0} {
+			# the file was not found in the cache, or the mtime was different
+			# read the file and update the cache
+			# puts "$fn $mtime not found in cache"
+			set temphdfdata {}
+			if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
+				puts "Error reading hdf file $fn"
 				set temphdfdata {}
-				if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
-					puts "Error reading hdf file $fn"
-					set temphdfdata {}
 
-				}
-				
+			} else {
 				dict_assign [bessy_class $temphdfdata] class motor detector nrows
-				set allvalues [bessy_get_all_fields $temphdfdata]
-				set cached [dict merge $cached $allvalues]
-				
-				# mark cache dirty and write back value
-				variable HDFCacheDirty true
-				dict set HDFCache $fn $cached
-				# don't check cache for this file any longer
-				set cachemiss true
+				set fieldvalues [bessy_get_all_fields $temphdfdata]
+				UpdateCache $fn $mtime $class $motor $detector $nrows $fieldvalues
 			}
-
-			# 3. get the value from the cache
-
-			switch $col {
-				Motor {
-					set value $motor
-				}
-
-				Detector {
-					set value $detector
-				}
-
-				Modified {
-					set value $mtime
-				}
-
-				NRows {
-					set value $nrows
-				}
-
-				default {
-					set value [SmallUtils::dict_getdefault $cached $col {}]
-				}
-			}
-
-			lappend result $value
-
-			# mark cache dirty and write back value
-			variable HDFCacheDirty true
-			dict set HDFCache $fn $col $value
-
+		} else {
+			# puts "$fn $mtime found in cache"
+			# retrieve basic meta info
+			lassign $metainfo class motor detector nrows
+			set fieldvalues [GetCachedFields $fn]
 		}
 
-		if {$cachemiss} {
-			# write back class & mtime to cache
-			dict set HDFCache $fn class $class
-			dict set HDFCache $fn Modified $mtime
-		}
+		# build dictionary with all information
+		set metainfodict [dict create class $class Motor $motor Detector $detector NRows $nrows]
+		set fieldvalues [dict merge $fieldvalues $metainfodict]
+
+		# loop over requested columns and retrieve values from cache
+		set result [lmap col $ActiveColumns {SmallUtils::dict_getdefault $fieldvalues $col {}}]
 		
-
 		# last column is always the icon for the class
 		set classicon [dict get $IconClassMap $class]
 		if {$filterenabled && [string trim $filterexpression]!= ""} {
-			if {[catch {dict_expr $HDFCache $fn $filterexpression} filterres]} {
+			if {[catch {dict_expr $fieldvalues $filterexpression} filterres]} {
 				# an error occured during filtering
 				FilterError $filterres
 			} else {
@@ -1932,7 +1897,6 @@ namespace eval BessyHDFViewer {
 			# puts stderr "tk busy forget succeeded"
 		}
 
-		SaveCache
 		FilterFinish
 	}
 
@@ -3235,6 +3199,11 @@ namespace eval BessyHDFViewer {
 		set keys [lrange $args 0 end-1]
 		set vardict [dict get $dictvalue {*}$keys]
 		dict for {var val} $vardict {
+			if {[string is list $val] && [llength $val] == 2} {
+				# typical min / max value
+				lassign $val min max
+				if {$min eq $max} { set val $min }
+			}
 			set ::DICT_EXPR::$var $val
 		}
 
