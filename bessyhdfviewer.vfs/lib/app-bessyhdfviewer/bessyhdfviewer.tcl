@@ -553,6 +553,8 @@ namespace eval BessyHDFViewer {
 			CREATE TABLE IF NOT EXISTS HDFFiles (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, 
 				mtime INTEGER NOT NULL, class TEXT NOT NULL, motor TEXT NOT NULL, detector TEXT NOT NULL, nrows INTEGER NOT NULL);
 			CREATE UNIQUE INDEX IF NOT EXISTS idx_filename ON HDFFiles(path);
+			CREATE INDEX IF NOT EXISTS idx_mtime ON HDFFiles(mtime);
+			CREATE INDEX IF NOT EXISTS idx_nrows ON HDFFiles(nrows);
 			CREATE TABLE IF NOT EXISTS Fields (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
 			CREATE TABLE IF NOT EXISTS FieldValues (hdfid INTEGER, fieldid INTEGER, minimum REAL, maximum REAL,
 				PRIMARY KEY (hdfid, fieldid),
@@ -561,6 +563,8 @@ namespace eval BessyHDFViewer {
 				FOREIGN KEY (fieldid) REFERENCES Fields(id)
 				ON DELETE CASCADE ON UPDATE CASCADE
 			);
+			CREATE INDEX IF NOt EXISTS idx_min ON FieldValues(minimum);
+			CREATE INDEX IF NOt EXISTS idx_max ON FieldValues(maximum);
 		}
 
 
@@ -734,8 +738,10 @@ namespace eval BessyHDFViewer {
 			set temphdfdata {}
 			if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
 				puts "Error reading hdf file $fn"
-				set temphdfdata {}
 
+				set result [lrepeat [llength $ActiveColumns] {}]
+				lappend result [IconGet unknown]
+				return $result
 			} else {
 				dict_assign [bessy_class $temphdfdata] class motor detector nrows
 				set fieldvalues [bessy_get_all_fields $temphdfdata]
@@ -749,7 +755,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		# build dictionary with all information
-		set metainfodict [dict create class $class Motor $motor Detector $detector NRows $nrows]
+		set metainfodict [dict create class $class Motor $motor Detector $detector NRows $nrows Modified $mtime]
 		set fieldvalues [dict merge $fieldvalues $metainfodict]
 
 		# loop over requested columns and retrieve values from cache
