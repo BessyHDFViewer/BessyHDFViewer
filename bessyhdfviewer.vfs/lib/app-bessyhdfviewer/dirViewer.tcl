@@ -351,7 +351,8 @@ namespace eval dirViewer {} {
 				
 				# if the classification is SKIP, don't show this file
 				if {[lindex $class end] != "SKIP"} {
-					lappend itemList [list [list file $tail] {*}$class $fullname]
+					set item [list [list file $tail] {*}$class $fullname]
+					lappend itemList $item
 				}
 				incr progress
 				event generate $win <<Progress>> -data $progress
@@ -441,7 +442,46 @@ namespace eval dirViewer {} {
 				}
 			}
 		}
+		
+		variable vfolders {}
+		method AddVirtualFolder {foldername filelist} {
+			if {[dict exists $vfolders $foldername node]} {
+				set node [dict get $vfolders $foldername node]
+				$tbl delete [$tbl delete [dict get $vfolders $foldername tblkeys]]
+			} else {
+				set node [$tbl insertchild root end [list [list virtualfolder $foldername]]]
+				dict set vfolders $foldername node $node
+			}
+			dict set vfolders $foldername files $filelist
+			$tbl cellconfigure $node,0 -image [BessyHDFViewer::IconGet open-folder]
+			$tbl expand $node
+			set fkeys [$self putItems $node $filelist {}]
+			dict set vfolders $foldername tblkeys $fkeys
 
+			if {[llength $fkeys] != 0 } {
+				$tbl see [lindex $fkeys 0]
+			} else {
+				$tbl see $node
+			}
+		}
+
+		method RemoveVirtualFolder {foldername} {
+			if {[dict exists $vfolders $foldername node]} {
+				set node [dict get $vfolders $foldername node]
+				$tbl delete $node
+				dict unset vfolders $foldername
+			}
+		}
+
+		method RefreshVirtualFolders {} {
+			set vfolders {}
+			
+			# set oldvfolders $vfolders
+			# set vfolders {}
+			# dict for {folder content} $oldvfolders {
+			# 	$self AddVirtualFolder $folder [dict get $oldvfolders $folder files]
+			# }
+		}
 
 		method inotifyhandler {wid} {
 			if {[catch {
@@ -484,6 +524,7 @@ namespace eval dirViewer {} {
 			set cwd $dir
 			$self putDir $dir root
 			set options(-hasparent) [expr {$cwd != {}}]
+			$self RefreshVirtualFolders
 		}
 
 		method getcwd {} {

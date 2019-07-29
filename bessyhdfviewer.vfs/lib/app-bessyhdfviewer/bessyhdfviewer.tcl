@@ -3071,6 +3071,53 @@ namespace eval BessyHDFViewer {
 		return [lsort -uniq $allkeys]
 	}
 
+	proc SearchHDF {foldername criteria {limit 100}} {
+		variable w
+		set jointables "HDFFiles"
+		set whereclauses {}
+		set count 0
+		foreach crit $criteria {
+			lassign $crit var mode val1 val2
+			if { $mode eq "meta"} {
+				lappend whereclauses "HDFFiles.$var $val1 :value$count"
+				set value$count $val2
+				continue
+			}
+
+			incr count
+			append jointables ", Fields as f$count, FieldValues as fv$count"
+			set whereclause "fv$count.hdfid = HDFFiles.id  AND f$count.name = :var$count AND f$count.id = fv$count.fieldid "
+			switch $mode {
+				contains {
+					append whereclause "AND (fv$count.minimum LIKE :pattern$count OR fv$count.maximum LIKE :pattern$count)"
+					set pattern$count "%$val1%"
+				}
+
+				between {
+					append whereclause "AND (fv$count.minimum <= :maxval$count AND fv$count.maximum >= :minval$count)"
+				}
+
+				covers {
+					append whereclause "AND (fv$count.minimum <= :minval$count AND fv$count.maximum >= :maxval$count)"
+				}
+
+				default {
+					return -code error "Unknown clause $mode"
+				}
+			}
+			
+			
+			set var$count $var
+			set minval$count $val1
+			set maxval$count $val2
+			lappend whereclauses "( $whereclause )"
+		}
+		set query "SELECT HDFFiles.path FROM $jointables\n WHERE [join $whereclauses "\nAND "]\n LIMIT $limit;"
+		puts $query
+		set result [HDFCache eval $query]
+		$w(filelist) AddVirtualFolder $foldername $result
+	}
+
 	proc RunTest {folder} {
 		# open all .hdf .h5 and .dat files in the given folder
 		# compare with the ASCII dump in the dump folder
