@@ -563,8 +563,7 @@ namespace eval BessyHDFViewer {
 				FOREIGN KEY (fieldid) REFERENCES Fields(id)
 				ON DELETE CASCADE ON UPDATE CASCADE
 			);
-			CREATE INDEX IF NOt EXISTS idx_min ON FieldValues(minimum);
-			CREATE INDEX IF NOt EXISTS idx_max ON FieldValues(maximum);
+			CREATE INDEX IF NOT EXISTS idx_values ON FieldValues(minimum,maximum,hdfid,fieldid);
 		}
 
 
@@ -3112,7 +3111,7 @@ namespace eval BessyHDFViewer {
 			set maxval$count $val2
 			lappend whereclauses "( $whereclause )"
 		}
-		set query "SELECT HDFFiles.path FROM $jointables\n WHERE [join $whereclauses "\nAND "]\n LIMIT $limit;"
+		set query "SELECT HDFFiles.path FROM $jointables\n WHERE [join $whereclauses "\nAND "]\n ORDER BY HDFFiles.mtime DESC LIMIT $limit;"
 		puts $query
 		set result [HDFCache eval $query]
 		$w(filelist) AddVirtualFolder $foldername $result
