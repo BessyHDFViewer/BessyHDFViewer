@@ -56,7 +56,7 @@ namespace eval BessyHDFViewer {
 
 	# load support modules
 	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl 
-		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl} {
+		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl searchdialog.tcl} {
 		namespace eval :: [list source [file join $basedir $module]]
 	}
 
@@ -3115,6 +3115,7 @@ namespace eval BessyHDFViewer {
 		puts $query
 		set result [HDFCache eval $query]
 		$w(filelist) AddVirtualFolder $foldername $result
+		return [llength $result]
 	}
 
 	proc RunTest {folder} {
