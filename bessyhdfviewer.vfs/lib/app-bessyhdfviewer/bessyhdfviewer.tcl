@@ -236,13 +236,14 @@ namespace eval BessyHDFViewer {
 		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
 		set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
+		set w(bsearch) [ttk::button $w(bbar).bsearch -command ${ns}::SearchCmd -text "Search" -image [IconGet dialog-search] -compound left]
 
 		set w(foldbut) [ttk::button $w(bbar).foldbut -text "<" -command ${ns}::FoldPlotCmd -image [IconGet fold-close] -style Toolbutton]
 		tooltip::tooltip $w(foldbut) "Fold away data display"
 
 		variable PlotFolded false
 		
-		pack $w(bhome) $w(bupwards) $w(brefresh) $w(dumpButton) -side left -expand no -padx 2
+		pack $w(bhome) $w(bupwards) $w(brefresh) $w(dumpButton) $w(bsearch) -side left -expand no -padx 2
 		pack $w(foldbut) -side left -expand yes -fill none -anchor e
 
 		set w(progbar) [ttk::progressbar $w(listfr).progbar]
@@ -541,7 +542,8 @@ namespace eval BessyHDFViewer {
 
 	proc InitCache {} {
 		variable profiledir
-
+		variable cachefile
+		
 		if {$profiledir == {} } {
 			sqlite3 HDFCache :memory:
 			puts stderr "No persistent Cache"
@@ -609,6 +611,12 @@ namespace eval BessyHDFViewer {
 		}
 
 		return $result
+	}
+
+	proc GetCachedFieldNames {} {
+		HDFCache eval { 
+			SELECT name FROM Fields ORDER BY name ASC
+		}
 	}
 
 	proc FindCache {fn mtime} {
@@ -3068,6 +3076,15 @@ namespace eval BessyHDFViewer {
 			}
 		}
 		return [lsort -uniq $allkeys]
+	}
+
+	proc SearchCmd {} {
+		set wname .__searchdialog
+		if {[winfo exists $wname]} {
+			raise $wname
+		} else {
+			SearchDialog $wname -fieldlist [GetCachedFieldNames] -title "Search data file"
+		}
 	}
 
 	proc SearchHDF {foldername criteria {limit 100}} {
