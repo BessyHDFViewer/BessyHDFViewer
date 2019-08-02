@@ -1,4 +1,5 @@
 package require snit
+package require fileutil
 
 snit::widget SearchDialog {
 	# dialog for choosing and sorting a subset of a large list
@@ -80,17 +81,18 @@ snit::widget SearchDialog {
 		# settings for the database
 		
 		set dblabel [ttk::label $dbframe.dbl -text "Database:"]
-		set dbentry [ttk::entry $dbframe.dbe -textvariable [myvar dbfile]]
+		set dbentry [ttk::entry $dbframe.dbe -state readonly -textvariable BessyHDFViewer::HDFCacheFile]
 		set dbfile $BessyHDFViewer::HDFCacheFile
 		set dbopen  [ttk::button $dbframe.dbo -command [mymethod OpenDB] -image [BessyHDFViewer::IconGet file-open] -text O -style Toolbutton]
+		set dbreset  [ttk::button $dbframe.dbr -command [mymethod ResetDB] -image [BessyHDFViewer::IconGet reset] -text R -style Toolbutton]
 
-		set clearbtn [ttk::button $dbframe.clear -command [mymethod ClearCache] -text "Clear Cache"]
-		set indexbtn [ttk::button $dbframe.index -command [mymethod IndexRun] -text "Index Directory"]
-		set importbtn [ttk::button $dbframe.import -command [mymethod Import] -text "Import database"]
+		set clearbtn [ttk::button $dbframe.clear -command [mymethod ClearCacheCmd] -text "Clear Cache"]
+		set indexbtn [ttk::button $dbframe.index -command [mymethod IndexRunCmd] -text "Index Directory"]
+		set importbtn [ttk::button $dbframe.import -command [mymethod ImportCmd] -text "Import database"]
 		
-		grid $dblabel $dbentry $dbopen  -sticky nsew
-		grid $indexbtn $importbtn  -sticky nsew
-		grid $clearbtn -sticky nsew
+		grid $dblabel $dbentry $dbopen  $dbreset -sticky nsew
+		grid $indexbtn $importbtn
+		grid $clearbtn
 
 		grid columnconfigure $dbframe $dbentry -weight 1
 
@@ -275,6 +277,68 @@ snit::widget SearchDialog {
 	method SetTitle {option title} {
 		set options($option) $title
 		wm title $win $title
+	}
+
+	method ClearCacheCmd {} {
+		set ans [tk_messageBox -message "Do you really want to clear the precious cache?" \
+			-parent $win -title "Are you sure?" -default cancel -type okcancel]
+		if {$ans eq "ok"} {
+			BessyHDFViewer::ClearCache
+		}
+	}
+
+	method OpenDB {} {
+		set newdb [tk_getSaveFile -title "Choose cachefile" -initialfile $BessyHDFViewer::HDFCacheFile -filetypes {{"Cache files" *.db}}]
+		if {$newdb ne {}} {
+			BessyHDFViewer::PreferenceSet HDFCacheFile $newdb
+			BessyHDFViewer::InitCache
+		}
+	}
+
+	method ResetDB {} {
+		BessyHDFViewer::PreferenceSet HDFCacheFile {}
+		BessyHDFViewer::InitCache
+	}
+
+	method IndexRunCmd {} {
+		set rootdir [$BessyHDFViewer::w(filelist) getcwd]
+		set ans [tk_messageBox -title "Are you sure?" \
+		-message "Run the index over the current directory\n$rootdir\n? This may take some time an dcannot be interrupted." \
+		-parent . -default cancel -type okcancel]
+		if {$ans eq "ok"} {
+			set status "Enumerating files..."
+			update
+			set files [fileutil::findByPattern $rootdir -glob {*.hdf *.h5}]
+			set N [llength $files]
+			set count 0
+			foreach fn $files {
+				if {$count % 10 == 0} {
+					set status "Indexing $count from $N files..." 
+					update
+				}
+				BessyHDFViewer::ClassifyHDF file $fn
+				incr count
+			}
+
+			set status "Indexing done ($count files)"
+
+		}
+	}
+
+	method ImportCmd {} {
+		set foreigncache [tk_getOpenFile -title "Choose cachefile for import" -initialfile $BessyHDFViewer::HDFCacheFile \
+			 -filetypes {{"Cache files" *.db} {"All files" *}} ]
+		if {$foreigncache ne {}} {
+			set mb ._message
+			toplevel $mb
+			pack [label $mb.l -text "Please wait while importing ...."]
+			update
+
+			BessyHDFViewer::ImportCache $foreigncache
+			lassign [BessyHDFViewer::CacheStats] nfiles nvalues
+			pack [label $mb.l2 -text "$nvalues from $nfiles imported"]
+			pack [button $mb.b -command [list destroy $mb] -text "Close"]
+		}
 	}
 
 }

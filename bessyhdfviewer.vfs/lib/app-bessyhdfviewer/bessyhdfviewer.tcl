@@ -557,7 +557,6 @@ namespace eval BessyHDFViewer {
 			puts stderr "No persistent Cache"
 		} else {
 			set HDFCacheFile [file join $localcachedir HDFCache.db]
-			sqlite3 HDFCache $HDFCacheFile
 		}
 		
 		# check preferences if the cache was set to another location
@@ -623,6 +622,7 @@ namespace eval BessyHDFViewer {
 		set nvalues [$cachdb eval {select count(*) from fieldvalues }]
 
 		puts "$nfiles Files, $nvalues Values"
+		return [list $nfiles $nvalues]
 	} 
 
 	proc UpdateCache {fn mtime class motor detector nrows fields} {
