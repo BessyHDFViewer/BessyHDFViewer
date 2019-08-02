@@ -83,8 +83,8 @@ snit::widget SearchDialog {
 		set dblabel [ttk::label $dbframe.dbl -text "Database:"]
 		set dbentry [ttk::entry $dbframe.dbe -state readonly -textvariable BessyHDFViewer::HDFCacheFile]
 		set dbfile $BessyHDFViewer::HDFCacheFile
-		set dbopen  [ttk::button $dbframe.dbo -command [mymethod OpenDB] -image [BessyHDFViewer::IconGet file-open] -text O -style Toolbutton]
-		set dbreset  [ttk::button $dbframe.dbr -command [mymethod ResetDB] -image [BessyHDFViewer::IconGet reset] -text R -style Toolbutton]
+		set dbopen  [ttk::button $dbframe.dbo -command [mymethod OpenDB] -image [BessyHDFViewer::IconGet document-open-remote] -text O -style Toolbutton]
+		set dbreset  [ttk::button $dbframe.dbr -command [mymethod ResetDB] -image [BessyHDFViewer::IconGet document-revert] -text R -style Toolbutton]
 
 		set clearbtn [ttk::button $dbframe.clear -command [mymethod ClearCacheCmd] -text "Clear Cache"]
 		set indexbtn [ttk::button $dbframe.index -command [mymethod IndexRunCmd] -text "Index Directory"]
@@ -288,7 +288,7 @@ snit::widget SearchDialog {
 	}
 
 	method OpenDB {} {
-		set newdb [tk_getSaveFile -title "Choose cachefile" -initialfile $BessyHDFViewer::HDFCacheFile -filetypes {{"Cache files" *.db}}]
+		set newdb [tk_getSaveFile -title "Choose cachefile" -initialfile $BessyHDFViewer::HDFCacheFile -filetypes {{"Cache files" *.db}} -defaultextension db]
 		if {$newdb ne {}} {
 			BessyHDFViewer::PreferenceSet HDFCacheFile $newdb
 			BessyHDFViewer::InitCache
@@ -303,7 +303,7 @@ snit::widget SearchDialog {
 	method IndexRunCmd {} {
 		set rootdir [$BessyHDFViewer::w(filelist) getcwd]
 		set ans [tk_messageBox -title "Are you sure?" \
-		-message "Run the index over the current directory\n$rootdir\n? This may take some time an dcannot be interrupted." \
+		-message "Run the index over the current directory\n$rootdir\n ? This may take some time and cannot be interrupted." \
 		-parent . -default cancel -type okcancel]
 		if {$ans eq "ok"} {
 			set status "Enumerating files..."

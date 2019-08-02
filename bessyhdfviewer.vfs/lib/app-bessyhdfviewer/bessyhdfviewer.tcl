@@ -552,15 +552,17 @@ namespace eval BessyHDFViewer {
 		variable localcachedir
 		variable HDFCacheFile
 		
-		if {$localcachedir == {} } {
-			set HDFCacheFile :memory:
-			puts stderr "No persistent Cache"
-		} else {
-			set HDFCacheFile [file join $localcachedir HDFCache.db]
-		}
-		
 		# check preferences if the cache was set to another location
-		set HDFCacheFile [PreferenceGet HDFCacheFile $HDFCacheFile]
+		set HDFCacheFile [PreferenceGet HDFCacheFile {}]
+		
+		if {$HDFCacheFile eq {}} {
+			if {$localcachedir == {} } {
+				set HDFCacheFile :memory:
+				puts stderr "No persistent Cache"
+			} else {
+				set HDFCacheFile [file join $localcachedir HDFCache.db]
+			}
+		}
 
 		sqlite3 HDFCache $HDFCacheFile
 		
