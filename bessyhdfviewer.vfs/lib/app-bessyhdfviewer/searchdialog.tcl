@@ -26,22 +26,25 @@ snit::widget SearchDialog {
 
 	variable status ""
 
-	variable modes {between contains covers equal}
 
 	variable signatures {
 		between { "" - and - }
 		contains { "" - }
 		covers { "range from" - to - }
 		equal { to - }
+		included { "in range from" - to - }
 		"" { }
 	}
 
+	variable modes
 
 	option -title -default {Select search criteria} -configuremethod SetTitle
 	option -fieldlist -default {Comment Energy}
 	option -parent -default {}
 
 	constructor {args} {
+		set modes [dict keys $signatures] 
+
 		# first fill toplevel with themed frame
 		install mainframe using ttk::frame $win.mfr
 		pack $mainframe -expand yes -fill both 
@@ -264,10 +267,14 @@ snit::widget SearchDialog {
 				set par [narrowrange {*}$par $epsilon]
 			}
 
+			included {
+				set par [widenrange {*}$par $epsilon]
+			}
+
 			equal {
 				lassign $par spar
 				set par [widenrange $spar $spar $epsilon]
-				set mode between
+				set mode included
 			}
 		}
 		

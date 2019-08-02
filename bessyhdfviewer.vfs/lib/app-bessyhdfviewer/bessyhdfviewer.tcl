@@ -3173,6 +3173,11 @@ namespace eval BessyHDFViewer {
 					append whereclause "AND (fv$count.minimum <= :minval$count AND fv$count.maximum >= :maxval$count)"
 				}
 
+				included {
+					append whereclause "AND (fv$count.minimum >= :minval$count AND fv$count.maximum <= :maxval$count)"
+
+				}
+
 				default {
 					return -code error "Unknown clause $mode"
 				}
