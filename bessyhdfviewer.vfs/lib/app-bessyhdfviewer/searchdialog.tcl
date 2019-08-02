@@ -16,6 +16,8 @@ snit::widget SearchDialog {
 	variable limit 100
 	variable epsilon 1e-5
 
+	variable dbfile
+
 	variable ncrit
 	variable critwidget
 	variable formdata
@@ -43,7 +45,7 @@ snit::widget SearchDialog {
 		install mainframe using ttk::frame $win.mfr
 		pack $mainframe -expand yes -fill both 
 
-
+		# Metainformation for this search
 		set flabel [ttk::label $mainframe.flabel -text "Name:"]
 		set fentry [ttk::entry $mainframe.fentry -textvariable [myvar foldername]]
 		set llabel [ttk::label $mainframe.llabel -text "Limit:"]
@@ -55,24 +57,43 @@ snit::widget SearchDialog {
 		install butframe using ttk::frame $mainframe.bbar
 		
 		set statusbar [ttk::label $mainframe.statbar -textvariable [myvar status]]
-		
-		grid $flabel $fentry -sticky nsew
-		grid $llabel $lentry -sticky nsw
-		grid $elabel $eentry -sticky nsw
-		grid $critframe - -sticky nsew
-		grid $statusbar - -sticky nsew
-		grid $butframe  -
+		set dbframe [ttk::labelframe $mainframe.db -text "Database"]
+
+		# main layout
+		grid $flabel       $fentry -sticky nsew
+		grid $llabel       $lentry -sticky nsw
+		grid $elabel       $eentry -sticky nsw
+		grid $critframe      -     -sticky nsew
+		grid $dbframe        -     -sticky nsew
+		grid $statusbar      -     -sticky nsew
+		grid $butframe       -
 
 		grid columnconfigure $mainframe $fentry -weight 1
 		grid rowconfigure $mainframe $critframe -weight 1
-
+		
+		# buttons for running
 		install searchbutton using ttk::button $butframe.search -text "Search" -command [mymethod RunSearch]
 		install removebutton using ttk::button $butframe.remove -text "Remove Search" -command [mymethod RemoveSearch]
 		install closebutton using ttk::button $butframe.close -text "Close" -command [mymethod Exit]
-
 		pack $searchbutton $removebutton $closebutton -side left
 		
+		# settings for the database
 		
+		set dblabel [ttk::label $dbframe.dbl -text "Database:"]
+		set dbentry [ttk::entry $dbframe.dbe -textvariable [myvar dbfile]]
+		set dbfile $BessyHDFViewer::HDFCacheFile
+		set dbopen  [ttk::button $dbframe.dbo -command [mymethod OpenDB] -image [BessyHDFViewer::IconGet file-open] -text O -style Toolbutton]
+
+		set clearbtn [ttk::button $dbframe.clear -command [mymethod ClearCache] -text "Clear Cache"]
+		set indexbtn [ttk::button $dbframe.index -command [mymethod IndexRun] -text "Index Directory"]
+		set importbtn [ttk::button $dbframe.import -command [mymethod Import] -text "Import database"]
+		
+		grid $dblabel $dbentry $dbopen  -sticky nsew
+		grid $indexbtn $importbtn  -sticky nsew
+		grid $clearbtn -sticky nsew
+
+		grid columnconfigure $dbframe $dbentry -weight 1
+
 		$self configurelist $args
 
 		set ncrit 1

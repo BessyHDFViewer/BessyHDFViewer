@@ -450,8 +450,6 @@ namespace eval BessyHDFViewer {
 		grid rowconfigure $w(difffr) 0 -weight 1
 
 		$w(displayfr) add $w(difffr) -text "Diff"
-		
-
 	}
 
 	proc AddPlotRow {} {
