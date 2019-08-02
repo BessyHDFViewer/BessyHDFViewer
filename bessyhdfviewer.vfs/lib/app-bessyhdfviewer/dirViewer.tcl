@@ -303,7 +303,7 @@ namespace eval dirViewer {} {
 		}
 
 
-		method putItems {node files directories} {
+		method putItems {node files directories {sorting yes}} {
 			set prog_max [expr {max(1,[llength $directories]+[llength $files]-1)}]
 			event generate $win <<ProgressStart>> -data $prog_max
 			set progress 0
@@ -363,7 +363,9 @@ namespace eval dirViewer {} {
 			# Sort the above list and insert it into the tablelist widget
 			# tbl as list of children of the row identified by nodeIdx
 			#
-			set itemList [$tbl applysorting $itemList]
+			if {$sorting} {
+				set itemList [$tbl applysorting $itemList]
+			}
 			# puts $itemList
 			set fcindex [lsearch $options(-columns) $options(-foldcolumn)]
 			if {$options(-foldcolumn) != {} && $fcindex >= 0} {
@@ -455,7 +457,7 @@ namespace eval dirViewer {} {
 			dict set vfolders $foldername files $filelist
 			$tbl cellconfigure $node,0 -image [BessyHDFViewer::IconGet open-folder]
 			$tbl expand $node
-			set fkeys [$self putItems $node $filelist {}]
+			set fkeys [$self putItems $node $filelist {} no]
 			dict set vfolders $foldername tblkeys $fkeys
 
 			if {[llength $fkeys] != 0 } {

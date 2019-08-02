@@ -63,14 +63,17 @@ namespace eval BessyHDFViewer {
 	proc Init {argv} {
 		variable ns
 		variable profiledir
+		variable localcachedir
 		
 		# find user profile directory
 		switch -glob $::tcl_platform(platform) {
 			win* {
 				set profiledir $::env(APPDATA)/BessyHDFViewer
+				set localcachedir $profiledir
 			}
 			unix {
 				set profiledir $::env(HOME)/.BessyHDFViewer
+				set localcachedir [file join /var/tmp BessyHDFViewerCache-$::env(USER)]
 			}
 			default {
 				set profiledir [pwd]
@@ -79,9 +82,16 @@ namespace eval BessyHDFViewer {
 
 		if {[catch {file mkdir $profiledir}]} {
 			# give up - no persistent cache
-			puts "No persistent cache - could not access profile dir $profiledir"
+			puts "No profile dir available (tried $profiledir)"
 			set profiledir {}
 		}
+		
+		if {[catch {file mkdir $localcachedir}]} {
+			# give up - no persistent cache
+			puts "No local cache dir available (tried $localcachedir)"
+			set localcachedir $profiledir
+		}
+
 
 		variable ColumnTraits {
 			Modified {
@@ -541,16 +551,22 @@ namespace eval BessyHDFViewer {
 
 
 	proc InitCache {} {
-		variable profiledir
-		variable cachefile
+		variable localcachedir
+		variable HDFCacheFile
 		
-		if {$profiledir == {} } {
-			sqlite3 HDFCache :memory:
+		if {$localcachedir == {} } {
+			set HDFCacheFile :memory:
 			puts stderr "No persistent Cache"
 		} else {
-			set HDFCacheFile [file join $profiledir HDFCache.db]
+			set HDFCacheFile [file join $localcachedir HDFCache.db]
 			sqlite3 HDFCache $HDFCacheFile
 		}
+		
+		# check preferences if the cache was set to another location
+		set HDFCacheFile [PreferenceGet HDFCacheFile $HDFCacheFile]
+
+		sqlite3 HDFCache $HDFCacheFile
+		
 		HDFCache eval {
 			CREATE TABLE IF NOT EXISTS HDFFiles (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, 
 				mtime INTEGER NOT NULL, class TEXT NOT NULL, motor TEXT NOT NULL, detector TEXT NOT NULL, nrows INTEGER NOT NULL);
@@ -568,8 +584,48 @@ namespace eval BessyHDFViewer {
 			CREATE INDEX IF NOT EXISTS idx_values ON FieldValues(minimum,maximum,hdfid,fieldid);
 		}
 
-
 	}
+
+	proc ClearCache {} {
+		# remove everything. Easiest implementation: delete cache file
+		variable HDFCacheFile
+		HDFCache close
+		file delete -force $HDFCacheFile
+		InitCache
+	}
+
+	proc ImportCache {fn} {
+		# open foreign database and import it into the current cache
+
+		HDFCache eval {
+			ATTACH DATABASE :fn AS foreign_cache;
+			BEGIN;
+			INSERT OR IGNORE INTO hdffiles(path, mtime, class, motor, detector, nrows) 
+				SELECT path,mtime,class,motor,detector,nrows 
+				FROM foreign_cache.hdffiles;
+			
+			INSERT OR IGNORE INTO Fields(name) SELECT name FROM foreign_cache.Fields;
+			
+			INSERT OR IGNORE INTO FieldValues(hdfid, fieldid, minimum, maximum) 
+				SELECT main.HDFFiles.id, main.Fields.id, foreign_cache.FieldValues.minimum, foreign_cache.FieldValues.maximum
+				FROM main.HDFFiles, main.Fields, foreign_cache.HDFFiles, foreign_cache.Fields, foreign_cache.FieldValues
+
+					WHERE main.HDFFiles.path = foreign_cache.HDFFiles.path AND main.Fields.name = foreign_cache.Fields.name
+					AND foreign_cache.FieldValues.hdfid = foreign_cache.HDFFiles.id 
+					AND foreign_cache.FieldValues.fieldid = foreign_cache.Fields.id;
+
+
+			COMMIT;
+			DETACH DATABASE foreign_cache;
+		}
+	}
+
+	proc CacheStats {{cachdb HDFCache}} {
+		set nfiles [$cachdb eval {select count(*) from hdffiles }]
+		set nvalues [$cachdb eval {select count(*) from fieldvalues }]
+
+		puts "$nfiles Files, $nvalues Values"
+	} 
 
 	proc UpdateCache {fn mtime class motor detector nrows fields} {
 		HDFCache eval BEGIN
