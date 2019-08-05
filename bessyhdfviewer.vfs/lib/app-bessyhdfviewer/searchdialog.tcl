@@ -311,7 +311,7 @@ snit::widget SearchDialog {
 		set rootdir [$BessyHDFViewer::w(filelist) getcwd]
 		set ans [tk_messageBox -title "Are you sure?" \
 		-message "Run the index over the current directory\n$rootdir\n ? This may take some time and cannot be interrupted." \
-		-parent . -default cancel -type okcancel]
+		-parent $win -default cancel -type okcancel]
 		if {$ans eq "ok"} {
 			set status "Enumerating files..."
 			update
