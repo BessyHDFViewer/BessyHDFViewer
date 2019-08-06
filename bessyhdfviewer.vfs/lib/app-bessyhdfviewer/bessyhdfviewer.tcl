@@ -2971,7 +2971,7 @@ namespace eval BessyHDFViewer {
 			set class MCA
 		} elseif {$images} {
 			# file contains images. Check for one or more
-			set length [llength [dict get $data Detector $imagekey data]]
+			set length [llength [filternan [dict get $data Detector $imagekey data]]]
 			if {$length == 1} {
 				set class SINGLE_IMG
 			}
