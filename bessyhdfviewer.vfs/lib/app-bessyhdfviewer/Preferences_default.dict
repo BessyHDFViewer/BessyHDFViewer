@@ -515,9 +515,34 @@ ImageDetectors {
 MaxCache 30000
 
 ImageDetectorFilePathRules {
+	Pilatus_filename {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
+
 	Pilatus_Tiff {
 		regex {(.*)_(.*)_\d+}
 		exprlist {$2 int($img)}
 		fmtstring {pilatus_%s_%04d.tif}
 	}
+
+	WAXS_filename {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
+	
+	WAXS_Tiff {
+		regex {(.*)_(.*)_\d+}
+		exprlist {$2 int($img)}
+		fmtstring {WAXS_%s_%04d.tif}
+	}
+
+	XCCD_file_number {
+		regex {(.*)_(.*)_\d+}
+		exprlist {$2 int($img)}
+		fmtstring {fcm_%s_%04d.spe}
+	}
+
 }
