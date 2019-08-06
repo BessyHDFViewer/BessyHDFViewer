@@ -510,6 +510,8 @@ namespace eval BessyHDFViewer {
 				if {[dict get $UserPreferences Version] == $PrefVersion} {
 					# throws for invalid dict and non-existent version
 					set Preferences [dict merge $Preferences $UserPreferences]
+				} else {
+					tk_messageBox -title "Settings were reset" -text "Your settings were reset to defaults because of an update of BessyHDFViewer."
 				}
 
 			}]} {

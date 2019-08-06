@@ -818,7 +818,7 @@ namespace eval DataEvaluation {
 	proc ArdeViewer {} {
 		# run an instance of ardeviewer, if not yet started
 		variable ns
-		set tifffmt [BessyHDFViewer::PreferenceGet TiffFmt "pilatus_%s_%04d.tif"]
+		set pathrules [BessyHDFViewer::PreferenceGet ImageDetectorFilePathRules {}]
 		
 		# get currently displayed zoom area
 		lassign [$BessyHDFViewer::w(Graph) cget -xrange] xmin xmax
@@ -836,15 +836,48 @@ namespace eval DataEvaluation {
 		set ptnr 0
 		variable viewdpmap {}
 		foreach hdfpath $BessyHDFViewer::HDFFiles {
-			set tiffnum [BessyHDFViewer::SELECT [list Pilatus_Tiff $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)] \
+
+			# check for the first available axis from the format table
+			set imgaxis {}
+			dict for {axis fmtdef} $pathrules {
+				set val [BessyHDFViewer::QueryCache $hdfpath $axis]
+				if {[llength $val] != 0} {
+					set imgaxis $axis
+					break
+				}
+			}
+
+			if {$imgaxis eq ""} { continue }
+
+			BessyHDFViewer::dict_assign $fmtdef regex fmtstring exprlist
+
+			set imgnum [BessyHDFViewer::SELECT [list $imgaxis $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)] \
 				[list $hdfpath] -allnan true]
+			
+			# decompose hdf file name according to regexp 
+			set dir [file dirname $hdfpath]
+			set hdfname [file rootname [file tail $hdfpath]]
+
+			if {![regexp $regex $hdfname -> 1 2 3 4 5 6 7 8]} {
+				puts "Warning: regex $regex does not match filename $hdfname"
+				puts "File skipped"
+				continue 
+			}
+
 
 			set dpnr -1
-			foreach line $tiffnum { 
-				lassign $line tiff x y 
+			foreach line $imgnum { 
+				lassign $line img x y 
 				incr dpnr
-				# parse tiffnr into integer
-				if {[catch {expr {int($tiff)}} tiffnr]} { continue }
+
+				# try to evaluate the list of expressions
+				# skip non-parseable expressions
+				if {[catch {
+					set exprresult [lmap e $exprlist {expr $e}]
+				}]} { 
+					puts "Skipped image $img"
+					continue 
+				}
 
 				# skip images that do not fit into the plot region
 				# careful: NaN-safe comparison 
@@ -852,17 +885,16 @@ namespace eval DataEvaluation {
 					continue
 				}
 
-				# decompose hdf file name into directory, prefix and number
-				set hdfdir [file dirname $hdfpath]
-				set hdfname [file rootname [file tail $hdfpath]]
-
-				regexp {^(.*)_(.*)_(\d+)$} $hdfname -> fcm prefix num
-
-				lappend  tifflist [file join $hdfdir [format $tifffmt $prefix $tiffnr]]
+				lappend  tifflist [file join $dir [format $fmtstring {*}$exprresult]]
 				
 				dict set viewdpmap [list $hdfpath $dpnr] $ptnr
 				incr ptnr
 			}
+		}
+
+		if {[llength $tifflist] == 0} {
+			tk_messageBox -title "Error" -message "No images found in this file"
+			return
 		}
 
 		makeArdeViewer
