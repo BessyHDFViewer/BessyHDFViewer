@@ -759,20 +759,28 @@ namespace eval dirViewer {} {
 			# puts "$tbl selection set \{$selectkeys\}"
 			$tbl selection set $selectkeys
 		}
-
-		method notifySelect {} {
+		
+		method getSelection {{what {file}}} {
+			# what defines the category of the
+			# entries to be returned. 
+			# can be file directory virtualfolder 
 			set rows [$tbl curselection]
 			set fullnames {}
 			foreach row $rows {
 				set type [lindex [$tbl get $row] 0 0]
-				if {$type == "file"} {
-					# only for ordinary files
+				if {$type in $what} {
+					# only for entries of the selected category
 					lappend fullnames [$tbl rowattrib $row pathName]
 				}
 			}
+
+			return $fullnames
+		}
+
+		method notifySelect {} {
 			if {$options(-selectcommand) != {}} {
-				uplevel #0 $options(-selectcommand) [list $fullnames]
-			}		
+				uplevel #0 $options(-selectcommand) [list [$self getSelection]]
+			}
 		}
 
 		method notifyColumnMoved {} {

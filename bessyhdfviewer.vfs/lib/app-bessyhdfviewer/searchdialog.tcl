@@ -308,24 +308,35 @@ snit::widget SearchDialog {
 	}
 
 	method IndexRunCmd {} {
-		set rootdir [$BessyHDFViewer::w(filelist) getcwd]
+		set rootdirs [$BessyHDFViewer::w(filelist) getSelection directory]
+		if {$rootdirs eq {}} {
+			set rootdirs [list [$BessyHDFViewer::w(filelist) getcwd]]
+		}
+
 		set ans [tk_messageBox -title "Are you sure?" \
-		-message "Run the index over the current directory\n$rootdir\n ? This may take some time and cannot be interrupted." \
+		-message "Run the index over these directorie:s\n[join $rootdirs \n]\ ? This may take some time and cannot be interrupted." \
 		-parent $win -default cancel -type okcancel]
 		if {$ans eq "ok"} {
 			set status "Enumerating files..."
 			update
-			set files [fileutil::findByPattern $rootdir -glob {*.hdf *.h5}]
+			foreach root $rootdirs {
+				lappend files {*}[fileutil::findByPattern $root -glob {*.hdf *.h5}]
+			}
 			set N [llength $files]
+			HDFCache eval BEGIN
 			set count 0
 			foreach fn $files {
 				if {$count % 10 == 0} {
 					set status "Indexing $count from $N files..." 
 					update
+					HDFCache eval COMMIT
+					HDFCache eval BEGIN
 				}
-				BessyHDFViewer::ClassifyHDF file $fn
+				
+				BessyHDFViewer::UpdateCacheForFile $fn false				
 				incr count
 			}
+			HDFCache eval COMMIT
 
 			set status "Indexing done ($count files)"
 

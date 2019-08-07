@@ -629,8 +629,12 @@ namespace eval BessyHDFViewer {
 		return [list $nfiles $nvalues]
 	} 
 
-	proc UpdateCache {fn mtime class motor detector nrows fields} {
-		HDFCache eval BEGIN
+	proc UpdateCache {fn mtime classinfo fields {transaction true}} {
+		dict_assign $classinfo class motor detector nrows
+
+		if {$transaction} {
+			HDFCache eval BEGIN
+		}
 		HDFCache eval {
 			INSERT OR REPLACE INTO HDFFiles (id, path, mtime, class, motor, detector, nrows) 
 				SELECT id, :fn, :mtime, :class, :motor, :detector, :nrows 
@@ -647,7 +651,27 @@ namespace eval BessyHDFViewer {
 			}
 
 		}
-		HDFCache eval COMMIT
+		if {$transaction} {
+			HDFCache eval COMMIT
+		}
+	}
+
+	proc UpdateCacheForFile {fn {transaction true}} {
+		set mtime [file mtime $fn]
+		set metainfo [FindCache $fn $mtime]
+
+		if {[llength $metainfo] == 0} {
+			if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
+				puts "Error reading hdf file $fn"
+				continue
+			}
+
+			set classinfo [bessy_class $temphdfdata]
+			set fieldvalues [bessy_get_all_fields $temphdfdata]
+			if {[dict get $classinfo class] ne "MCA"} {
+				BessyHDFViewer::UpdateCache $fn $mtime $classinfo $fieldvalues $transaction
+			}
+		}
 	}
 
 	proc QueryCache {fn field} {
@@ -808,9 +832,11 @@ namespace eval BessyHDFViewer {
 				lappend result [IconGet unknown]
 				return $result
 			} else {
-				dict_assign [bessy_class $temphdfdata] class motor detector nrows
+				set classinfo [bessy_class $temphdfdata]
 				set fieldvalues [bessy_get_all_fields $temphdfdata]
-				UpdateCache $fn $mtime $class $motor $detector $nrows $fieldvalues
+				UpdateCache $fn $mtime $classinfo $fieldvalues
+				
+				dict_assign [bessy_class $temphdfdata] class motor detector nrows
 			}
 		} else {
 			# puts "$fn $mtime found in cache"
@@ -3193,7 +3219,9 @@ namespace eval BessyHDFViewer {
 		}
 		set query "SELECT HDFFiles.path FROM $jointables\n WHERE [join $whereclauses "\nAND "]\n ORDER BY HDFFiles.mtime DESC LIMIT $limit;"
 		puts $query
-		set result [HDFCache eval $query]
+		puts [HDFCache eval "EXPLAIN QUERY PLAN $query"]
+		set timing [time {set result [HDFCache eval $query]}]
+		puts $timing
 		$w(filelist) AddVirtualFolder $foldername $result
 		return [llength $result]
 	}
