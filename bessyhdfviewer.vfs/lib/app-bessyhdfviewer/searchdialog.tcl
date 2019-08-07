@@ -92,10 +92,11 @@ snit::widget SearchDialog {
 		set clearbtn [ttk::button $dbframe.clear -command [mymethod ClearCacheCmd] -text "Clear Cache"]
 		set indexbtn [ttk::button $dbframe.index -command [mymethod IndexRunCmd] -text "Index Directory"]
 		set importbtn [ttk::button $dbframe.import -command [mymethod ImportCmd] -text "Import database"]
+		set optimizebtn [ttk::button $dbframe.optimize -command [mymethod OptimizeCmd] -text "Optimize database"]
 		
 		grid $dblabel $dbentry $dbopen  $dbreset -sticky nsew
 		grid $indexbtn $importbtn
-		grid $clearbtn
+		grid $clearbtn $optimizebtn
 
 		grid columnconfigure $dbframe $dbentry -weight 1
 
@@ -326,7 +327,7 @@ snit::widget SearchDialog {
 			HDFCache eval BEGIN
 			set count 0
 			foreach fn $files {
-				if {$count % 10 == 0} {
+				if {$count % 50 == 0} {
 					set status "Indexing $count from $N files..." 
 					update
 					HDFCache eval COMMIT
@@ -359,4 +360,10 @@ snit::widget SearchDialog {
 		}
 	}
 
+	method OptimizeCmd {} {
+		HDFCache eval {
+			ANALYZE;
+			VACUUM;
+		}
+	}
 }
