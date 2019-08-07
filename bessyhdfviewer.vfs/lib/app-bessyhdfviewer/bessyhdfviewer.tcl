@@ -663,14 +663,12 @@ namespace eval BessyHDFViewer {
 		if {[llength $metainfo] == 0} {
 			if {[catch {bessy_reshape $fn -shallow} temphdfdata]} {
 				puts "Error reading hdf file $fn"
-				continue
+				return
 			}
 
 			set classinfo [bessy_class $temphdfdata]
 			set fieldvalues [bessy_get_all_fields $temphdfdata]
-			if {[dict get $classinfo class] ne "MCA"} {
-				BessyHDFViewer::UpdateCache $fn $mtime $classinfo $fieldvalues $transaction
-			}
+			BessyHDFViewer::UpdateCache $fn $mtime $classinfo $fieldvalues $transaction
 		}
 	}
 
@@ -3217,7 +3215,7 @@ namespace eval BessyHDFViewer {
 			set maxval$count $val2
 			lappend whereclauses "( $whereclause )"
 		}
-		set query "SELECT HDFFiles.path FROM $jointables\n WHERE [join $whereclauses "\nAND "]\n ORDER BY HDFFiles.mtime DESC LIMIT $limit;"
+		set query "SELECT HDFFiles.path FROM $jointables\n WHERE HDFFiles.class != 'MCA' AND [join $whereclauses "\nAND "]\n ORDER BY HDFFiles.mtime DESC LIMIT $limit;"
 		puts $query
 		puts [HDFCache eval "EXPLAIN QUERY PLAN $query"]
 		set timing [time {set result [HDFCache eval $query]}]

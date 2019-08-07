@@ -334,7 +334,8 @@ snit::widget SearchDialog {
 					HDFCache eval BEGIN
 				}
 				
-				BessyHDFViewer::UpdateCacheForFile $fn false				
+				set fullname [file normalize $fn]
+				BessyHDFViewer::UpdateCacheForFile $fullname false		
 				incr count
 			}
 			HDFCache eval COMMIT
