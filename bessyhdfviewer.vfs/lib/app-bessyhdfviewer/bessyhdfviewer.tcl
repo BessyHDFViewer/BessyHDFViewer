@@ -242,9 +242,9 @@ namespace eval BessyHDFViewer {
 		# Create navigation buttons
 		#
 		set w(bbar) [ttk::frame $w(listfr).bbar]
-		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) RefreshRequest]]
-		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
 		set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
+		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
+		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) RefreshRequest]]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 		set w(bsearch) [ttk::button $w(bbar).bsearch -command ${ns}::SearchCmd -text "Search" -image [IconGet dialog-search] -compound left]
 
@@ -511,13 +511,14 @@ namespace eval BessyHDFViewer {
 					# throws for invalid dict and non-existent version
 					set Preferences [dict merge $Preferences $UserPreferences]
 				} else {
-					tk_messageBox -title "Settings were reset" -text "Your settings were reset to defaults because of an update of BessyHDFViewer."
+					tk_messageBox -title "Settings were reset" -message "Your settings were reset to defaults because of an update of BessyHDFViewer."
 				}
 
-			}]} {
+			} err]} {
 				# error - maybe cleanup fd
 				# cache file remains valid - maybe simply didn't exist
 				if {[info exists fd]} { catch {close $fd} }
+				puts "Error reading preferences: $err"
 			}
 		}
 
@@ -745,7 +746,7 @@ namespace eval BessyHDFViewer {
 	proc ColumnEdit {} {
 		variable ActiveColumns
 		set ColumnsAvailableTree [PreferenceGet ColumnsAvailableTree {{GROUP General {{LIST {Motor Detector Modified}}}} {GROUP Motors {{LIST {Energy}}}}}]
-		set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns" -parent .]
+		set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns" -parent . -aclist [GetCachedFieldNames]]
 		if {$columns != $ActiveColumns} {
 			ChooseColumns $columns
 			PreferenceSet Columns $columns 

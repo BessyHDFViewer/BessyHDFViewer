@@ -1,4 +1,4 @@
-Version 2
+Version 3
 
 Columns {
 	Motor
@@ -522,7 +522,7 @@ ImageDetectorFilePathRules {
 	}
 
 	Pilatus_Tiff {
-		regex {(.*)_(.*)_\d+}
+		regex {^(.*)_(.*)_\d+(_edit)?$}
 		exprlist {$2 int($img)}
 		fmtstring {pilatus_%s_%04d.tif}
 	}
@@ -534,15 +534,15 @@ ImageDetectorFilePathRules {
 	}
 	
 	WAXS_Tiff {
-		regex {(.*)_(.*)_\d+}
+		regex {^(.*)_(.*)_\d+(_edit)?$}
 		exprlist {$2 int($img)}
-		fmtstring {WAXS_%s_%04d.tif}
+		fmtstring {WAXS_%s_%05d.tif}
 	}
 
 	XCCD_file_number {
-		regex {(.*)_(.*)_\d+}
+		regex {^(.*)_(.*)_\d+$}
 		exprlist {$2 int($img)}
-		fmtstring {fcm_%s_%04d.spe}
+		fmtstring {XCCD_%s_%05d.spe}
 	}
 
 }

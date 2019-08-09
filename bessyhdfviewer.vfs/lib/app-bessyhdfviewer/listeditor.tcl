@@ -9,6 +9,7 @@ snit::widget ListEditor {
 	component valuestbl
 	component bbar
 	component mainframe
+	component newent
 
 	# current lists
 	variable includelist
@@ -21,6 +22,7 @@ snit::widget ListEditor {
 	option -resultvar {}
 	option -title -default {Select options} -configuremethod SetTitle
 	option -parent -default {}
+	option -aclist -configuremethod SetACList
 
 	# call this function to get the modal dialog
 	typevariable resultlist
@@ -53,12 +55,14 @@ snit::widget ListEditor {
 		set curframe [ttk::frame $editframe.curframe]
 		set avlframe [ttk::frame $editframe.avlframe]
 		set pmbar [ttk::frame $editframe.pmbar]
-		set newent [ttk::entry $editframe.newent -textvariable [myvar newitem]]
+		install newent using ttk::combobox $editframe.newent -textvariable [myvar newitem]
+		AutoComplete $newent
+
 		bind $newent <Return> [mymethod Add]
 
 		grid $curlabel $avllabel -sticky nsew
-		grid $curframe $avlframe -sticky nsew
 		grid $pmbar $newent -sticky ew
+		grid $curframe $avlframe -sticky nsew
 
 		grid rowconfigure $editframe 1 -weight 1
 		grid columnconfigure $editframe 0 -weight 1
@@ -143,6 +147,12 @@ snit::widget ListEditor {
 		set options($option) $title
 		wm title $win $title
 	}
+	
+	method SetACList {option aclist} {
+		set options($option) $aclist
+		$newent configure -values $aclist -aclist $aclist
+	}
+
 
 	method InsertChild_rec {node tree} {
 		set tree [lassign $tree type]

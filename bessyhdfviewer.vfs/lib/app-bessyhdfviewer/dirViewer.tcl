@@ -104,7 +104,7 @@ namespace eval dirViewer {} {
 			if {[catch {package require inotify}]} {
 				set haveinotify false
 			} else {
-				set haveinotify true
+				set haveinotify false
 			}
 		}
 
