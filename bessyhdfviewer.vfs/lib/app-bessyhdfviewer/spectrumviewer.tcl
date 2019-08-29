@@ -1,4 +1,6 @@
 namespace eval SpectrumViewer {
+	namespace import ::SmallUtils::*
+	
 	proc Open {} {
 		spectrumviewer .spectrum
 	}
@@ -84,7 +86,7 @@ namespace eval SpectrumViewer {
 				
 				if {![dict exists $hdfdata HDDataset]} { continue }
 				
-				set poscounter [SmallUtils::dict_getdefault $hdfdata Dataset PosCounter data {}]
+				set poscounter [dict_getdefault $hdfdata Dataset PosCounter data {}]
 				dict set poscountersets $fn $poscounter
 				set spectra [dict get $hdfdata HDDataset]
 				set devices {}
@@ -111,7 +113,7 @@ namespace eval SpectrumViewer {
 		method showspec {ind} {
 			lassign [lindex $validpoints $ind] fn dpnr
 			
-			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			set Pos [lindex [dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {![dict exists $spectrashown $fn $Pos]} {
 				if {![dict exists $allspectra $fn $Pos]} { return }
 
@@ -134,7 +136,7 @@ namespace eval SpectrumViewer {
 		method unshowspec {ind} {
 			lassign [lindex $validpoints $ind] fn dpnr
 			
-			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			set Pos [lindex [dict_getdefault $poscountersets $fn {}] $dpnr]
 			if {[dict exists $spectrashown $fn $Pos]} {
 				set ids [dict get $spectrashown $fn $Pos ids]
 				foreach id $ids { $Graph remove $id }
@@ -149,7 +151,7 @@ namespace eval SpectrumViewer {
 		method specvisible {ind} {
 			lassign [lindex $validpoints $ind] fn dpnr
 			
-			set Pos [lindex [SmallUtils::dict_getdefault $poscountersets $fn {}] $dpnr]
+			set Pos [lindex [dict_getdefault $poscountersets $fn {}] $dpnr]
 			dict exists $spectrashown $fn $Pos
 		}
 
@@ -175,7 +177,7 @@ namespace eval SpectrumViewer {
 				set shift false
 			}
 
-			set poscounter [SmallUtils::dict_getdefault $poscountersets $fn {}]
+			set poscounter [dict_getdefault $poscountersets $fn {}]
 			set Pos [lindex $poscounter $dpnr]
 			set ind [$self getSpecNr $fn $dpnr]
 
@@ -284,8 +286,12 @@ namespace eval SpectrumViewer {
 		variable ROInr 0
 		method AddROICmd {} {
 			# figure out a peak and add a ROI for it
-			# fake it for now
-			$self AddROI ROI$ROInr 2000 2100
+			# compute a sensible region in the middle of the visible area
+			dict_assign [$Graph cget -displayrange] xmin xmax
+
+			set vmin [expr {$xmin + 0.48*$xmax}]
+			set vmax [expr {$xmin + 0.52*$xmax}]
+			$self AddROI ROI$ROInr $vmin $vmax
 			incr ROInr
 		}
 

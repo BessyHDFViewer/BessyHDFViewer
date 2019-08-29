@@ -4,6 +4,8 @@ namespace eval SmallUtils {
 	variable ns [namespace current]
 	variable Requests {}
 
+	namespace export defer autovar autofd enumerate dict_getdefault dict_assign
+
 	proc defer {cmd} {
 		# defer cmd to idle time. Multiple requests are merged
 		variable ns
@@ -138,6 +140,17 @@ namespace eval SmallUtils {
 			return [dict get $dict {*}$keys]
 		} else {
 			return $default
+		}
+	}
+	
+	proc dict_assign {dictvalue args} {
+		# extract variables from dict
+		# unset -> unset
+		foreach var $args {
+			upvar $var v 
+			if {[catch {dict get $dictvalue $var} v]} {
+				unset v
+			}
 		}
 	}
 

@@ -53,13 +53,15 @@ namespace eval BessyHDFViewer {
 	variable ns [namespace current]
 	variable basedir [file dirname [info script]]
 
-
+	
 	# load support modules
 	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl 
 		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl searchdialog.tcl} {
 		namespace eval :: [list source [file join $basedir $module]]
 	}
 
+	namespace import ::SmallUtils::*
+	
 	proc Init {argv} {
 		variable ns
 		variable profiledir
@@ -3339,17 +3341,6 @@ namespace eval BessyHDFViewer {
 			incr i
 		}
 		join $list [lindex $args end]
-	}
-
-	proc dict_assign {dictvalue args} {
-		# extract variables from dict
-		# unset -> unset
-		foreach var $args {
-			upvar $var v 
-			if {[catch {dict get $dictvalue $var} v]} {
-				unset v
-			}
-		}
 	}
 
 	proc dict_expr {dictvalue args} {
