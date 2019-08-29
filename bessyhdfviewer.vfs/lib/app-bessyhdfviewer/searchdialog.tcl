@@ -57,6 +57,7 @@ snit::widget SearchDialog {
 		set elabel [ttk::label $mainframe.elabel -text "Epsilon:"]
 		set eentry [ttk::entry $mainframe.eentry -textvariable [myvar epsilon]]
 
+
 		install critframe using ttk::labelframe $mainframe.crit -text "Criteria"
 		install butframe using ttk::frame $mainframe.bbar
 		
@@ -148,6 +149,7 @@ snit::widget SearchDialog {
 				-textvariable [myvar formdata(var,$i)]]
 			
 			AutoComplete $critwidget(varcbx,$i) -aclist $options(-fieldlist)
+			bind $critwidget(varcbx,$i) <Key-Return> [mymethod RunSearch]
 			
 			set formdata(mode,$i) ""
 			set modewidget(modecbx,$i) [ttk::combobox $critframe.modecbx$i -values $modes -state readonly \
@@ -204,7 +206,8 @@ snit::widget SearchDialog {
 			if {$text ne ""} {
 				grid [ttk::label $frame.l$i -text $text] -column [expr {2*$i}] -row 0 -sticky nsew
 			}
-			set ent [ttk::entry $frame.e$i -width 6 -textvariable [myvar formdata(par,$ind,$i)]] 
+			set ent [ttk::entry $frame.e$i -width 6 -textvariable [myvar formdata(par,$ind,$i)]]
+			bind $ent <Key-Return> [mymethod RunSearch]
 			grid $ent -column [expr {2*$i+1}] -row 0 -sticky nsew
 			
 			incr i

@@ -3026,6 +3026,7 @@ namespace eval BessyHDFViewer {
 				}
 			}
 		}
+		
 		return [dict create class $class motor $motor detector $detector \
 					nrows $length motors $motors detectors $detectors \
 					datasets $datasets axes $axes]
@@ -3203,6 +3204,10 @@ namespace eval BessyHDFViewer {
 				included {
 					append whereclause "AND (fv$count.minimum >= :minval$count AND fv$count.maximum <= :maxval$count)"
 
+				}
+
+				"" {
+					append whereclause ""
 				}
 
 				default {
