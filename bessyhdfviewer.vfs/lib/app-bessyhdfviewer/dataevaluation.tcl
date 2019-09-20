@@ -18,6 +18,48 @@ namespace eval DataEvaluation {
 		OpenSpectrum	spectrumviewer	"Display embedded spectra"
 	}
 
+	proc maketoolbar {f} {
+		# pack the toolbuttons into f
+		variable commands
+		variable ns
+		
+		set cmdnr 0
+		foreach {cmd icon description} $DataEvaluation::commands {
+			set btn [ttk::button $f.cmdbtn$cmdnr -text $description -image [BessyHDFViewer::IconGet $icon] \
+			         -command ${ns}::$cmd -style Toolbutton]
+			grid $btn -row 0 -column $cmdnr -sticky nw
+			tooltip::tooltip $btn $description
+			incr cmdnr
+		}
+
+		set extracmds [BessyHDFViewer::PreferenceGet ExtraButtons {}]
+		foreach line $extracmds {
+			if {![dict exists $line shortname]} {
+				puts "No shortname for user command $line"
+				continue
+			}
+			if {![dict exists $line eval]} {
+				puts "No eval for user command $line"
+				continue
+			}
+			
+			set shortname [dict get $line shortname]
+			set cmd [dict get $line eval]
+			set icon [SmallUtils::dict_getdefault $line icon ""]
+			set description [SmallUtils::dict_getdefault $line description ""]
+			
+			set btn [ttk::button $f.cmdbtn$cmdnr -text $shortname -image [BessyHDFViewer::IconGet $icon] \
+			         -command [list ${ns}::RunUserCmd $cmd] -style Toolbutton]
+			grid $btn -row 0 -column $cmdnr -sticky nw
+			incr cmdnr
+			
+			if {$description ne {}} {
+				tooltip::tooltip $btn $description
+			}
+		}
+
+
+	}
 
 	# peak-locating using the AMPD method
 	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588
@@ -1004,6 +1046,42 @@ namespace eval DataEvaluation {
 
 	proc OpenSpectrum {} {
 		SpectrumViewer::Open
+	}
+
+	proc if_exists {var default} {
+		upvar 1 $var v
+		if {[info exists v]} { 
+			return $v
+		} else {
+			return $default
+		}
+	}
+
+	proc RunUserCmd {cmd} {
+		set hdfs [if_exists ::BessyHDFViewer::HDFFiles ""]
+		set hdf1 [lindex $hdfs 0]
+		if {[catch {$BessyHDFViewer::w(Graph) cget -displayrange} result]} {
+			puts "Graph error: $result"
+			lassign {* * * *} xmin xmax ymin ymax
+		} else {
+			BessyHDFViewer::dict_assign $result xmin xmax ymin ymax
+		}
+		
+		set xformat [if_exists BessyHDFViewer::xformat(0) ""]
+		set yformula [if_exists BessyHDFViewer::yformat(0) ""]
+
+		# try to parse the formula for simple cases
+		if {[string first {$} $yformula] >= 0} {
+			puts "Formula"
+			regexp {\${?([^/]+)}?/\${?(.*)}?$} $yformula -> nom denom
+			set yformat $nom
+			set ynormalize $denom
+		} else {
+			set yformat $yformula
+			set ynormalize 1
+		}
+
+		eval $cmd
 	}
 		
 }

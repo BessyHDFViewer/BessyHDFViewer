@@ -361,14 +361,7 @@ namespace eval BessyHDFViewer {
 
 		# Toolbar: Command buttons from dataevaluation namespace
 		
-		set cmdnr 0
-		foreach {cmd icon description} $DataEvaluation::commands {
-			set btn [ttk::button $w(toolbar).cmdbtn$cmdnr -text $description -image [IconGet $icon] \
-			         -command DataEvaluation::$cmd -style Toolbutton]
-			grid $btn -row 0 -column $cmdnr -sticky nw
-			tooltip::tooltip $btn $description
-			incr cmdnr
-		}
+		DataEvaluation::maketoolbar $w(toolbar)
 
 		$w(displayfr) add $w(plotfr) -text "Plot"
 
@@ -3372,14 +3365,19 @@ namespace eval BessyHDFViewer {
 		return $result
 	}
 
-	variable iconcache {}
+	variable iconcache {{} {}}
 	proc IconGet {name} {
 		variable iconcache
 		variable basedir
+		variable profiledir
 		if {[dict exists $iconcache $name]} {
 			return [dict get $iconcache $name]
 		} else {
-			if {[catch {image create photo -file [file join $basedir icons $name.png]} iname]} {
+			foreach dir [list $basedir $profiledir] {
+				set fn [file join $dir icons $name.png]
+				if {[file exists $fn]} break
+			}
+			if {[catch {image create photo -file $fn} iname]} {
 				return {} ;# not found
 			} else {
 				dict set iconcache $name $iname
