@@ -908,7 +908,6 @@ namespace eval BessyHDFViewer {
 
 	proc MakeTable {} {
 		# reformat plotdata into table
-		# compute maximum length for each data column - might be different due to BESSY_INF trimming
 		variable BessyClass
 		variable hdfdata 
 
@@ -932,10 +931,16 @@ namespace eval BessyHDFViewer {
 			}
 		}
 
+		# compute maximum length for each data column - might be different due to BESSY_INF trimming
+		set maxlength 0
+		dict for {var entry} $plotdata {
+			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
+		}
+
 		set tblheader Row
 		lappend tblheader {*}[dict keys $plotdata]
 		set tbldata {}
-		for {set i 0} {$i<[dict get $BessyClass nrows]} {incr i} {
+		for {set i 0} {$i<$maxlength} {incr i} {
 			set line $i
 			dict for {var entry} $plotdata {
 				lappend line [lindex [dict get $entry data] $i]
