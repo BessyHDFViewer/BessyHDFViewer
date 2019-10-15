@@ -2665,7 +2665,7 @@ namespace eval BessyHDFViewer {
 		dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Dataset PosCountTimer data]
 		
 		# check for stdddev data from averaging
-		if {$stddevpath ne {} && [catch {
+		if {$stddevpath ne {} && [dict exists $rawd {*}$stddevpath] && [catch {
 			set stdddata {}
 			dict for {key dset} [dict get $rawd {*}$stddevpath data] {
 				dict_assign $dset ndata dspace dtype data attrs
