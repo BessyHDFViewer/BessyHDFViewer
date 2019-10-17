@@ -32,8 +32,34 @@ namespace eval DataEvaluation {
 			incr cmdnr
 		}
 
-		set extracmds [BessyHDFViewer::PreferenceGet ExtraButtons {}]
-		foreach line $extracmds {
+		# read extra commands from the plugin dir
+		variable extracmds {}
+
+		set plugindir [file join $::BessyHDFViewer::profiledir plugins]
+		set nplugin 0
+		foreach pdir [glob -nocomplain -type d $plugindir/*] {
+			incr nplugin
+			set pns plugin$nplugin
+			set pmainfile [file join $pdir/pluginmain.tcl]
+			set pbutfile [file join $pdir/button.dict]
+
+			if {[file exists $pmainfile]} {
+				if {[catch {
+					namespace eval $pns [list source $pmainfile]
+					namespace eval $pns [list namespace path $ns]
+				} err errdict]} {
+					tk_messageBox -title "Error reading $pmainfile" -message [dict get $errdict -errorstack]
+				}
+			}
+
+			if {[file exists $pbutfile]} {
+				if {[catch { dict set extracmds $pns [fileutil::cat $pbutfile] } result errdict]} {
+					tk_messageBox -title "Error reading $pbutfile" -message [dict get $errdict -errorstack]
+				}
+			}
+		}
+
+		dict for {pns line} $extracmds {
 			if {![dict exists $line shortname]} {
 				puts "No shortname for user command $line"
 				continue
@@ -49,7 +75,7 @@ namespace eval DataEvaluation {
 			set description [SmallUtils::dict_getdefault $line description ""]
 			
 			set btn [ttk::button $f.cmdbtn$cmdnr -text $shortname -image [BessyHDFViewer::IconGet $icon] \
-			         -command [list ${ns}::RunUserCmd $cmd] -style Toolbutton]
+			         -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
 			grid $btn -row 0 -column $cmdnr -sticky nw
 			incr cmdnr
 			
@@ -1057,31 +1083,35 @@ namespace eval DataEvaluation {
 		}
 	}
 
-	proc RunUserCmd {cmd} {
+	proc RunUserCmd {pns} {
+		variable extracmds
 		set hdfs [if_exists ::BessyHDFViewer::HDFFiles ""]
-		set hdf1 [lindex $hdfs 0]
+		set ${pns}::hdfs $hdfs
+		set ${pns}::hdf1 [lindex $hdfs 0]
 		if {[catch {$BessyHDFViewer::w(Graph) cget -displayrange} result]} {
 			puts "Graph error: $result"
-			lassign {* * * *} xmin xmax ymin ymax
+			lassign {* * * *} ${pns}::xmin ${pns}::xmax ${pns}::ymin ${pns}::ymax
 		} else {
-			BessyHDFViewer::dict_assign $result xmin xmax ymin ymax
+			BessyHDFViewer::dict_assign $result ${pns}::xmin ${pns}::xmax ${pns}::ymin ${pns}::ymax
 		}
 		
-		set xformat [if_exists BessyHDFViewer::xformat(0) ""]
+		set ${pns}::xformat [if_exists BessyHDFViewer::xformat(0) ""]
 		set yformula [if_exists BessyHDFViewer::yformat(0) ""]
+		set ${pns}::yformula $yformula
 
 		# try to parse the formula for simple cases
 		if {[string first {$} $yformula] >= 0} {
 			puts "Formula"
 			regexp {\${?([^/]+)}?/\${?(.*)}?$} $yformula -> nom denom
-			set yformat $nom
-			set ynormalize $denom
+			set ${pns}::yformat $nom
+			set ${pns}::ynormalize $denom
 		} else {
-			set yformat $yformula
-			set ynormalize 1
+			set ${pns}::yformat $yformula
+			set ${pns}::ynormalize 1
 		}
-
-		eval $cmd
+		
+		set cmd [dict get $extracmds $pns eval]
+		namespace eval $pns $cmd
 	}
 		
 }
