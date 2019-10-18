@@ -1083,34 +1083,44 @@ namespace eval DataEvaluation {
 		}
 	}
 
+	proc parseformula {formula} {
+		if {[string first {$} $formula] >= 0} {
+			puts "Formula"
+			if {![regexp "\\$\{?(\[^/\]+)\}?/\\$\{?(\[^\}\]+)\}?$" $formula -> nom denom]} {
+				set nom $formula
+				set denom 1
+			}
+		} else {
+			set nom $formula
+			set denom 1
+		}
+		return [list $nom $denom]
+	}
+
 	proc RunUserCmd {pns} {
 		variable extracmds
 		set hdfs [if_exists ::BessyHDFViewer::HDFFiles ""]
-		set ${pns}::hdfs $hdfs
-		set ${pns}::hdf1 [lindex $hdfs 0]
+		set hdf1 [lindex $hdfs 0]
 		if {[catch {$BessyHDFViewer::w(Graph) cget -displayrange} result]} {
 			puts "Graph error: $result"
-			lassign {* * * *} ${pns}::xmin ${pns}::xmax ${pns}::ymin ${pns}::ymax
+			lassign {* * * *} xmin xmax ymin ymax
 		} else {
-			BessyHDFViewer::dict_assign $result ${pns}::xmin ${pns}::xmax ${pns}::ymin ${pns}::ymax
+			BessyHDFViewer::dict_assign $result xmin xmax ymin ymax
 		}
-		
-		set ${pns}::xformat [if_exists BessyHDFViewer::xformat(0) ""]
-		set yformula [if_exists BessyHDFViewer::yformat(0) ""]
-		set ${pns}::yformula $yformula
 
-		# try to parse the formula for simple cases
-		if {[string first {$} $yformula] >= 0} {
-			puts "Formula"
-			regexp {\${?([^/]+)}?/\${?(.*)}?$} $yformula -> nom denom
-			set ${pns}::yformat $nom
-			set ${pns}::ynormalize $denom
-		} else {
-			set ${pns}::yformat $yformula
-			set ${pns}::ynormalize 1
+		set xformula [if_exists BessyHDFViewer::xformat(0) ""]
+		set yformula [if_exists BessyHDFViewer::yformat(0) ""]
+
+		lassign [parseformula $xformula] xnom xdenom
+		lassign [parseformula $yformula] ynom ydenom
+
+		foreach var {xmin xmax ymin ymax hdfs hdf1 
+					xformula yformula 
+					xnom xdenom ynom ydenom} {
+			set ${pns}::$var [set $var]
 		}
-		
 		set cmd [dict get $extracmds $pns eval]
+		
 		namespace eval $pns $cmd
 	}
 		
