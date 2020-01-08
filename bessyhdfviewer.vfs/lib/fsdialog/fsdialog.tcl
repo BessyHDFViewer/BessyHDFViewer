@@ -27,10 +27,10 @@ namespace eval ::ttk::dialog::file {
 	variable dirlist "" filelist "" filetype none opt
 	array set opt {
 		-sort		name
-		-hidden		1
+		-hidden		0	
 		-sepfolders	1
 		-foldersfirst	1
-		-details	0
+		-details	1
 		-reverse	0
 		-filetype	none
 		-typevariable	""
@@ -58,6 +58,18 @@ interp alias {} ttk::getOpenFile {} ::ttk::dialog::file::tkFDialog open
 interp alias {} ttk::getSaveFile {} ::ttk::dialog::file::tkFDialog save
 interp alias {} ttk::getAppendFile {} ::ttk::dialog::file::tkFDialog append
 interp alias {} ttk::getDirectory {} ::ttk::dialog::file::tkFDialog directory
+
+proc ::ttk::dialog::file::truejoin {args} {
+	set fargs {}
+	foreach f $args {
+		if {[string match ~* $f]} {
+			lappend fargs ./$f
+		} else {
+			lappend fargs $f
+		}
+	}
+	return [file join {*}$fargs]
+}
 
 proc ::ttk::dialog::file::Create {win class} {
 	toplevel $win -class $class
@@ -351,7 +363,7 @@ proc ::ttk::dialog::file::ChangeDir {w dir} {
 
 	set data(history) [lrange $data(history) 0 $data(histpos)]
 	set cwd [lindex $data(history) $data(histpos)]
-	set data(selectPath) [file normalize [file join $cwd $dir]]
+	set data(selectPath) [file normalize [truejoin $cwd $dir]]
 	lappend data(history) $data(selectPath)
 	if {[incr data(histpos)]} {
 		$data(prevBtn) state !disabled
@@ -443,9 +455,11 @@ proc ::ttk::dialog::file::Update {w} {
 	foreach f [eval [linsert $filter 0 glob -nocomplain -tails \
 		-directory $cwd -type {f l c b p}]] {
 		# Links can still be directories. Skip those.
-		if {[file isdirectory [file join $cwd $f]]} continue
+		if {[file isdirectory [truejoin $cwd $f]]} continue
 		lappend flist [list $f file]
 	}
+
+#puts "$cwd globbed [llength $flist] files [clock clicks -milliseconds]"
 
 	# Combine the two lists, if necessary
 	if {$data(-sepfolders)} {
@@ -458,6 +472,8 @@ proc ::ttk::dialog::file::Update {w} {
 		set flist [sort $w [concat $flist $dlist]]
 		set dlist ""
 	}
+
+#puts "Stat complete [clock clicks -milliseconds]"
 
 	set t $data(dirArea)
 	$t configure -state normal
@@ -492,6 +508,7 @@ proc ::ttk::dialog::file::Update {w} {
 		set data(colwidth) $maxsize
 		set data(rows) [expr {[winfo height $t] / 18}]
 		set data(list) $list
+#puts "Before table fill [clock clicks -milliseconds]"
 		::ttk::dialog::file::FileList2 $w
 	}
 
@@ -501,6 +518,8 @@ proc ::ttk::dialog::file::Update {w} {
 		$data(upBtn) state !disabled
 	}
 	$w configure -cursor ""
+#puts "going Tk [clock clicks -milliseconds]"
+
 }
 
 # Create a detailed file list
@@ -523,7 +542,7 @@ proc ::ttk::dialog::file::FileList1 {w} {
 	foreach f $data(list) {
 		lassign $f name type size date mode uid gid
 		if {![info exists users($uid)] || ![info exists groups($gid)]} {
-			set fname [file join $cwd $name]
+			set fname [truejoin $cwd $name]
 			# May fail for dead links
 			if {![catch {array set attr [file attributes $fname]}]} {
 				if {[info exists attr(-owner)]} {
@@ -611,6 +630,9 @@ proc ::ttk::dialog::file::FileList2 {w} {
 	set files {}
 	$t configure -state normal
 	$t delete 1.0 end
+#puts "After delete [clock clicks -milliseconds]"
+	# transpose data to row major
+	set transdata {}
 	foreach {name type} $data(list) {
 		set idx $row.end
 		set image [expr {$type eq "directory" ? $dir : $file}]
@@ -626,6 +648,11 @@ proc ::ttk::dialog::file::FileList2 {w} {
 			$t insert $idx "\n"
 		}
 	}
+#puts "Before insert [clock clicks -milliseconds]"
+	# insert all in one go
+#	dict for {row insertargs} $transdata {
+#		$t insert $row.0 {*}$insertargs "\n"
+#	}
 	$t insert 1.end "\t"
 	$t configure -state disabled
 	set data(columns) [expr {$row > 1 ? $col + 1 : $col}]
@@ -650,6 +677,7 @@ proc ::ttk::dialog::file::FileList2 {w} {
 			}
 		}
 	}
+#puts "End of update [clock clicks -milliseconds]"
 }
 
 proc ::ttk::dialog::file::LocEdit {w str} {
@@ -673,10 +701,11 @@ proc ::ttk::dialog::file::sort {w list} {
 	foreach f $list {
 		set file [lindex $f 0]
 		# Use lstat in case the destination doesn't exists
-		file lstat [file join $cwd $file] stat
+		set fullname [truejoin $cwd $file]
+		file lstat $fullname stat
 		if {$stat(type) eq "link"} {
 			# This may fail if the link points to nothing
-			if {![catch {file stat [file join $cwd $file] dest}]} {
+			if {![catch {file stat $fullname dest}]} {
 				array set stat [array get dest]
 				if {$stat(type) eq "file"} {
 					set stat(type) link
@@ -848,7 +877,7 @@ proc ::ttk::dialog::file::NextDirCmd {w} {
 }
 
 proc ::ttk::dialog::file::HomeDirCmd {w} {
-	ChangeDir $w ~
+	ChangeDir $w [file normalize ~]
 }
 
 proc ::ttk::dialog::file::NewDirCmd {win} {
@@ -906,7 +935,7 @@ proc ::ttk::dialog::file::NewDirExit {w {save 0}} {
 
 	if {$save} {
 		set dir [lindex $data(history) $data(histpos)]
-		set newdir [file join $dir [$w.new.f.box get]]
+		set newdir [truejoin $dir [$w.new.f.box get]]
 		if {[catch {file mkdir $newdir} err]} {
 			tk_messageBox -type ok -parent $w.new -icon error -message "$err"
 			return
@@ -944,10 +973,10 @@ proc ::ttk::dialog::file::Done {w} {
 			if {[file extension $file] eq ""} {
 				append file $data(-defaultextension)
 			}
-			lappend path [file join $cwd $file]
+			lappend path [truejoin $cwd $file]
 		}
 	} else {
-		set file [file join $cwd $data(selectFile)]
+		set file [truejoin $cwd $data(selectFile)]
 		if {[file extension $file] eq ""} {
 			append file $data(-defaultextension)
 		}
@@ -1334,10 +1363,10 @@ proc ::ttk::dialog::file::Config {dataName type argList} {
 
 	# Ensure that initialdir is an absolute path name.
 	if {$data(-initialdir) ne ""} {
-		set dir [file normalize [file join [pwd] $data(-initialdir)]]
+		set dir [file normalize [truejoin [pwd] $data(-initialdir)]]
 		set path $dir
 		while {[file exists $path] && [file type $path] eq "link"} {
-			set path [file normalize [file join \
+			set path [file normalize [truejoin \
 				[file dirname $path] [file link $path]]]
 		}
 		if {[file isdirectory $path]} {
@@ -1439,7 +1468,7 @@ proc ::ttk::dialog::file::treeCreate {w} {
 proc ::ttk::dialog::file::treeUpdate {w dir} {
 	upvar ::ttk::dialog::file::[winfo name $w](text) txt
 
-	set dir [file normalize [file join [pwd] $dir]]
+	set dir [file normalize [truejoin [pwd] $dir]]
 	set list [lassign [file split $dir] parent]
 	lappend list .
 	$txt configure -state normal
@@ -1448,7 +1477,7 @@ proc ::ttk::dialog::file::treeUpdate {w dir} {
 
 	foreach d $list {
 		treeOpen $w $parent subdir $d
-		set parent [file join $parent $d]
+		set parent [truejoin $parent $d]
 	}
 	$txt yview subdir-5l
 	TreeSelect $w subdir
@@ -1500,7 +1529,7 @@ proc ::ttk::dialog::file::treeOpen {w path {index insert} {subdir .}} {
 		$txt insert insert "\n"
 		# Insert the line with the appropriate tags
 		$txt insert insert $tabs [list $path]
-		file stat [file join $path $d] stat
+		file stat [truejoin $path $d] stat
 		if {$stat(nlink) != 2} {
 			set img [$txt image create insert -name diropen \
 				-image ::ttk::dialog::image::diropen -padx 3]
@@ -1597,7 +1626,7 @@ proc ::ttk::dialog::file::TreeSelect {w index} {
 		$data(text) tag add sel $index1-1c $index2+1c
 		set path [lsearch -inline [$data(text) tag names $index1] /*]
 		set dir [$data(text) get $index1+1c $index2]
-		set data(selectPath) [file join $path $dir]
+		set data(selectPath) [truejoin $path $dir]
 	}
 }
 
@@ -1617,10 +1646,10 @@ proc ::ttk::dialog::file::TreeRelease1 {w} {
 		$txt mark set selmark sel.first
 		switch -glob $name {
 			*::diropen {
-				treeOpen $w [file join $path $dir] $index
+				treeOpen $w [truejoin $path $dir] $index
 			}
 			*::dirclose {
-				treeClose $w [file join $path $dir]
+				treeClose $w [truejoin $path $dir]
 			}
 		}
 		$txt tag remove sel 1.0 end
