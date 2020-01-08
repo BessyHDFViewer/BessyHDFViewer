@@ -546,12 +546,16 @@ namespace eval BessyHDFViewer {
 	}
 
 
-	proc InitCache {} {
+	proc InitCache {{fn {}}} {
 		variable localcachedir
 		variable HDFCacheFile
 		
 		# check preferences if the cache was set to another location
-		set HDFCacheFile [PreferenceGet HDFCacheFile {}]
+		if {$fn eq {}} {
+			set HDFCacheFile [PreferenceGet HDFCacheFile {}]
+		} else {
+			set HDFCacheFile $fn
+		}
 		
 		if {$HDFCacheFile eq {}} {
 			if {$localcachedir == {} } {
@@ -828,7 +832,7 @@ namespace eval BessyHDFViewer {
 			} else {
 				set classinfo [bessy_class $temphdfdata]
 				set fieldvalues [bessy_get_all_fields $temphdfdata]
-				UpdateCache $fn $mtime $classinfo $fieldvalues
+				UpdateCache $fn $mtime $classinfo $fieldvalues false
 				
 				dict_assign [bessy_class $temphdfdata] class motor detector nrows
 			}
@@ -1967,6 +1971,7 @@ namespace eval BessyHDFViewer {
 		$w(progbar) configure -maximum $max
 		tk_busy hold .
 		# puts "tk busy hold succeeded"
+		HDFCache eval BEGIN
 	}
 
 	proc OpenProgress {i} {
@@ -1994,6 +1999,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		FilterFinish
+		HDFCache eval COMMIT
 	}
 
 	proc ::formatDate {date} {
