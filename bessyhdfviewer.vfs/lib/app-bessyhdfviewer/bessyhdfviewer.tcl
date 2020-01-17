@@ -1971,7 +1971,7 @@ namespace eval BessyHDFViewer {
 		$w(progbar) configure -maximum $max
 		tk_busy hold .
 		# puts "tk busy hold succeeded"
-		HDFCache eval BEGIN
+		nohup {HDFCache eval BEGIN}
 	}
 
 	proc OpenProgress {i} {
@@ -1999,7 +1999,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		FilterFinish
-		HDFCache eval COMMIT
+		nohup {HDFCache eval COMMIT}
 	}
 
 	proc ::formatDate {date} {

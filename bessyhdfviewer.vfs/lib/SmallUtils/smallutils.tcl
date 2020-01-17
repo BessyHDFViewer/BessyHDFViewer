@@ -4,7 +4,7 @@ namespace eval SmallUtils {
 	variable ns [namespace current]
 	variable Requests {}
 
-	namespace export defer autovar autofd enumerate dict_getdefault dict_assign
+	namespace export defer autovar autofd enumerate dict_getdefault dict_assign nohup
 
 	proc defer {cmd} {
 		# defer cmd to idle time. Multiple requests are merged
@@ -378,4 +378,11 @@ namespace eval SmallUtils {
 		return $result
 	}
 
+	proc nohup {cmd} {
+		# run a cmd, ignore errors and print to stdout
+		catch {uplevel 1 $cmd} err errdict
+		if {[dict get $errdict -code]} {
+			puts stderr [dict get $errdict -errorinfo]
+		}
+	}
 }
