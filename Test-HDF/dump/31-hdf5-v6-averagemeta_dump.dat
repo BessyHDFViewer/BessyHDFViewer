@@ -1,0 +1,289 @@
+# EVEH5Version	 = 6
+# Comment	 = Qais empty beam
+# Version	 = 1.32.2
+# XMLversion	 = 7.0
+# Location	 = KMC
+# SCML-Name	 = 2020kw04_Qais_empty_beam.scml
+# SCML-Author	 = fcm@roe
+# StartTimeISO	 = 2020-01-25T05:06:18
+# StartTime	 = 05:06:18
+# StartDate	 = 25.01.2020
+# EndTimeISO	 = 2020-01-25T05:06:48
+# FileFormat	 = HDF5
+#
+# MotorPositions:
+# 	Counter	 = 0
+# 	FILTER_1	 = 125um Be
+# 	FILTER_2	 = None
+# 	FILTER_PINHOLES	 = Al
+# 	REF_DIODES	 = Thin diode
+# 	DIODE_IN_MONO	 = Out
+# 	DIODE_BEHIND_MONO	 = Out
+# 	COATING_2nd_MIR	 = Pt
+# 	Energy	 = 8048.021233420664
+# 	Mono_1st_wheel	 = 14.222605000000001
+# 	Mono_2nd_wheel	 = 14.222610000000003
+# 	Mono_cr_change	 = 54.0
+# 	Sample-Z	 = 0.0
+# 	Tilt-Z	 = 0.04400000000000048
+# 	Sample-Y	 = 0.5960000000000036
+# 	Tilt-Y	 = 0.0
+# 	Theta	 = 3.0
+# 	2Theta	 = 30.5
+# 	Det.-X	 = -6.99984
+# 	Sample-X	 = 98.5
+# 	Filter_1	 = 33.5
+# 	Filter_2	 = 99.7
+# 	Mirror_1_hor	 = 0.0
+# 	Mirror_1_vert	 = -0.4800000000000001
+# 	Mirror_1_theta	 = 7.4996146918
+# 	Mirror_1_psi	 = -1.3499999999999999
+# 	Beam_pos_vert	 = -6.0
+# 	Beam_pos_hor	 = 1.0
+# 	Slit_1_up	 = 24.259999999999998
+# 	Slit_1_down	 = 13.599999999999998
+# 	Slit_1_right	 = 31.72
+# 	Slit_1_left	 = 16.1
+# 	Slit_2_up	 = 37.150000000000006
+# 	Slit_2_down	 = 16.379999999999995
+# 	Filter_CCD_pinholes	 = 39.0
+# 	Ref_Diodes	 = 55.5
+# 	Crystal_2_theta	 = 8.0626997406006
+# 	Crystal_3_theta	 = 3.5694999446868905
+# 	Crystal_2_phi	 = 3.8558
+# 	Crystal_1_phi	 = 2.123625
+# 	Crystal_3_phi	 = 19.900000000000002
+# 	Crystal_4_phi	 = 4.201
+# 	Diode_in_mono	 = 90.0
+# 	Diode_behind_mono	 = 5.0
+# 	Slit_3_up	 = 7.170000000000003
+# 	Slit_3_down	 = 23.98
+# 	Slit_3_right	 = 20.99
+# 	Slit_3_left	 = 20.96
+# 	Mirror_2_hor	 = 0.0
+# 	Mirror_2_vert	 = -1.7299999999999986
+# 	Mirror_2_theta	 = 7.596785929000001
+# 	Lift_table	 = 613.9500059799999
+# 	Slit_4_up	 = 0.022499999999999964
+# 	Slit_4_down	 = 7.307499999999999
+# 	Slit_4_right	 = 3.3087500000000003
+# 	Slit_4_left	 = -0.4537500000000003
+# 	Pinhole_1_y	 = 5.0
+# 	Pinhole_1_x	 = 2.6799999999999926
+# 	Pinhole_2_X	 = 96.93992
+# 	NewRef_S5_up	 = 0.5899999999999999
+# 	NewRef_S5_down	 = 0.1899999999999995
+# 	NewRef_S5_right	 = 1.674999999999999
+# 	NewRef_S5_left	 = 1.675
+# 	Slit_1_vert_pos	 = 5.551115123125783e-17
+# 	Slit_1_vert_size	 = 3.000000000000002
+# 	Slit_1_hor_pos	 = -1.3322676295501878e-15
+# 	Slit_1_hor_size	 = 12.0
+# 	Slit_2_vert_pos	 = 0.30000000000000426
+# 	Slit_2_vert_size	 = 20.0
+# 	Slit_3_vert_pos	 = 1.450000000000001
+# 	Slit_3_vert_size	 = 1.5
+# 	Slit_3_hor_pos	 = 1.099999999999999
+# 	Slit_3_hor_size	 = 15.000000000000004
+# 	Slit_4_vert_pos	 = -0.08000000000000007
+# 	Slit_4_vert_size	 = 0.1999999999999993
+# 	Slit_4_hor_pos	 = -0.16500000000000004
+# 	Slit_4_hor_size	 = 1.6
+# 	date Timer	 = 2020-01-25T05:06:18.618+01:00
+# 	Timer	 = 0.0
+# 	msec Timer	 = 0
+#
+# DetectorValues:
+# 	SM-Counter	 = 5
+#
+# Plot:
+# 	Motor	 = Counter
+# 	Detector	 = Keysight1
+# 	Monitor	 = Keysight3
+#
+# SnapshotValues:
+# 	Detector:
+# 		Keysight1	 = 2 3.14899e-13 9 4.37318e-8
+# 		Keysight2	 = 2 1.77039e-13 9 2.22055e-13
+# 		Keysight3	 = 2 6.55942e-8 9 6.5793e-8
+# 		Keysight4	 = 2 8.22811e-8 9 8.23488e-8
+# 		Mono_Cu_Temp	 = 2 30.768291752498822 9 30.786602578774858
+# 		Cr_1_Cu_Bloc	 = 2 28.839551384756383 9 28.85786221103242
+# 		Cr_2_Si_Temp	 = 2 29.666590371557334 9 29.727626459144123
+# 		Mon_Gear_Temp	 = 2 31.119249256122842 9 31.16807812619227
+# 		Cr_3_Si_Temp	 = 2 27.249685213228332 9 27.248445105216604
+# 		Cr_4_InSb_Temp	 = 2 27.47970559631603 9 27.480803113987715
+# 		Bessy_Ringstrom	 = 2 297.8737326 9 297.6172915
+# 		Bessy_Lebensdauer	 = 2 10.192658421028653 9 9.452818248128887
+# 		Offset_1st_wheel	 = 2 -7.107144999999999 9 -7.107144999999999
+# 		Offset_2nd_wheel	 = 2 209.99536 9 209.99536
+# 		Offset_Theta	 = 2 -361.295 9 -361.295
+# 		Offset_2Theta	 = 2 107.989 9 107.989
+# 		date Time	 = 2 2020-01-25T05:06:18.653+01:00 9 2020-01-25T05:06:48.336+01:00
+# 		Time	 = 2 0.587 9 30.27
+# 		msec Time	 = 2 587 9 30270
+# 		PTB_U49	 = 2 29.5557 9 29.62
+# 		Ring_1	 = 2 297.3900822322815 9 297.1370309272628
+# 		Lebensdauer_1	 = 2 9.688183089224953 9 9.71067169350793
+# 		TopupState	 = 2 decay 9 decay
+# 		Ring_2	 = 2 297.41226246361305 9 297.15879646218093
+# 		Lebensdauer_2	 = 2 9.783402682144914 9 9.533931458438948
+# 		Pot_Mi_1_hor	 = 2 3.498546009979489 9 3.498841416852791
+# 		Pot_Mi_1_vert	 = 2 3.0907070758589503 9 3.0907993065720123
+# 		Pot_Mi_1_theta	 = 2 3.778210988733976 9 3.7781297639495626
+# 		Pot_Mi_1_psi	 = 2 5.367726541886755 9 5.367471755384231
+# 		Tilt_Mi_1_theta	 = 2 8.328491124987028 9 8.32826553787031
+# 		Tilt_Mi_1_phi	 = 2 -3.5003305887901734 9 -3.5012695004621923
+# 		FCM_Diff	 = 2 3.439183261709349 9 3.44173984172726
+# 		Tilt_Mono_theta	 = 2 -0.07707965483896743 9 -0.07643612710687472
+# 		Tilt_Mono_psi	 = 2 0.15519043332777901 9 0.15480949007753605
+# 		Pot_Mi_2_hor	 = 2 8.864671303231667 9 8.865759336975637
+# 		Pot_Mi_2_theta	 = 2 3.4674466522003144 9 3.4670350539717356
+# 		Tilt_Mi_2_theta	 = 2 5.516451186549136 9 5.515673937492558
+# 		Tilt_Mi_2_phi	 = 2 -0.25820840111039306 9 -0.2578435956359854
+# 		Pressure_Bender	 = 2 2.216034176531851 9 2.240847894376788
+# Motors:
+# 	Counter:
+# 		XML-ID	 = Counter-mot
+# 		Name	 = Counter
+# 		Access	 = local:Counter
+# 		DeviceType	 = Axis
+# 	Sample-Y:
+# 		XML-ID	 = OMS58:io1500002
+# 		Name	 = Sample-Y
+# 		Access	 = ca:OMS58:io1500002
+# 		Unit	 = mm
+# 		DeviceType	 = Axis
+# 	Theta:
+# 		XML-ID	 = OMS58:io1501000
+# 		Name	 = Theta
+# 		Access	 = ca:OMS58:io1501000
+# 		Unit	 = deg
+# 		DeviceType	 = Axis
+# 	2Theta:
+# 		XML-ID	 = OMS58:io1501001
+# 		Name	 = 2Theta
+# 		Access	 = ca:OMS58:io1501001
+# 		Unit	 = deg
+# 		DeviceType	 = Axis
+# 	Det.-X:
+# 		XML-ID	 = OMS58:io1501002
+# 		Name	 = Det.-X
+# 		Access	 = ca:OMS58:io1501002
+# 		Unit	 = mm
+# 		DeviceType	 = Axis
+# Detectors:
+# 	Keysight1:
+# 		XML-ID	 = A2980:22702chan1
+# 		Name	 = Keysight1
+# 		Access	 = ca:A2980:22702.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight2:
+# 		XML-ID	 = A2980:22703chan1
+# 		Name	 = Keysight2
+# 		Access	 = ca:A2980:22703.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight3:
+# 		XML-ID	 = A2980:22704chan1
+# 		Name	 = Keysight3
+# 		Access	 = ca:A2980:22704.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Keysight4:
+# 		XML-ID	 = A2980:22705chan1
+# 		Name	 = Keysight4
+# 		Access	 = ca:A2980:22705.VAL
+# 		Unit	 = A
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Time:
+# 		XML-ID	 = Timer1-det-double
+# 		Name	 = Time
+# 		Access	 = local:Timer
+# 		Unit	 = secs
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Ring_1:
+# 		XML-ID	 = bIICurrent:Mnt1chan1
+# 		Name	 = Ring_1
+# 		Access	 = ca:bIICurrent:Mnt1.VAL
+# 		Unit	 = mA
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 	Ring_2:
+# 		Access	 = ca:bIICurrent:Mnt2.VAL
+# 		Unit	 = mA
+# 		DeviceType	 = Channel
+# 		Detectortype	 = Standard
+# 		XML-ID	 = bIICurrent:Mnt2chan1
+# 		Name	 = Ring_2
+# Datasets:
+# 	PosCountTimer:
+# 		Unit	 = msecs
+# 	Keysight1:Attempts:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight1:MaxAttempts:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight1:AverageCount:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight1:Preset:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight1:Limit:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight1:maxDeviation:
+# 		Name	 = Keysight1
+# 		channel	 = A2980:22702chan1
+# 	Keysight3:Attempts:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight3:MaxAttempts:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight3:AverageCount:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight3:Preset:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight3:Limit:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight3:maxDeviation:
+# 		Name	 = Keysight3
+# 		channel	 = A2980:22704chan1
+# 	Keysight4:Attempts:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	Keysight4:MaxAttempts:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	Keysight4:AverageCount:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	Keysight4:Preset:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	Keysight4:Limit:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	Keysight4:maxDeviation:
+# 		Name	 = Keysight4
+# 		channel	 = A2980:22705chan1
+# 	PosCounter:
+# Counter	Sample-Y	Theta	2Theta	Det.-X	Keysight1	Keysight2	Keysight3	Keysight4	Time	Ring_1	Ring_2	PosCountTimer	Keysight1:Attempts	Keysight1:MaxAttempts	Keysight1:AverageCount	Keysight1:Preset	Keysight1:Limit	Keysight1:maxDeviation	Keysight3:Attempts	Keysight3:MaxAttempts	Keysight3:AverageCount	Keysight3:Preset	Keysight3:Limit	Keysight3:maxDeviation	Keysight4:Attempts	Keysight4:MaxAttempts	Keysight4:AverageCount	Keysight4:Preset	Keysight4:Limit	Keysight4:maxDeviation	PosCounter
+NaN	3.0	0.0	-7.938999999999993	0.0	NaN	NaN	NaN	NaN	NaN	NaN	NaN	981	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN	3
+1	3.0	0.0	-7.938999999999993	0.0	4.3736320000000005e-8	3.11428e-13	6.569132e-8	8.227974e-8	18.091	297.2402964136177	297.2632011654771	15926	1	10	5	5	2e-13	1.0	1	20	5	5	1e-12	1.0	1	10	5	5	1e-12	1.0	4
+2	3.0	0.0	-7.938999999999993	0.0	4.3745560000000005e-8	2.01103e-13	6.580242e-8	8.227014e-8	20.727	297.21805654244923	297.2414328328716	19726	1	10	5	5	2e-13	1.0	1	20	5	5	1e-12	1.0	1	10	5	5	1e-12	1.0	5
+3	3.0	0.0	-7.938999999999993	0.0	4.377706e-8	1.62786e-13	6.577074e-8	8.226244e-8	23.362	297.19645987789573	297.2173919855927	22361	1	10	5	5	2e-13	1.0	1	20	5	5	1e-12	1.0	1	10	5	5	1e-12	1.0	6
+4	3.0	0.0	-7.938999999999993	0.0	4.3811840000000004e-8	1.83563e-13	6.581763999999999e-8	8.229378e-8	25.998	297.1734299506354	297.1942518655306	24997	1	10	5	5	2e-13	1.0	1	20	5	5	1e-12	1.0	1	10	5	5	1e-12	1.0	7
+5	3.0	0.0	-7.938999999999993	0.0	4.377514e-8	2.06423e-13	6.585946000000001e-8	8.233156e-8	28.634	297.15103904295296	297.17344623098677	27632	1	10	5	5	2e-13	1.0	1	20	5	5	1e-12	1.0	1	10	5	5	1e-12	1.0	8

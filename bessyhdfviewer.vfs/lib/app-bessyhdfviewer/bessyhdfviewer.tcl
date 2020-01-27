@@ -2577,6 +2577,14 @@ namespace eval BessyHDFViewer {
 	}
 
 
+	proc h52dictpath {hpath} {
+		set dpath {}
+		foreach c [split $hpath /] {
+			lappend dpath data $c
+		}
+		return $dpath
+	}
+
 	proc bessy_reshape_hdf5 {fn {shallow {}}} {
 		SmallUtils::autovar hdf H5pp -args $fn
 		switch $shallow {
@@ -2607,14 +2615,14 @@ namespace eval BessyHDFViewer {
 			1.0 { 
 				set path [list data $chain data]
 				set optpath {}
-				set stddevpath {}
+				set subfieldpaths {}
 			}
 			2.0 -
 			3.0 -
 			3.1 {
 				set path [list data $chain data default data]
 				set optpath [list data $chain data alternate data]
-				set stddevpath {}
+				set subfieldpaths {}
 			}
 
 			4.0 -
@@ -2622,8 +2630,7 @@ namespace eval BessyHDFViewer {
 			6  {
 				set path [list data $chain data main data]
 				set optpath [list data $chain data snapshot data]
-				set stddevpath [list data $chain data main data standarddev]
-				set stddevpathhdf $chain/main/standarddev
+				set subfieldpaths [list $chain/main/standarddev $chain/main/averagemeta]
 			}
 
 
@@ -2634,11 +2641,14 @@ namespace eval BessyHDFViewer {
 		}
 		
 		# check for stddev data, which was not read from this level
-		if {$stddevpath ne {} && [dict exists $rawd {*}$stddevpath]} {
-			if {[dict size [dict get $rawd {*}$stddevpath data]] == 0} {
-				# read the data back in
-				set stdddata [$hdf dump 0 $stddevpathhdf]
-				dict set rawd {*}$stddevpath $stdddata
+		foreach h5path $subfieldpaths {
+			set dpath [h52dictpath $h5path]
+			if {[dict exists $rawd {*}$dpath]} {
+				if {[dict size [dict get $rawd {*}$dpath data]] == 0} {
+					# read the data back in
+					set stdddata [$hdf dump 0 $h5path]
+					dict set rawd {*}$dpath $stdddata
+				}
 			}
 		}
 
@@ -2671,46 +2681,49 @@ namespace eval BessyHDFViewer {
 		dict_move rawd [list data $chain data meta data PosCountTimer data] reshaped [list Dataset PosCountTimer data]
 		
 		# check for stdddev data from averaging
-		if {$stddevpath ne {} && [dict exists $rawd {*}$stddevpath] && [catch {
-			set stdddata {}
-			dict for {key dset} [dict get $rawd {*}$stddevpath data] {
-				dict_assign $dset ndata dspace dtype data attrs
-				
-				# entries in the stddev group can have multiple 
-				# columns with the PosCounter
-				
-				set fields [lassign $dtype poscounter]
-				set name [dict get $dset attrs Name]
+		foreach h5path $subfieldpaths {
+			set dpath [h52dictpath $h5path]
+			if {[dict exists $rawd {*}$dpath] && [catch {
+				set stdddata {}
+				dict for {key dset} [dict get $rawd {*}$dpath data] {
+					dict_assign $dset ndata dspace dtype data attrs
+					
+					# entries in the stddev group can have multiple 
+					# columns with the PosCounter
+					
+					set fields [lassign $dtype poscounter]
+					set name [dict get $dset attrs Name]
 
-				set i 0
-				while {$i < [llength $data]} {
-					set poscount [lindex $data $i]
-					#puts "$i $poscount"
-					incr i
-					foreach field $fields {
-						set val [lindex $data $i]
+					set i 0
+					while {$i < [llength $data]} {
+						set poscount [lindex $data $i]
+						#puts "$i $poscount"
 						incr i
-						dict lappend stdddata $name:$field $poscount $val
+						foreach field $fields {
+							set val [lindex $data $i]
+							incr i
+							dict lappend stdddata $name:$field $poscount $val
+						}
 					}
+
+					foreach field $fields {
+						dict set fattrs $name:$field $attrs
+					}
+
+
 				}
 
-				foreach field $fields {
-					dict set fattrs $name:$field $attrs
+				#puts $stdddata
+				#puts $attrs
+				dict for {field data} $stdddata {
+					dict set reshaped Dataset $field data $data
+					dict set reshaped Dataset $field attrs [dict get $fattrs $field]
+					lappend joinsets Dataset $field
 				}
 
-
+			} stddeverr]} {
+				puts stderr "stddev: $stddeverr, $h5path, [dict keys [dict get $rawd data]]"
 			}
-
-			#puts $stdddata
-			#puts $attrs
-			dict for {field data} $stdddata {
-				dict set reshaped Dataset $field data $data
-				dict set reshaped Dataset $field attrs [dict get $fattrs $field]
-				lappend joinsets Dataset $field
-			}
-
-		} stddeverr]} {
-			puts stderr "stddev: $stddeverr, $stddevpath, [dict keys [dict get $rawd data]]"
 		}
 
 
