@@ -38,12 +38,14 @@ namespace eval SpectrumViewer {
 			set addroibtn [ttk::button $bbar.add -text "Add ROI" -command [mymethod AddROICmd]]
 			set delroibtn [ttk::button $bbar.del -text "Delete ROI" -command [mymethod DeleteROICmd]]
 			set computebtn [ttk::button $bbar.compute -text "Compute" -command [mymethod ComputeROIs]]
+			set exportbtn [ttk::button $bbar.export -text "Export" -command [mymethod ExportCmd]]
 
 			pack $cycleroibtn -side left
 			pack $plotallbtn -side left
 			pack $addroibtn -side left
 			pack $delroibtn -side left
 			pack $computebtn -side left
+			pack $exportbtn -side left
 
 			$Graph set log y
 
@@ -106,6 +108,34 @@ namespace eval SpectrumViewer {
 						lappend validpoints [list $fn $dpnr]
 					}
 				}
+			}
+		}
+
+		
+		method export_spectra {dir} {
+			dict for {fn fndata} $allspectra {
+				dict for {pos posdata} $fndata {
+					dict for {spectrometer counts} $posdata {
+						set base [file rootname [file tail $fn]]
+						set npos [format %05d $pos]
+						set outfn [file join $dir ${base}_${spectrometer}_${npos}.dat]
+						set lines [list "# File = $fn"]
+						lappend lines "# Spectrometer = $spectrometer"
+						lappend lines "# PosCounter = $pos"
+						lappend lines {*}$counts
+						fileutil::writeFile $outfn [join $lines \n]
+					}
+				}
+			}
+		}
+
+
+		method ExportCmd {} {
+			set fn1 [lindex [dict keys $allspectra] 0]
+			set basedir [file dirname $fn1]
+			set dir [tk_getDirectory -title "Choose directory for the exported spectra..." -initialdir $basedir]
+			if {$dir ne ""} {
+				$self export_spectra $dir
 			}
 		}
 
