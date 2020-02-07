@@ -52,7 +52,6 @@ set tkcon::OPT(exec) ""
 namespace eval BessyHDFViewer {
 	variable ns [namespace current]
 	variable basedir [file dirname [info script]]
-
 	
 	# load support modules
 	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl 
@@ -221,7 +220,11 @@ namespace eval BessyHDFViewer {
 			-image [IconGet configure] -command ${ns}::ColumnEdit -style Toolbutton]
 		tooltip::tooltip $w(coleditbut) "Edit displayed columns in browser"
 
-		grid $w(pathent) $w(filterbut) $w(filterent) $w(groupbut) $w(groupbox) $w(coleditbut) -sticky ew
+		set w(infobutton) [ttk::button $w(pathfr).infobut -text "About BessyHDFViewer" \
+			-image [IconGet info] -command ${ns}::About -style Toolbutton]
+		tooltip::tooltip $w(infobutton) "About BessyHDFViewer"
+
+		grid $w(pathent) $w(infobutton) $w(filterbut) $w(filterent) $w(groupbut) $w(groupbox) $w(coleditbut) -sticky ew
 		grid columnconfigure $w(pathfr) $w(pathent) -weight 1
 
 		set w(filelist) [dirViewer::dirViewer $w(listfr).filelist $browsepath \
@@ -741,6 +744,24 @@ namespace eval BessyHDFViewer {
 		variable ActiveColumns $columns
 	}
 
+	
+	proc About {} {
+		set exebasedir [info nameofexecutable]
+		set version [fileutil::cat [file join $exebasedir VERSION]]
+		set title "BessyHDFViewer - a program for browsing and analysing PTB@BESSY measurement files"
+		set abouttext "(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
+		append abouttext "\n All rights reserved"
+		append abouttext "\n Using Tcl [info patchlevel]"
+		append abouttext "\n Git commit message:\n"
+		append abouttext $version
+		append abouttext "\n Tcl platform info:\n"
+		append abouttext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
+		
+		puts $abouttext
+
+		tk_messageBox -icon info -title $title -message $title -detail $abouttext
+
+	}
 
 	proc ColumnEdit {} {
 		variable ActiveColumns
