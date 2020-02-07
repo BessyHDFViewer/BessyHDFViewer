@@ -9,10 +9,10 @@ starpacks:
 	sdx wrap BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/Windows_runtime64.exe
 
 install: starpacks
-	cp -p BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
-	chmod 775 $(INSTALLDIR)/BessyHDFViewer.exe $(INSTALLDIR)/BessyHDFViewer_Linux64
+	-cp -p BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
+	-chmod 775 $(INSTALLDIR)/BessyHDFViewer.exe $(INSTALLDIR)/BessyHDFViewer_Linux64
 	# install to BAM
-	scp BessyHDFViewer_Linux64 BessyHDFViewer.exe ptb@193.149.11.227:/messung/BessyHDFViewer_bin/
+	-scp BessyHDFViewer_Linux64 BessyHDFViewer.exe ptb@193.149.11.227:/messung/BessyHDFViewer_bin/
 
 mac:
 	# create application for Mac OSX
