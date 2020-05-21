@@ -733,29 +733,110 @@ namespace eval BessyHDFViewer {
 		variable ActiveColumns $columns
 	}
 
-	
-	proc About {} {
-		set exebasedir [info nameofexecutable]
-		set version [AboutReadVersion $exebasedir]
-		set title "BessyHDFViewer - a program for browsing and analysing PTB@BESSY measurement files"
-		set abouttext "(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
-		append abouttext "\n All rights reserved"
-		append abouttext "\n Using Tcl [info patchlevel]"
-		append abouttext "\n Git commit message:\n"
-		append abouttext $version
-		append abouttext "\n Tcl platform info:\n"
-		append abouttext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
-		append abouttext "\n Plugin information:\n"
+	snit::widget AboutDialog {
+		hulltype toplevel
+		component text
+		component vsb
+		component hsb
 
-		foreach pdir $::DataEvaluation::plugindirs {
-			append abouttext $pdir\n
-			append abouttext [AboutReadVersion $pdir]\n
+		variable title
+		variable copyright
+		variable vinfotext
+
+		constructor {args} {
+			$self CreateText
+			
+			wm title $win $title
+			
+			set mfr [ttk::frame $win.mfr]
+			pack $mfr -expand yes -fill both
+
+			set textfr [ttk::frame $mfr.textfr]
+			set butfr [ttk::frame $mfr.butfr]
+			set eyecandy [ttk::label $mfr.icon -image [IconGet BessyHDFViewer_large]]
+			set cplabel [ttk::label $mfr.lbl -text $copyright]
+			
+			grid $eyecandy $cplabel -sticky nsew
+			grid $textfr - -sticky nsew -padx 10
+			grid $butfr - 
+
+			grid rowconfigure $mfr $textfr -weight 1
+			grid columnconfigure $mfr $textfr -weight 1
+			
+			
+			install text using text $textfr.text \
+				-xscrollcommand [list $textfr.hsb set] \
+				-yscrollcommand [list $textfr.vsb set]
+
+			install hsb using ttk::scrollbar $textfr.hsb -orient horizontal -command [list $text xview]
+			install vsb using ttk::scrollbar $textfr.vsb -orient vertical -command [list $text yview]
+
+			grid $text $vsb -sticky nsew
+			grid $hsb  -    -sticky nsew
+			
+			grid rowconfigure $textfr $text -weight 1
+			grid columnconfigure $textfr $text -weight 1
+
+			$text insert 1.0 $vinfotext
+
+			# add buttons
+			set okbut [ttk::button $butfr.ok -text "OK" -command [mymethod Quit] -default active]
+			set instbut [ttk::button $butfr.inst -text "Install Package..." -command [mymethod InstallPackageCmd] -default normal]
+			pack $okbut $instbut -side left -anchor c
+			focus $okbut
+		}
+
+		method AddText {msg} {
+			$text insert end $msg
+			$text see end
+			raise $win
 		}
 		
-		puts $abouttext
+		method CreateText {} {	
+			set exebasedir [info nameofexecutable]
+			set version [AboutReadVersion $exebasedir]
+			set title "About BessyHDFViewer"
+			set copyright "BessyHDFViewer - a program for browsing\nand analysing PTB@BESSY measurement files"
+			append copyright "\n(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
+			append copyright "\n All rights reserved"
+			append copyright "\n Using Tcl [info patchlevel]"
 
-		tk_messageBox -icon info -title $title -message $title -detail $abouttext
+			set vinfotext "Git version:\n"
+			append vinfotext $version
+			append vinfotext "\nPlugin versions:\n"
 
+			foreach pdir $::DataEvaluation::plugindirs {
+				append vinfotext $pdir\n
+				append vinfotext [AboutReadVersion $pdir]\n
+			}
+			
+			append vinfotext "\n Tcl platform info:\n"
+			append vinfotext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
+
+		}
+
+		method InstallPackageCmd {} {
+			set filetypes { 
+				{{BessyHDFViewer package} {.bpkg}}
+				{{All Files}        *  }
+			}
+
+			set fn [tk_getOpenFile -title "Select BessyHDFViewer package..." -filetypes $filetypes]
+
+			if {$fn != "" } {
+				InstallPackage $fn
+			}
+		}
+
+		method Quit {} {
+			destroy $win
+		}
+	}
+
+	proc About {} {
+		# create dialog window
+		AboutDialog .about
+		tkwait window .about
 	}
 
 	proc AboutReadVersion {dir} {
@@ -3528,7 +3609,7 @@ namespace eval BessyHDFViewer {
 			}
 		}
 	}
-
+	
 	proc InstallPackage {fn} {
 		# takes a .bkpg package file and
 		# installs it in the local plugin folder.
