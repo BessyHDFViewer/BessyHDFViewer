@@ -756,7 +756,7 @@ namespace eval BessyHDFViewer {
 			set eyecandy [ttk::label $mfr.icon -image [IconGet BessyHDFViewer_large]]
 			set cplabel [ttk::label $mfr.lbl -text $copyright]
 			
-			grid $eyecandy $cplabel -sticky nsew
+			grid $eyecandy $cplabel -sticky nsew -padx 10 -pady 10
 			grid $textfr - -sticky nsew -padx 10
 			grid $butfr - 
 
@@ -784,6 +784,8 @@ namespace eval BessyHDFViewer {
 			set instbut [ttk::button $butfr.inst -text "Install Package..." -command [mymethod InstallPackageCmd] -default normal]
 			pack $okbut $instbut -side left -anchor c
 			focus $okbut
+			bind $self <Return> [mymethod Quit]
+			bind $self <Escape> [mymethod Quit]
 		}
 
 		method AddText {msg} {
@@ -798,18 +800,20 @@ namespace eval BessyHDFViewer {
 			set title "About BessyHDFViewer"
 			set copyright "BessyHDFViewer - a program for browsing\nand analysing PTB@BESSY measurement files"
 			append copyright "\n(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
-			append copyright "\n All rights reserved"
-			append copyright "\n Using Tcl [info patchlevel]"
+			append copyright "\nAll rights reserved"
+			append copyright "\nUsing Tcl [info patchlevel]"
 
 			set vinfotext "Git version:\n"
-			append vinfotext $version
+			append vinfotext $version\n
 			append vinfotext "\nPlugin versions:\n"
 
 			foreach pdir $::DataEvaluation::plugindirs {
-				append vinfotext $pdir\n
-				append vinfotext [AboutReadVersion $pdir]\n
+				append vinfotext [file tail $pdir]:\n
+				append vinfotext [AboutReadVersion $pdir]\n\n
 			}
 			
+			append vinfotext "\nExecutable path:\n[info nameofexecutable]\n"
+			append vinfotext "\nProfile path:\n$BessyHDFViewer::profiledir\n"
 			append vinfotext "\n Tcl platform info:\n"
 			append vinfotext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
 
@@ -3661,6 +3665,7 @@ namespace eval BessyHDFViewer {
 				}
 			}
 			file copy -force $fn/$pkgdir $plugindir
+			tk_messageBox -type ok -icon info -title "Package installed!" -message "Installation successful!" -detail "You need to restart BessyHDFViewer to take effect"
 		}
 		vfs::zip::Unmount $zipfd $fn
 	}
