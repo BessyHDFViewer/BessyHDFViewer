@@ -120,20 +120,9 @@ namespace eval BessyHDFViewer {
 			}
 		}
 
-		# initialize iconlist
-		variable IconClassMap {
-			MCA  mca
-			HDDS mca
-			MULTIPLE_IMG image-multiple
-			SINGLE_IMG image-x-generic
-			PLOT graph
-			UNKNOWN unknown
-		}
-			
-		set IconClassMap [dict map {class icon} $IconClassMap {IconGet $icon}]
-		
 		ReadPreferences
 		InitCache
+		InitIconCache
 		InitGUI
 
 		if {[llength $argv] != 0} {
@@ -3466,15 +3455,41 @@ namespace eval BessyHDFViewer {
 	}
 
 	variable iconcache {{} {}}
-	proc IconGet {name} {
-		variable iconcache
+	variable icondirs {}
+	proc AddIconDir {dir} {
+		variable icondirs
+		if [file isdirectory $dir] {
+			lappend icondirs $dir
+		}
+	}
+	
+	proc InitIconCache {} {
 		variable basedir
 		variable profiledir
+		AddIconDir $basedir/icons
+		AddIconDir $profiledir/icons
+		
+		# icons for the file browser
+		variable IconClassMap {
+			MCA  mca
+			HDDS mca
+			MULTIPLE_IMG image-multiple
+			SINGLE_IMG image-x-generic
+			PLOT graph
+			UNKNOWN unknown
+		}
+			
+		set IconClassMap [dict map {class icon} $IconClassMap {IconGet $icon}]	
+	}
+
+	proc IconGet {name} {
+		variable iconcache
+		variable icondirs
 		if {[dict exists $iconcache $name]} {
 			return [dict get $iconcache $name]
 		} else {
-			foreach dir [list $basedir $profiledir] {
-				set fn [file join $dir icons $name.png]
+			foreach dir $icondirs {
+				set fn [file join $dir $name.png]
 				if {[file exists $fn]} break
 			}
 			if {[catch {image create photo -file $fn} iname]} {
