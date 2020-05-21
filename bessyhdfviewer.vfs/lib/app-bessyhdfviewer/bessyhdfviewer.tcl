@@ -1,12 +1,12 @@
 package provide app-bessyhdfviewer 1.0
 
-
 package require hdfpp
 package require ukaz 2.1
 package require Tk
 package require tooltip
 package require tablelist_tile 5.9
 package require sqlite3
+package require vfs::zip
 
 if {[tk windowingsystem]=="x11"} {
 	ttk::setTheme default
@@ -736,7 +736,7 @@ namespace eval BessyHDFViewer {
 	
 	proc About {} {
 		set exebasedir [info nameofexecutable]
-		set version [fileutil::cat [file join $exebasedir VERSION]]
+		set version [AboutReadVersion $exebasedir]
 		set title "BessyHDFViewer - a program for browsing and analysing PTB@BESSY measurement files"
 		set abouttext "(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
 		append abouttext "\n All rights reserved"
@@ -745,11 +745,39 @@ namespace eval BessyHDFViewer {
 		append abouttext $version
 		append abouttext "\n Tcl platform info:\n"
 		append abouttext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
+		append abouttext "\n Plugin information:\n"
+
+		foreach pdir $::DataEvaluation::plugindirs {
+			append abouttext $pdir\n
+			append abouttext [AboutReadVersion $pdir]\n
+		}
 		
 		puts $abouttext
 
 		tk_messageBox -icon info -title $title -message $title -detail $abouttext
 
+	}
+
+	proc AboutReadVersion {dir} {
+		if {[catch {fileutil::cat [file join $dir VERSION]} vers]} {
+			return "Development"
+			puts $vers
+		} else {
+			# check that there are 2 lines with commit and Date
+			# if so, return these, otherwise the whole thing
+			set commitinfo {}
+			foreach line [split $vers \n] {
+				switch -glob $line {
+					commit* -
+					Date:* { lappend commitinfo $line }
+				}
+			}
+			if {[llength $commitinfo] >= 2} {
+				return [join $commitinfo \n]
+			} else {
+				return $vers
+			}
+		}
 	}
 
 	proc ColumnEdit {} {
@@ -3499,6 +3527,68 @@ namespace eval BessyHDFViewer {
 				return $iname
 			}
 		}
+	}
+
+	proc InstallPackage {fn} {
+		# takes a .bkpg package file and
+		# installs it in the local plugin folder.
+		set zipfd [vfs::zip::Mount $fn $fn]
+		# first check for manifest and single directory
+		set manifn [file join $fn MANIFEST]
+		if {![file exists $manifn]} {
+			AbortInstall "$fn is not a valid BessyHDFViewer package (missing manifest)"
+		}
+		
+		set manifest [fileutil::cat $manifn]
+
+		set pkgdirs [glob -type d -directory $fn -tails *]
+		if {[llength $pkgdirs] != 1} {
+			AbortInstall "$fn is not a valid BessyHDFViewer package (single subdir)"
+		}
+		lassign $pkgdirs pkgdir
+
+		set msg "You are about to install package $pkgdir. Continue?"
+		set ans [tk_messageBox -icon question -message $msg -detail $manifest -type yesno]
+	
+		if {$ans == "yes"} {
+			set plugindir $::DataEvaluation::plugindir
+			file mkdir $plugindir
+			set targetdir $plugindir/$pkgdir
+			if {[file exists $targetdir]} {
+				set nolink [catch {file readlink $targetdir} linktarget]
+				if {$nolink} {
+					set version [AboutReadVersion $targetdir]
+				} else {
+					set version "Link to $linktarget"
+				}
+
+				set msg "Plugin already installed" 
+				set detail "Installed version:\n"
+				append detail "$version\n"
+				append detail "Version in the package:"
+				append detail [AboutReadVersion $fn/$pkgdir]\n
+				append detail "Overwrite?"
+				set ans [tk_messageBox -icon question -message $msg -detail "$version\n\nOverwrite?" -type okcancel -title "Overwrite?"]
+				if {$ans == "cancel"} {
+					AbortInstall "Cancelled"
+				}
+
+				if {$nolink} {
+					file delete -force $targetdir
+				} else {
+					file delete $targetdir
+				}
+			}
+			file copy -force $fn/$pkgdir $plugindir
+		}
+		vfs::zip::Unmount $zipfd $fn
+	}
+
+	proc AbortInstall {msg} {
+		catch {uplevel 1 {vfs::zip::Unmount $zipfd $fn}} err
+		puts stderr $err
+		tk_messageBox -message "Installation aborted" -detail $msg -type ok -icon info
+		return -level 2
 	}
 
 }

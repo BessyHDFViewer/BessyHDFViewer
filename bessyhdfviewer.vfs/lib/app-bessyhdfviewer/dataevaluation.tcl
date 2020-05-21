@@ -35,9 +35,11 @@ namespace eval DataEvaluation {
 		# read extra commands from the plugin dir
 		variable extracmds {}
 
-		set plugindir [file join $::BessyHDFViewer::profiledir plugins]
+		variable plugindir [file join $::BessyHDFViewer::profiledir plugins]
 		set nplugin 0
-		foreach pdir [glob -nocomplain -type d $plugindir/*] {
+		variable plugindirs [glob -nocomplain -type d $plugindir/*]
+
+		foreach pdir $plugindirs {
 			incr nplugin
 			set pns plugin$nplugin
 			set pmainfile [file join $pdir/pluginmain.tcl]
