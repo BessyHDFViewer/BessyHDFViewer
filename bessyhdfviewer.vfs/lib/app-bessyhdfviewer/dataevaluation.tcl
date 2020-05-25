@@ -46,6 +46,7 @@ namespace eval DataEvaluation {
 			set pbutfile [file join $pdir/button.dict]
 			BessyHDFViewer::AddIconDir $pdir/icons
 
+			namespace eval $pns [list set PluginHome $pdir]
 			if {[file exists $pmainfile]} {
 				if {[catch {
 					namespace eval $pns [list source $pmainfile]
