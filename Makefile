@@ -14,7 +14,7 @@ install: starpacks
 	-cp -p BessyHDFViewer.exe $(WININSTALLDIR)
 	-chmod 775 $(INSTALLDIR)/BessyHDFViewer.exe $(INSTALLDIR)/BessyHDFViewer_Linux64
 	# install to BAM
-	-scp BessyHDFViewer_Linux64 BessyHDFViewer.exe ptb@193.149.11.227:/messung/BessyHDFViewer_bin/
+	-scp BessyHDFViewer_Linux64 BessyHDFViewer.exe ptb@193.149.11.227:/soft/BessyHDFViewer_bin/
 
 mac:
 	# create application for Mac OSX
