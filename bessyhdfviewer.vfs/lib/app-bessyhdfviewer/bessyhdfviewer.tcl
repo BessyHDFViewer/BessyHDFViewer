@@ -3133,7 +3133,7 @@ namespace eval BessyHDFViewer {
 	proc bessy_class {data} {
 		# classify dataset into Images, Plot and return plot axes
 		set images false
-		foreach imagekey [PreferenceGet ImageDetectors {}] {
+		foreach imagekey [PreferenceGet ImageDetectorFilePathRules {}] {
 			if {[dict exists $data Detector $imagekey data]} {
 				set images true
 				# keep imagekey to read the images later
