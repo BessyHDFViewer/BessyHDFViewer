@@ -47,10 +47,10 @@ namespace eval DataEvaluation {
 			BessyHDFViewer::AddIconDir $pdir/icons
 
 			namespace eval $pns [list set PluginHome $pdir]
+			namespace eval $pns [list namespace path $ns]
 			if {[file exists $pmainfile]} {
 				if {[catch {
 					namespace eval $pns [list source $pmainfile]
-					namespace eval $pns [list namespace path $ns]
 				} err errdict]} {
 					tk_messageBox -title "Error reading $pmainfile" -message [dict get $errdict -errorstack]
 				}
