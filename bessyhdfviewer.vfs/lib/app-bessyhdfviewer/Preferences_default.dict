@@ -531,5 +531,13 @@ ImageDetectorFilePathRules {
 		exprlist {$2 int($img)}
 		fmtstring {XCCD_%s_%05d.spe}
 	}
+	
+	Daheng_file_name {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+
+	}
+
 
 }
