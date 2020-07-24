@@ -2265,12 +2265,22 @@ namespace eval BessyHDFViewer {
 			lappend allkeys $var
 		}
 
+		# Snapshot values saved only once
 		foreach key {MotorPositions DetectorValues OptionalPositions Plot {}} {
 			if {[dict exists $hdfdata $key]} {
 				dict for {var value} [dict get $hdfdata $key] {
 					namespace eval ::SELECT [list set $var $value]
 					lappend allkeys $var
 				}
+			}
+		}
+
+		# Multiple snapshot values
+		set snapshots {}
+		foreach category {Motor Detector Meta} {
+			dict for {key data} [SmallUtils::dict_getdefault $hdfdata SnapshotValues $category {}] {
+				lappend allkeys $key
+				dict set snapshots $key [SmallUtils::dict_getdefault $data data {}]
 			}
 		}
 
@@ -2318,12 +2328,34 @@ namespace eval BessyHDFViewer {
 			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
 		}
 
-		for {set i 0} {$i<$maxlength && $Row<$limit} {incr i; incr Row} {
+		for {set i 0} {($i<$maxlength || [dict size $snapshots] > 0) && $Row<$limit} {incr i; incr Row} {
 			namespace eval ::SELECT [list set Row $Row] 
 			
-			foreach {var entry} $table {
+			dict for {var entry} $table {
 				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
 			}
+
+			if {[dict exists $table PosCounter] && $i < $maxlength} {
+				set poscounter $::SELECT::PosCounter
+			} else {
+				set poscounter $i
+			}
+			
+			# update values from the snapshot table
+			set updsnaps {}
+			dict for {key slist} $snapshots {
+				set rest [lassign $slist pos val]
+				if {$poscounter >= $pos} {
+					namespace eval ::SELECT [list set $key $val]
+					if {[llength $rest] > 1} { 
+						dict set updsnaps $key $rest
+					}
+				} else {
+					dict set updsnaps $key $slist
+				}
+			}
+			set snapshots $updsnaps
+
 
 			set line {}
 			foreach fmt $fmtlist {
