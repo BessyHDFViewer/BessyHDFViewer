@@ -2517,6 +2517,13 @@ namespace eval BessyHDFViewer {
 
 	proc bessy_reshape {fn args} {
 		# switch on the file extension
+		# first check, if this is a virtual file
+
+		variable virtualfiles
+		if {[dict exists $virtualfiles $fn]} {
+			return [dict get $virtualfiles $fn]
+		}
+
 		switch [file extension $fn] {
 			.hdf { set data [bessy_reshape_hdf4 $fn] 
 				dict set data {} FileFormat HDF4 }
@@ -2731,6 +2738,11 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	variable virtualfiles {}
+	proc SetVirtualFile {fn data} {
+		variable virtualfiles
+		dict set virtualfiles $fn $data
+	}
 
 	proc h52dictpath {hpath} {
 		set dpath {}
@@ -3455,8 +3467,13 @@ namespace eval BessyHDFViewer {
 		puts [HDFCache eval "EXPLAIN QUERY PLAN $query"]
 		set timing [time {set result [HDFCache eval $query]}]
 		puts $timing
-		$w(filelist) AddVirtualFolder $foldername $result
+		AddVirtualFolder $foldername $result
 		return [llength $result]
+	}
+
+	proc AddVirtualFolder {foldername flist} {
+		variable w
+		$w(filelist) AddVirtualFolder $foldername $flist
 	}
 
 	proc RunTest {folder} {
