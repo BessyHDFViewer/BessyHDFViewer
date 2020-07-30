@@ -2331,12 +2331,8 @@ namespace eval BessyHDFViewer {
 		for {set i 0} {($i<$maxlength || [dict size $snapshots] > 0) && $Row<$limit} {incr i; incr Row} {
 			namespace eval ::SELECT [list set Row $Row] 
 			
-			dict for {var entry} $table {
-				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
-			}
-
 			if {[dict exists $table PosCounter] && $i < $maxlength} {
-				set poscounter $::SELECT::PosCounter
+				set poscounter [lindex [dict get $table PosCounter data] $i]]
 			} else {
 				set poscounter $i
 			}
@@ -2356,6 +2352,9 @@ namespace eval BessyHDFViewer {
 			}
 			set snapshots $updsnaps
 
+			dict for {var entry} $table {
+				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
+			}
 
 			set line {}
 			foreach fmt $fmtlist {
