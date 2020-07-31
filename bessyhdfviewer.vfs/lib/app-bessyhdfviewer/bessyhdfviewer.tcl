@@ -1301,7 +1301,7 @@ namespace eval BessyHDFViewer {
 				if {!$singlefile} {
 					# in case of multiple files, open separately for each 
 					# HDF input file. Path is the dirname then
-					set roottail [file rootname [file tail $hdf]]
+					set roottail [ShortFileName $hdf]
 					SmallUtils::autofd fd [file join [dict get $choice path] $roottail.dat] wb
 				}
 
@@ -1343,7 +1343,7 @@ namespace eval BessyHDFViewer {
 			} else {
 				# individual files
 				foreach hdf $files {
-					set roottail [file rootname [file tail $hdf]]
+					set roottail [ShortFileName $hdf]
 					SmallUtils::autofd fd [file join [dict get $choice path] $roottail.dat] wb
 					if {"Filename" in $headerfmt} {
 						puts $fd "# $hdf"
@@ -1853,7 +1853,7 @@ namespace eval BessyHDFViewer {
 		foreach fullname $HDFFiles {
 			set shortname [file tail $fullname]
 			lappend data [bessy_reshape $fullname -shallow]
-			append columnconfig " 0 $shortname left"
+			lappend columnconfig 0 $shortname left
 		}
 
 		$w(difftbl) configure -columns $columnconfig
@@ -2741,6 +2741,15 @@ namespace eval BessyHDFViewer {
 	proc SetVirtualFile {fn data} {
 		variable virtualfiles
 		dict set virtualfiles $fn $data
+	}
+
+	proc ShortFileName {fn} {
+		variable virtualfiles
+		if {[dict exists $virtualfiles $fn]} {
+			return [file tail $fn]
+		} else {
+			return [file rootname [file tail $fn]]
+		}
 	}
 
 	proc h52dictpath {hpath} {

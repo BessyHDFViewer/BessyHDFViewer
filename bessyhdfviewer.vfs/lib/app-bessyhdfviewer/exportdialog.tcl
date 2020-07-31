@@ -253,10 +253,14 @@ snit::widget ExportDialog {
 	method SwitchSingleFile {} {
 		if {$singlefile} {
 			# path is currently a dir
-			set curpath [file join $curpath [file tail [file rootname $firstfile]].dat]
+			set curpath [file join $curpath [BessyHDFViewer::ShortFileName $firstfile].dat]
 		} else {
-			# path is currently a file name, trucate
+			# path is currently a file name, truncate
 			set curpath [file dirname $curpath]
+			if {![file isdirectory $curpath]} {
+				set curpath [file dirname $curpath]
+			}
+				
 		}
 	}
 
