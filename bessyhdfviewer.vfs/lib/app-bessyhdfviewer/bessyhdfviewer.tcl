@@ -55,7 +55,8 @@ namespace eval BessyHDFViewer {
 	
 	# load support modules
 	foreach module {dirViewer.tcl listeditor.tcl hformat.tcl exportdialog.tcl 
-		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl searchdialog.tcl} {
+		autocomplete.tcl dataevaluation.tcl spectrumviewer.tcl searchdialog.tcl
+		bhdfdialog.tcl} {
 		namespace eval :: [list source [file join $basedir $module]]
 	}
 
