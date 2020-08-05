@@ -187,6 +187,7 @@ snit::widget BHDFDialog {
 
 	method execute {} {
 		vwait [myvar answers]
+		if {![info exists answers]} { return {} }
 		return [$self close $answers]
 	}
 	
@@ -202,7 +203,15 @@ snit::widget BHDFDialog {
 		# -enableif
 		if {[dict exists $uargs -enableif]} {
 			dict set conditions $uvar [dict get $uargs -enableif]
-			dict unset args -enableif
+			dict unset uargs -enableif
+		}
+		
+		# -default
+		puts "$uargs"
+		if {[dict exists $uargs -default]} {
+			puts "Found: -default in $uargs"
+			set values($uvar) [dict get $uargs -default]
+			dict unset uargs -default
 		}
 	}
 
@@ -213,7 +222,7 @@ snit::widget BHDFDialog {
 			dict unset uargs $arg
 			return $val
 		} else {
-			return {}
+			return $default
 		}
 	}
 
@@ -235,6 +244,10 @@ snit::widget BHDFDialog {
 		set widgets($var) [ttk::combobox $formfr.c$var -textvariable [myvar values($var)] -values $axes]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
+
+		if {![info exists values($var)] || $values($var) ni $axes} {
+			set values($var) [lindex $axes 0]
+		}
 	}
 
 	method double {label var args} {

@@ -1138,7 +1138,8 @@ namespace eval DataEvaluation {
 					.dialog {*}$line
 				}
 			}
-
+			
+			.dialog UpdateStates {}
 			set answer [.dialog execute]
 			if {$answer eq {}} {
 				# dialog was cancelled
