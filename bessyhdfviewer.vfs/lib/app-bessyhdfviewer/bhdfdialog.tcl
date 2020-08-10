@@ -101,12 +101,12 @@ snit::widget BHDFDialog {
 
 	variable diodes
 	variable axes
-	variable separatornr 0
 	variable values
 	variable widgets
 	variable lbl
 	variable conditions {}
 	variable links {}
+	variable id 0
 	
 	variable answers
 
@@ -213,6 +213,8 @@ snit::widget BHDFDialog {
 			set values($uvar) [dict get $uargs -default]
 			dict unset uargs -default
 		}
+		
+		incr id
 	}
 
 	proc poparg {arg default} {
@@ -232,16 +234,16 @@ snit::widget BHDFDialog {
 		if {$enumlink ne {}} {
 			dict set links $var $enumlink
 		}
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$var -textvariable [myvar values($var)] {*}$args]
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar values($var)] {*}$args]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
 
 	method channel {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$var -textvariable [myvar values($var)] -values $axes]
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar values($var)] -values $axes]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 
@@ -252,16 +254,16 @@ snit::widget BHDFDialog {
 
 	method double {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::entry $formfr.e$var -textvariable [myvar values($var)]]
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
 
 	method integer {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::entry $formfr.e$var -textvariable [myvar values($var)]]
+		set lbl($var) [ttk::label $formfr.l$vid -text $label]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
@@ -269,34 +271,50 @@ snit::widget BHDFDialog {
 
 	method string {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::entry $formfr.e$var -textvariable [myvar values($var)]]
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
 
 	method bool {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [ttk::checkbutton $formfr.s$var -variable [myvar values($var)] \
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::checkbutton $formfr.b$id -variable [myvar values($var)] \
 			-command [mymethod UpdateStates $var]]
-		grid $lbl($var) $widgets($var) -sticky e
+		grid $lbl($var) $widgets($var) -sticky w
+	}
+
+	method radio {label var args} {
+		$self parseargs
+		set active [poparg -active false]
+		set value [poparg -value $label]
+		if {$active} {
+			set values($var) $value
+		}
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [ttk::radiobutton $formfr.r$id -variable [myvar values($var)] \
+			-command [mymethod UpdateStates $var] -value $value]
+		grid $lbl($var) $widgets($var) -sticky w
 	}
 
 	method separator {} {
-		ttk::separator $formfr.sep$separatornr
-		grid  $formfr.sep$separatornr - -sticky ew
+		incr id
+		ttk::separator $formfr.sep$id
+		grid  $formfr.sep$id - -sticky ew
 
-		incr separatornr
 	}
 
 	method hdf {label var args} {
 		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$var -text $label]
-		set widgets($var) [BHDFFilePicker $formfr.hdf$var -variable [myvar values($var)] \
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [BHDFFilePicker $formfr.hdf$id -variable [myvar values($var)] \
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
 		
+	}
+
+	method file {label var args} {
 	}
 
 	method UpdateStates {var args} {
