@@ -46,9 +46,17 @@ snit::widget GeneralFilePicker {
 	component fname_entry
 	component pickbutton
 	option -variable -default {}
-	option -command -default {}
-	
+	option -command -default {}	
 	option -mode -default open
+
+	# options for the dialog
+	option -message -default {}
+	option -filetypes -default {}
+	option -defaultextension -default {}
+	option -multiple -default {}
+	option -typevariable -default {}
+	option -title -default {}
+	
 	# -mode determines the purpose of the entry
 	#    open
 	#    save
@@ -61,7 +69,7 @@ snit::widget GeneralFilePicker {
 		install fname_entry using ttk::entry $win.entry
 		set btext [dict get {open Open! save Save! dir Folder!} $options(-mode)]
 		set icon [dict get {open document-open save document-save-as dir document-open-folder} $options(-mode)]
-		install pickbutton using ttk::button $win.button \
+		install pickbutton using ttk::button $win.button -style Toolbutton \
 			-command [mymethod Pick] -image [BessyHDFViewer::IconGet $icon] -text $btext
 		$self configurelist $args
 		$fname_entry configure -textvariable $options(-variable)
@@ -70,12 +78,45 @@ snit::widget GeneralFilePicker {
 	}
 
 	method Pick {} {
-		switch $options(-mode) {
+		upvar #0 $options(-variable) linkedvar
+
+		if {[info exists linkedvar]} {
+			set initial $linkedvar
+		} else {
+			set initial {}
 		}
-		$self see_end
-		set cmd $options(-command)
-		if {$cmd ne {}} {
-			uplevel #0 $cmd
+
+		switch $options(-mode) {
+			open {
+				set cmd [list tk_getOpenFile -initialfile $initial]
+			}
+			save {
+				set cmd [list tk_getSaveFile -initialfile $initial]
+			}
+			dir {
+				set cmd [list tk_chooseDirectory -initialdir $initial]
+			}	
+			default {
+				return -code error "Unknown file dialog >$mode<"
+			}
+		}
+
+		set cmdopts {}
+		# transfer the standard dialog options
+		foreach opt {-message -filetypes -defaultextension -multiple -typevariable -title} {
+			if {$options($opt) ne {}} {
+				dict set cmdopts $opt $options($opt)
+			}
+		}
+
+		set result [{*}$cmd {*}$cmdopts]
+		if {$result ne {}} {
+			set linkedvar $result
+			$self see_end
+			set cmd $options(-command)
+			if {$cmd ne {}} {
+				uplevel #0 $cmd
+			}
 		}
 	}
 	
@@ -101,7 +142,7 @@ snit::widget BHDFDialog {
 
 	variable diodes
 	variable axes
-	variable values
+	variable input
 	variable widgets
 	variable lbl
 	variable conditions {}
@@ -182,7 +223,7 @@ snit::widget BHDFDialog {
 
 	method OK {} {
 		# BessyHDFViewer::PreferenceSet DiodeRefData $refdata
-		set answers [array get values]
+		set answers [array get input]
 	}
 
 	method execute {} {
@@ -210,7 +251,7 @@ snit::widget BHDFDialog {
 		puts "$uargs"
 		if {[dict exists $uargs -default]} {
 			puts "Found: -default in $uargs"
-			set values($uvar) [dict get $uargs -default]
+			set input($uvar) [dict get $uargs -default]
 			dict unset uargs -default
 		}
 		
@@ -235,7 +276,7 @@ snit::widget BHDFDialog {
 			dict set links $var $enumlink
 		}
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar values($var)] {*}$args]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar input($var)] {*}$args]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -243,19 +284,19 @@ snit::widget BHDFDialog {
 	method channel {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar values($var)] -values $axes]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar input($var)] -values $axes]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 
-		if {![info exists values($var)] || $values($var) ni $axes} {
-			set values($var) [lindex $axes 0]
+		if {![info exists input($var)] || $input($var) ni $axes} {
+			set input($var) [lindex $axes 0]
 		}
 	}
 
 	method double {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -263,7 +304,7 @@ snit::widget BHDFDialog {
 	method integer {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$vid -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
@@ -272,7 +313,7 @@ snit::widget BHDFDialog {
 	method string {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar values($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -280,7 +321,7 @@ snit::widget BHDFDialog {
 	method bool {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::checkbutton $formfr.b$id -variable [myvar values($var)] \
+		set widgets($var) [ttk::checkbutton $formfr.b$id -variable [myvar input($var)] \
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky w
 	}
@@ -290,10 +331,10 @@ snit::widget BHDFDialog {
 		set active [poparg -active false]
 		set value [poparg -value $label]
 		if {$active} {
-			set values($var) $value
+			set input($var) $value
 		}
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::radiobutton $formfr.r$id -variable [myvar values($var)] \
+		set widgets($var) [ttk::radiobutton $formfr.r$id -variable [myvar input($var)] \
 			-command [mymethod UpdateStates $var] -value $value]
 		grid $lbl($var) $widgets($var) -sticky w
 	}
@@ -308,13 +349,19 @@ snit::widget BHDFDialog {
 	method hdf {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [BHDFFilePicker $formfr.hdf$id -variable [myvar values($var)] \
+		set widgets($var) [BHDFFilePicker $formfr.hdf$id -variable [myvar input($var)] \
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
 		
 	}
 
-	method file {label var args} {
+	method file {label var args} {	
+		$self parseargs
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [GeneralFilePicker $formfr.file$id -variable [myvar input($var)] \
+			-command [mymethod UpdateStates $var] {*}$args]
+		grid $lbl($var) $widgets($var) -sticky nsew
+	
 	}
 
 	method UpdateStates {var args} {
@@ -346,8 +393,8 @@ snit::widget BHDFDialog {
 					set uniqvalues [lsort -unique \
 						[lmap x [BessyHDFViewer::SELECT [list $linkvarsubst] $options(-hdfs)] {lindex $x 0}]]
 					$widgets($cvar) configure -values $uniqvalues
-					if {![info exists values($cvar)] || $values($cvar) ni $uniqvalues} {
-						set values($cvar) [lindex $uniqvalues 0]
+					if {![info exists input($cvar)] || $input($cvar) ni $uniqvalues} {
+						set input($cvar) [lindex $uniqvalues 0]
 					}
 				}
 			}
@@ -360,12 +407,12 @@ if {0} {
 BHDFDialog .dialog -hdfs $BessyHDFViewer::HDFFiles -title "Test dialog"
 foreach e {
 	{channel "Energy:" energy}
-	{double  "Height:" height -enableif $values(norm)}
+	{double  "Height:" height -enableif $input(norm)}
 	separator
 	{bool    "Normalize:" norm}
-	{hdf     "Reference scan:" refhdf -enableif $values(norm)}
+	{hdf     "Reference scan:" refhdf -enableif $input(norm)}
 	{enum	 "Pet preference" pet -values {Cat Dog Bunny}}
-	{enum    "Select energy" senergy -linkchannel $values(energy)}
+	{enum    "Select energy" senergy -linkchannel $input(energy)}
 } {
 	.dialog {*}$e
 }

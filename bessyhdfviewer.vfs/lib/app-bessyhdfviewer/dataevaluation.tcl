@@ -1145,7 +1145,8 @@ namespace eval DataEvaluation {
 				# dialog was cancelled
 				return
 			}
-			set ${pns}::userinput $answer
+			set ${pns}::inputs $answer
+			array set ${pns}::input $answer
 		}
 		
 		namespace eval $pns $cmd
