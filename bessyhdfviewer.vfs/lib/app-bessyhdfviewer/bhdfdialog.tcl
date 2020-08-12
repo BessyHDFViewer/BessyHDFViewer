@@ -142,19 +142,21 @@ snit::widget BHDFDialog {
 
 	variable diodes
 	variable axes
-	variable input
 	variable widgets
 	variable lbl
 	variable conditions {}
 	variable links {}
 	variable id 0
-	
+	variable dns
+
 	variable answers
+
 
 
 	component formfr
 	option -title -default {Select}
 	option -hdfs
+	option -datastorens
 
 	# supported entry types:
 	# channel
@@ -169,6 +171,10 @@ snit::widget BHDFDialog {
 	#
 	constructor {args} {
 		$self configurelist $args
+		set dns $options(-datastorens)
+		
+		# link the array input with our variable
+		upvar #0 ${dns}::input input
 		
 		# retrieve possible axes for channels
 		set hdfs $options(-hdfs)
@@ -223,10 +229,13 @@ snit::widget BHDFDialog {
 
 	method OK {} {
 		# BessyHDFViewer::PreferenceSet DiodeRefData $refdata
-		set answers [array get input]
+		set answers [array get ${dns}::input]
 	}
 
 	method execute {} {
+		# update all constraints
+		$self UpdateStates {}
+		# wait for the buttons
 		vwait [myvar answers]
 		if {![info exists answers]} { return {} }
 		return [$self close $answers]
@@ -251,7 +260,7 @@ snit::widget BHDFDialog {
 		puts "$uargs"
 		if {[dict exists $uargs -default]} {
 			puts "Found: -default in $uargs"
-			set input($uvar) [dict get $uargs -default]
+			set ${dns}::input($uvar) [dict get $uargs -default]
 			dict unset uargs -default
 		}
 		
@@ -276,7 +285,7 @@ snit::widget BHDFDialog {
 			dict set links $var $enumlink
 		}
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar input($var)] {*}$args]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable ${dns}::input($var) {*}$args]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -284,10 +293,11 @@ snit::widget BHDFDialog {
 	method channel {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::combobox $formfr.c$id -textvariable [myvar input($var)] -values $axes]
+		set widgets($var) [ttk::combobox $formfr.c$id -textvariable ${dns}::input($var) -values $axes]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
-
+		
+		upvar #0 ${dns}::input input
 		if {![info exists input($var)] || $input($var) ni $axes} {
 			set input($var) [lindex $axes 0]
 		}
@@ -296,7 +306,7 @@ snit::widget BHDFDialog {
 	method double {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -304,7 +314,7 @@ snit::widget BHDFDialog {
 	method integer {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$vid -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
@@ -313,7 +323,7 @@ snit::widget BHDFDialog {
 	method string {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable [myvar input($var)]]
+		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
@@ -321,7 +331,7 @@ snit::widget BHDFDialog {
 	method bool {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::checkbutton $formfr.b$id -variable [myvar input($var)] \
+		set widgets($var) [ttk::checkbutton $formfr.b$id -variable ${dns}::input($var) \
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky w
 	}
@@ -331,10 +341,10 @@ snit::widget BHDFDialog {
 		set active [poparg -active false]
 		set value [poparg -value $label]
 		if {$active} {
-			set input($var) $value
+			set ${dns}::input($var) $value
 		}
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::radiobutton $formfr.r$id -variable [myvar input($var)] \
+		set widgets($var) [ttk::radiobutton $formfr.r$id -variable ${dns}::input($var) \
 			-command [mymethod UpdateStates $var] -value $value]
 		grid $lbl($var) $widgets($var) -sticky w
 	}
@@ -349,7 +359,7 @@ snit::widget BHDFDialog {
 	method hdf {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [BHDFFilePicker $formfr.hdf$id -variable [myvar input($var)] \
+		set widgets($var) [BHDFFilePicker $formfr.hdf$id -variable ${dns}::input($var) \
 			-command [mymethod UpdateStates $var]]
 		grid $lbl($var) $widgets($var) -sticky nsew
 		
@@ -358,7 +368,7 @@ snit::widget BHDFDialog {
 	method file {label var args} {	
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [GeneralFilePicker $formfr.file$id -variable [myvar input($var)] \
+		set widgets($var) [GeneralFilePicker $formfr.file$id -variable ${dns}::input($var) \
 			-command [mymethod UpdateStates $var] {*}$args]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	
@@ -367,6 +377,8 @@ snit::widget BHDFDialog {
 	method UpdateStates {var args} {
 		puts "Change in $var"
 		parray widgets
+		
+		upvar #0 ${dns}::input input
 		# check enableif and links
 		dict for {cvar cond} $conditions {
 			if {$var ne $cvar} {
@@ -402,23 +414,4 @@ snit::widget BHDFDialog {
 	}
 }
 
-
-if {0} {
-BHDFDialog .dialog -hdfs $BessyHDFViewer::HDFFiles -title "Test dialog"
-foreach e {
-	{channel "Energy:" energy}
-	{double  "Height:" height -enableif $input(norm)}
-	separator
-	{bool    "Normalize:" norm}
-	{hdf     "Reference scan:" refhdf -enableif $input(norm)}
-	{enum	 "Pet preference" pet -values {Cat Dog Bunny}}
-	{enum    "Select energy" senergy -linkchannel $input(energy)}
-} {
-	.dialog {*}$e
-}
-
-.dialog UpdateStates {}
-
-puts "Selected: [.dialog execute]"
-}
 

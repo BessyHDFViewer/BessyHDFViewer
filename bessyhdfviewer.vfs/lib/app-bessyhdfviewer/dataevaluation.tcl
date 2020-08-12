@@ -1102,6 +1102,7 @@ namespace eval DataEvaluation {
 	}
 
 	proc RunUserCmd {pns} {
+		variable ns
 		variable extracmds
 		set hdfs [if_exists ::BessyHDFViewer::HDFFiles ""]
 		set hdf1 [lindex $hdfs 0]
@@ -1131,7 +1132,8 @@ namespace eval DataEvaluation {
 			# filter line continuation
 			set dialog [string map {"\\\n" " "} $dialog]
 			
-			BHDFDialog .dialog -hdfs $BessyHDFViewer::HDFFiles -title [dict get $extracmds $pns shortname]
+			BHDFDialog .dialog -datastorens ${ns}::$pns -hdfs $BessyHDFViewer::HDFFiles -title [dict get $extracmds $pns shortname]
+			
 			foreach line [split $dialog \n] {
 				if {[llength $line] > 0 && ![regexp {^\s*#} $line]} {
 					puts "$line"
@@ -1146,7 +1148,7 @@ namespace eval DataEvaluation {
 				return
 			}
 			set ${pns}::inputs $answer
-			array set ${pns}::input $answer
+		#	array set ${pns}::input $answer
 		}
 		
 		namespace eval $pns $cmd
