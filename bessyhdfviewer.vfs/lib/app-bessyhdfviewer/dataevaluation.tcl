@@ -1130,7 +1130,8 @@ namespace eval DataEvaluation {
 		if {[dict exists $extracmds $pns dialog]} {
 			set dialog [dict get $extracmds $pns dialog]
 			
-			BHDFDialog .dialog -datastorens ${ns}::$pns -hdfs $BessyHDFViewer::HDFFiles -title [dict get $extracmds $pns shortname]
+			BHDFDialog .dialog -datastorens ${ns}::$pns \
+				-hdfs $BessyHDFViewer::HDFFiles -shortname [dict get $extracmds $pns shortname]
 			
 			if {0} {
 			# filter line continuation

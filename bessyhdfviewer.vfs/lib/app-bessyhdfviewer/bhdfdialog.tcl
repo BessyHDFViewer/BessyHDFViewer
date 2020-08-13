@@ -144,19 +144,23 @@ snit::widget BHDFDialog {
 
 	variable diodes
 	variable axes
+	variable fields
 	variable widgets
 	variable lbl
 	variable conditions {}
 	variable links {}
 	variable id 0
 	variable dns
+	variable persistency {}
+	variable prefkey
+	variable defaults {}
+	variable settings {}
 
 	variable answers
 
 
-
 	component formfr
-	option -title -default {Select}
+	option -shortname
 	option -hdfs
 	option -datastorens
 
@@ -171,18 +175,20 @@ snit::widget BHDFDialog {
 			interp alias {} ${dns}::$cmd {} {*}[mymethod $cmd]
 		}
 		
-		# link the array input with our variable
-		upvar #0 ${dns}::input input
+		set prefkey $options(-shortname)
+		set settings [BessyHDFViewer::PreferenceGet PluginSettings $prefkey {}]
 		
-		# retrieve possible axes for channels
 		set hdfs $options(-hdfs)
 		
-		set title "$options(-title) [file tail [lindex $hdfs 0]]"
+		set title "$options(-shortname) [file tail [lindex $hdfs 0]]"
 		if {[llength $hdfs] > 1} { append title "..." }
 		wm title $win $title
 		
 		
+		# retrieve possible axes for channels
 		set axes [BessyHDFViewer::bessy_get_keys_flist $hdfs Axes]
+		set fields [BessyHDFViewer::bessy_get_keys_flist $hdfs]
+		
 		set mfr [ttk::frame $win.mfr]
 		pack $mfr -expand yes -fill both
 
@@ -226,8 +232,8 @@ snit::widget BHDFDialog {
 	}
 
 	method OK {} {
-		# BessyHDFViewer::PreferenceSet DiodeRefData $refdata
 		set answers [array get ${dns}::input]
+		BessyHDFViewer::PreferenceSet PluginSettings $prefkey $answers
 	}
 
 	method execute {} {
@@ -249,17 +255,34 @@ snit::widget BHDFDialog {
 		upvar 1 args uargs
 		upvar 1 var uvar
 		# -enableif
+
 		if {[dict exists $uargs -enableif]} {
 			dict set conditions $uvar [dict get $uargs -enableif]
 			dict unset uargs -enableif
 		}
 		
+		# -persistent
+		if {[dict exists $uargs -persistent]} {
+			dict set persistency $uvar [dict get $uargs -persistency]
+			dict unset uargs -persistency
+		} else {
+			dict set persistency $uvar true
+		}
+
 		# -default
 		puts "$uargs"
 		if {[dict exists $uargs -default]} {
 			puts "Found: -default in $uargs"
 			set ${dns}::input($uvar) [dict get $uargs -default]
 			dict unset uargs -default
+		}
+		
+		# check the cache in the preferences
+		if {[dict exists $settings $uvar]} {
+			# check that this is really a persistent variable
+			if {[dict get $persistency $uvar]} {
+				set ${dns}::input($uvar) [dict get $settings $uvar]
+			}	
 		}
 		
 		incr id
@@ -273,6 +296,18 @@ snit::widget BHDFDialog {
 			return $val
 		} else {
 			return $default
+		}
+	}
+
+	proc movetodict {from_ to_ key} {
+		upvar 1 $from_ from
+		upvar 1 $to_ to
+		if {[dict exists $from $key]} {
+			dict set to $key [dict get $from $key]
+			dict unset to $key
+			return true
+		} else {
+			return false
 		}
 	}
 
@@ -296,7 +331,7 @@ snit::widget BHDFDialog {
 		grid $lbl($var) $widgets($var) -sticky nsew
 		
 		upvar #0 ${dns}::input input
-		if {![info exists input($var)] || $input($var) ni $axes} {
+		if {![info exists input($var)] || $input($var) ni $fields} {
 			set input($var) [lindex $axes 0]
 		}
 	}

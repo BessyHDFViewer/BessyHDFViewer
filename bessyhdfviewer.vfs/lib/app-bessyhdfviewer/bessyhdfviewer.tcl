@@ -512,19 +512,22 @@ namespace eval BessyHDFViewer {
 
 	}
 
-	proc PreferenceGet {key default} {
+	# key ?key? ... default
+	proc PreferenceGet {args} {
 		variable Preferences
-		if {![dict exists $Preferences $key]} {
-			dict set Preferences $key $default
+		set default [lindex $args end]
+		set keys [lrange $args 0 end-1]
+		if {![dict exists $Preferences {*}$keys]} {
+			dict set Preferences {*}$keys $default
 			return $default
 		} else {
-			return [dict get $Preferences $key]
+			return [dict get $Preferences {*}$keys]
 		}
 	}
 
-	proc PreferenceSet {key value} {
+	proc PreferenceSet {args} {
 		variable Preferences
-		dict set Preferences $key $value
+		dict set Preferences {*}$args
 	}
 
 	proc SavePreferences {} {
