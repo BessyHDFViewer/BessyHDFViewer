@@ -1129,11 +1129,12 @@ namespace eval DataEvaluation {
 		# if there is a dialog, execute it first 
 		if {[dict exists $extracmds $pns dialog]} {
 			set dialog [dict get $extracmds $pns dialog]
-			# filter line continuation
-			set dialog [string map {"\\\n" " "} $dialog]
 			
 			BHDFDialog .dialog -datastorens ${ns}::$pns -hdfs $BessyHDFViewer::HDFFiles -title [dict get $extracmds $pns shortname]
 			
+			if {0} {
+			# filter line continuation
+			set dialog [string map {"\\\n" " "} $dialog]
 			foreach line [split $dialog \n] {
 				if {[llength $line] > 0 && ![regexp {^\s*#} $line]} {
 					puts "$line"
@@ -1142,6 +1143,10 @@ namespace eval DataEvaluation {
 			}
 			
 			.dialog UpdateStates {}
+			}
+
+
+			namespace eval $pns $dialog
 			set answer [.dialog execute]
 			if {$answer eq {}} {
 				# dialog was cancelled

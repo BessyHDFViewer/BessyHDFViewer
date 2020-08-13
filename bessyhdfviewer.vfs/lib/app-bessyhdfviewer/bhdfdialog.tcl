@@ -75,6 +75,8 @@ snit::widget GeneralFilePicker {
 		$fname_entry configure -textvariable $options(-variable)
 		grid $fname_entry $pickbutton -sticky nsew
 		grid columnconfigure $win $fname_entry -weight 1
+
+		# create the methods for constructing the dialog
 	}
 
 	method Pick {} {
@@ -158,20 +160,16 @@ snit::widget BHDFDialog {
 	option -hdfs
 	option -datastorens
 
-	# supported entry types:
-	# channel
-	# double
-	# integer
-	# bool
-	# string
-	# file
-	# hdf
-	# formula
-	# separator
-	#
+	# supported entry types:	
+	variable aliases { enum channel number bool radio path hdf separator entry }
+
 	constructor {args} {
 		$self configurelist $args
 		set dns $options(-datastorens)
+		
+		foreach cmd $aliases {
+			interp alias {} ${dns}::$cmd {} {*}[mymethod $cmd]
+		}
 		
 		# link the array input with our variable
 		upvar #0 ${dns}::input input
@@ -303,7 +301,7 @@ snit::widget BHDFDialog {
 		}
 	}
 
-	method double {label var args} {
+	method number {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
 		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
@@ -311,16 +309,7 @@ snit::widget BHDFDialog {
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
 
-	method integer {label var args} {
-		$self parseargs
-		set lbl($var) [ttk::label $formfr.l$vid -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
-		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
-			-command [mymethod UpdateStates $var]]
-		grid $lbl($var) $widgets($var) -sticky nsew
-	}
-
-	method string {label var args} {
+	method entry {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
 		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
@@ -365,7 +354,7 @@ snit::widget BHDFDialog {
 		
 	}
 
-	method file {label var args} {	
+	method path {label var args} {	
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
 		set widgets($var) [GeneralFilePicker $formfr.file$id -variable ${dns}::input($var) \
@@ -399,7 +388,7 @@ snit::widget BHDFDialog {
 		dict for {cvar linkvar} $links {
 			puts "$cvar $linkvar"
 			if {$var ne $cvar} {
-				if {[catch {subst $linkvar} linkvarsubst]} {
+				if {[catch {namespace eval $dns [list subst $linkvar]} linkvarsubst]} {
 					puts "Link error: $linkvarsubst"
 				} else {
 					set uniqvalues [lsort -unique \
