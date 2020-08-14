@@ -90,10 +90,10 @@ snit::widget GeneralFilePicker {
 
 		switch $options(-mode) {
 			open {
-				set cmd [list tk_getOpenFile -initialfile $initial]
+				set cmd [list tk_getOpenFile -initialfile [file tail $initial] -initialdir [file dirname $initial]]
 			}
 			save {
-				set cmd [list tk_getSaveFile -initialfile $initial]
+				set cmd [list tk_getSaveFile -initialfile  [file tail $initial] -initialdir [file dirname $initial]]
 			}
 			dir {
 				set cmd [list tk_chooseDirectory -initialdir $initial]
@@ -262,27 +262,39 @@ snit::widget BHDFDialog {
 		}
 		
 		# -persistent
-		if {[dict exists $uargs -persistent]} {
-			dict set persistency $uvar [dict get $uargs -persistency]
-			dict unset uargs -persistency
+		if {[dict exists $persistency $uvar]} {
+			# this variable was handled by a previous entry
+			set persist false
 		} else {
-			dict set persistency $uvar true
+			if {[dict exists $uargs -persistent]} {
+				set persist [dict get $uargs -persistency]
+				dict unset uargs -persistency
+			} else {
+				set persist true
+			}
+			dict set persistency $uvar $persist
 		}
 
 		# -default
-		puts "$uargs"
 		if {[dict exists $uargs -default]} {
-			puts "Found: -default in $uargs"
-			set ${dns}::input($uvar) [dict get $uargs -default]
+			set def [dict get $uargs -default]
+			set ${dns}::input($uvar) $def
 			dict unset uargs -default
+			dict lappend defaults $uvar $def
 		}
 		
 		# check the cache in the preferences
 		if {[dict exists $settings $uvar]} {
 			# check that this is really a persistent variable
-			if {[dict get $persistency $uvar]} {
-				set ${dns}::input($uvar) [dict get $settings $uvar]
-			}	
+			if {$persist} {
+				set def [dict get $settings $uvar]
+				set ${dns}::input($uvar) $def
+				dict lappend defaults $uvar $def
+			}
+		}
+
+		if {![dict exists $defaults $uvar]} {
+			dict set defaults $uvar {}
 		}
 		
 		incr id
@@ -328,12 +340,19 @@ snit::widget BHDFDialog {
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
 		set widgets($var) [ttk::combobox $formfr.c$id -textvariable ${dns}::input($var) -values $axes]
 		bind $widgets($var)	<<ComboboxSelected>> [mymethod UpdateStates $var]
+		AutoComplete $widgets($var) -aclist $fields
 		grid $lbl($var) $widgets($var) -sticky nsew
 		
-		upvar #0 ${dns}::input input
-		if {![info exists input($var)] || $input($var) ni $fields} {
-			set input($var) [lindex $axes 0]
+		# handle defaults in the order of appearance, 
+		# keep only sensible defaults
+		set bestdefault [lindex $axes 0]
+		foreach def [dict get $defaults $var] {
+			if {$def in $fields} {
+				set bestdefault $def
+			}
 		}
+		
+		set ${dns}::input($var) $bestdefault
 	}
 
 	method number {label var args} {
@@ -364,7 +383,7 @@ snit::widget BHDFDialog {
 		$self parseargs
 		set active [poparg -active false]
 		set value [poparg -value $label]
-		if {$active} {
+		if {$active && [llength [dict get $defaults $var]] == 0} {
 			set ${dns}::input($var) $value
 		}
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
@@ -399,9 +418,6 @@ snit::widget BHDFDialog {
 	}
 
 	method UpdateStates {var args} {
-		puts "Change in $var"
-		parray widgets
-		
 		upvar #0 ${dns}::input input
 		# check enableif and links
 		dict for {cvar cond} $conditions {
@@ -421,7 +437,6 @@ snit::widget BHDFDialog {
 		}
 
 		dict for {cvar linkvar} $links {
-			puts "$cvar $linkvar"
 			if {$var ne $cvar} {
 				if {[catch {namespace eval $dns [list subst $linkvar]} linkvarsubst]} {
 					puts "Link error: $linkvarsubst"
