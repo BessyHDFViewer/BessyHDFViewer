@@ -68,7 +68,7 @@ snit::widget GeneralFilePicker {
 		
 		install fname_entry using ttk::entry $win.entry
 		set btext [dict get {open Open! save Save! dir Folder!} $options(-mode)]
-		set icon [dict get {open document-open save document-save-as dir document-open-folder} $options(-mode)]
+		set icon [dict get {open document-open-inline save document-save-as-inline dir document-open-folder-inline} $options(-mode)]
 		install pickbutton using ttk::button $win.button -style Toolbutton \
 			-command [mymethod Pick] -image [BessyHDFViewer::IconGet $icon] -text $btext
 		$self configurelist $args
