@@ -18,12 +18,15 @@ namespace eval DataEvaluation {
 		OpenSpectrum	spectrumviewer	"Display embedded spectra"
 	}
 
+	variable plugindirs {}
+
 	proc maketoolbar {f} {
 		# pack the toolbuttons into f
 		variable commands
 		variable ns
+		variable toolframe $f
 		
-		set cmdnr 0
+		variable cmdnr 0
 		foreach {cmd icon description} $DataEvaluation::commands {
 			set btn [ttk::button $f.cmdbtn$cmdnr -text $description -image [BessyHDFViewer::IconGet $icon] \
 			         -command ${ns}::$cmd -style Toolbutton]
@@ -36,60 +39,73 @@ namespace eval DataEvaluation {
 		variable extracmds {}
 
 		variable plugindir [file join $::BessyHDFViewer::profiledir plugins]
-		set nplugin 0
-		variable plugindirs [glob -nocomplain -type d $plugindir/*]
+		variable nplugin 0
+		set pdirs [glob -nocomplain -type d $plugindir/*]
 
-		foreach pdir $plugindirs {
-			incr nplugin
-			set pns plugin$nplugin
-			set pmainfile [file join $pdir/pluginmain.tcl]
-			set pbutfile [file join $pdir/button.dict]
-			BessyHDFViewer::AddIconDir $pdir/icons
-
-			namespace eval $pns [list set PluginHome $pdir]
-			namespace eval $pns [list namespace path $ns]
-			if {[file exists $pmainfile]} {
-				if {[catch {
-					namespace eval $pns [list source $pmainfile]
-				} err errdict]} {
-					tk_messageBox -title "Error reading $pmainfile" -message [dict get $errdict -errorstack]
-				}
-			}
-
-			if {[file exists $pbutfile]} {
-				if {[catch { dict set extracmds $pns [fileutil::cat $pbutfile] } result errdict]} {
-					tk_messageBox -title "Error reading $pbutfile" -message [dict get $errdict -errorstack]
-				}
-			}
+		foreach pdir $pdirs {
+			LoadPluginFromDir $pdir
 		}
-
-		dict for {pns line} $extracmds {
-			if {![dict exists $line shortname]} {
-				puts "No shortname for user command $line"
-				continue
-			}
-			if {![dict exists $line eval]} {
-				puts "No eval for user command $line"
-				continue
-			}
-			
-			set shortname [dict get $line shortname]
-			set cmd [dict get $line eval]
-			set icon [SmallUtils::dict_getdefault $line icon ""]
-			set description [SmallUtils::dict_getdefault $line description ""]
-			
-			set btn [ttk::button $f.cmdbtn$cmdnr -text $shortname -image [BessyHDFViewer::IconGet $icon] \
-			         -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
-			grid $btn -row 0 -column $cmdnr -sticky nw
-			incr cmdnr
-			
-			if {$description ne {}} {
-				tooltip::tooltip $btn $description
-			}
-		}
-
-
 	}
+
+	proc LoadPluginFromDir {pdir} {
+		variable ns
+		variable nplugin
+		variable toolframe
+		variable cmdnr
+		variable extracmds
+		variable plugindirs
+
+		incr nplugin
+		set pns plugin$nplugin
+		set pmainfile [file join $pdir/pluginmain.tcl]
+		set pbutfile [file join $pdir/button.dict]
+		BessyHDFViewer::AddIconDir $pdir/icons
+
+		namespace eval $pns [list set PluginHome $pdir]
+		namespace eval $pns [list namespace path $ns]
+		if {[file exists $pmainfile]} {
+			if {[catch {
+				namespace eval $pns [list source $pmainfile]
+			} err errdict]} {
+				tk_messageBox -title "Error reading $pmainfile" -message [dict get $errdict -errorstack]
+			}
+		}
+
+		if {[file exists $pbutfile]} {
+			if {[catch {fileutil::cat $pbutfile} btndict errdict]} {
+				tk_messageBox -title "Error reading $pbutfile" -message [dict get $errdict -errorstack]
+			}
+		}
+
+		dict set extracmds $pns $btndict
+
+		if {![dict exists $btndict shortname]} {
+			puts stderr "No shortname for user command $btndict"
+			return
+		}
+
+		if {![dict exists $btndict eval]} {
+			puts stderr "No eval for user command $btndict"
+			return
+		}
+		
+		set shortname [dict get $btndict shortname]
+		set cmd [dict get $btndict eval]
+		set icon [SmallUtils::dict_getdefault $btndict icon ""]
+		set description [SmallUtils::dict_getdefault $btndict description ""]
+		
+		set btn [ttk::button $toolframe.pluginbtn$nplugin -text $shortname -image [BessyHDFViewer::IconGet $icon] \
+				 -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
+		grid $btn -row 0 -column $cmdnr -sticky nw
+		incr cmdnr
+		
+		if {$description ne {}} {
+			tooltip::tooltip $btn $description
+		}
+
+		lappend plugindirs $pdir
+	}
+
 
 	# peak-locating using the AMPD method
 	# Algorithms 2012, 5(4), 588-603; doi:10.3390/a5040588

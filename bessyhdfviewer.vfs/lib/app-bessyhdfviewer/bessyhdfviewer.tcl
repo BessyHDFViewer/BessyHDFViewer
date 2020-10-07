@@ -829,9 +829,9 @@ namespace eval BessyHDFViewer {
 				{{All Files}        *  }
 			}
 
-			set fn [tk_getOpenFile -title "Select BessyHDFViewer package..." -filetypes $filetypes]
+			set fns [tk_getOpenFile -title "Select BessyHDFViewer package..." -filetypes $filetypes -multiple yes]
 
-			if {$fn != "" } {
+			foreach fn $fns {
 				InstallPackage $fn
 			}
 		}
@@ -3724,9 +3724,17 @@ namespace eval BessyHDFViewer {
 				} else {
 					file delete $targetdir
 				}
+				set activate false
+			} else {
+				set activate true
 			}
+
 			file copy -force $fn/$pkgdir $plugindir
-			tk_messageBox -type ok -icon info -title "Package installed!" -message "Installation successful!" -detail "You need to restart BessyHDFViewer to take effect"
+			if {$activate} {
+				DataEvaluation::LoadPluginFromDir $targetdir
+			} else {
+				tk_messageBox -type ok -icon info -title "Package installed!" -message "Installation successful!" -detail "You need to restart BessyHDFViewer to take effect"
+			}
 		}
 		vfs::zip::Unmount $zipfd $fn
 	}
