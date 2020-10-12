@@ -746,6 +746,8 @@ namespace eval BessyHDFViewer {
 		variable title
 		variable copyright
 		variable vinfotext
+		variable envinfotext
+		variable pluginfo
 
 		constructor {args} {
 			$self CreateText
@@ -782,6 +784,16 @@ namespace eval BessyHDFViewer {
 			grid columnconfigure $textfr $text -weight 1
 
 			$text insert 1.0 $vinfotext
+			# create text and buttons to remove plugins
+			set count 0
+			dict for {pdir desc} $pluginfo {
+				$text insert end "\n[file tail $pdir]:"
+				set btn [ttk::button $text.remove[incr count] -text "Remove"]
+				$btn configure -command [mymethod RemovePluginCmd $btn $pdir]
+				$text window create end -window $btn
+				$text insert end \n$desc\n
+			}
+			$text insert end $envinfotext
 
 			# add buttons
 			set okbut [ttk::button $butfr.ok -text "OK" -command [mymethod Quit] -default active]
@@ -809,17 +821,16 @@ namespace eval BessyHDFViewer {
 
 			set vinfotext "Git version:\n"
 			append vinfotext $version\n
-			append vinfotext "\nPlugin versions:\n"
 
+			set pluginfo {}
 			foreach pdir $::DataEvaluation::plugindirs {
-				append vinfotext [file tail $pdir]:\n
-				append vinfotext [AboutReadVersion $pdir]\n\n
+				dict set pluginfo $pdir [AboutReadVersion $pdir]
 			}
 			
-			append vinfotext "\nExecutable path:\n[info nameofexecutable]\n"
-			append vinfotext "\nProfile path:\n$BessyHDFViewer::profiledir\n"
-			append vinfotext "\n Tcl platform info:\n"
-			append vinfotext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
+			append envinfotext "\nExecutable path:\n[info nameofexecutable]\n"
+			append envinfotext "\nProfile path:\n$BessyHDFViewer::profiledir\n"
+			append envinfotext "\n Tcl platform info:\n"
+			append envinfotext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
 
 		}
 
@@ -834,6 +845,12 @@ namespace eval BessyHDFViewer {
 			foreach fn $fns {
 				InstallPackage $fn
 			}
+		}
+
+		method RemovePluginCmd {btn pdir} {
+			file delete -force $pdir
+			$btn configure -text "Removed!"
+			$btn state disabled
 		}
 
 		method Quit {} {
