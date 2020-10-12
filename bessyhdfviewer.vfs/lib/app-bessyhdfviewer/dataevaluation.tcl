@@ -1117,6 +1117,12 @@ namespace eval DataEvaluation {
 		return [list $nom $denom]
 	}
 
+	proc ExecPython {PluginHome script args} {
+		set scriptpath [file join $PluginHome $script]
+		set interpreter [BessyHDFViewer::PreferenceGet PythonInterpreter python3]
+		tailcall exec $interpreter $scriptpath {*}$args
+	}
+
 	proc RunUserCmd {pns} {
 		variable ns
 		variable extracmds
@@ -1172,7 +1178,10 @@ namespace eval DataEvaluation {
 			set ${pns}::inputs $answer
 		#	array set ${pns}::input $answer
 		}
-		
+
+		# add extra command "python"
+		interp alias {} ${pns}::python {} ${ns}::ExecPython [set ${pns}::PluginHome]
+
 		namespace eval $pns $cmd
 	}
 		
