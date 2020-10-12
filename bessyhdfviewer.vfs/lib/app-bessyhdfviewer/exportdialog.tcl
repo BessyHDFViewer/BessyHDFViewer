@@ -172,6 +172,9 @@ snit::widget ExportDialog {
 			1 { 
 				set singlefile 1
 				set curpath [file dirname $firstfile]
+				if {![file isdirectory $curpath]} {
+					set curpath [file dirname $curpath]
+				}
 				append title "  $firstfile\n"
 			}
 			default {

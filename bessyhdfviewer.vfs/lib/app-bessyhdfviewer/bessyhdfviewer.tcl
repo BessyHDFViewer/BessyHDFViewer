@@ -1361,7 +1361,7 @@ namespace eval BessyHDFViewer {
 					if {"BareColumns" in $headerfmt} {
 						puts $fd "[join $format \t]"
 					}
-					set data [SELECT $format $hdf -allnan true]
+					set data [SELECT $format [list $hdf] -allnan true]
 					if {$grouping} {
 						set data [GROUP_BY $data $groupby]
 					}
