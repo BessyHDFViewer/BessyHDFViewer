@@ -58,7 +58,7 @@ namespace eval DataEvaluation {
 		incr nplugin
 		set pns plugin$nplugin
 		set pmainfile [file join $pdir/pluginmain.tcl]
-		set pbutfile [file join $pdir/button.dict]
+		set pbutfile [file join $pdir/button.tcl]
 		BessyHDFViewer::AddIconDir $pdir/icons
 
 		namespace eval $pns [list set PluginHome $pdir]
@@ -72,38 +72,41 @@ namespace eval DataEvaluation {
 		}
 
 		if {[file exists $pbutfile]} {
-			if {[catch {fileutil::cat $pbutfile} btndict errdict]} {
+			if {[catch {SmallUtils::script2dict [fileutil::cat $pbutfile]} btndict errdict]} {
 				tk_messageBox -title "Error reading $pbutfile" -message [dict get $errdict -errorstack]
 			}
-		}
-
-		dict set extracmds $pns $btndict
-
-		if {![dict exists $btndict shortname]} {
-			puts stderr "No shortname for user command $btndict"
-			return
-		}
-
-		if {![dict exists $btndict eval]} {
-			puts stderr "No eval for user command $btndict"
-			return
-		}
 		
-		set shortname [dict get $btndict shortname]
-		set cmd [dict get $btndict eval]
-		set icon [SmallUtils::dict_getdefault $btndict icon ""]
-		set description [SmallUtils::dict_getdefault $btndict description ""]
-		
-		set btn [ttk::button $toolframe.pluginbtn$nplugin -text $shortname -image [BessyHDFViewer::IconGet $icon] \
-				 -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
-		grid $btn -row 0 -column $cmdnr -sticky nw
-		incr cmdnr
-		
-		if {$description ne {}} {
-			tooltip::tooltip $btn $description
-		}
 
-		lappend plugindirs $pdir
+			dict set extracmds $pns $btndict
+
+			if {![dict exists $btndict shortname]} {
+				puts stderr "No shortname for user command $btndict"
+				return
+			}
+
+			if {![dict exists $btndict eval]} {
+				puts stderr "No eval for user command $btndict"
+				return
+			}
+			
+			set shortname [dict get $btndict shortname]
+			set cmd [dict get $btndict eval]
+			set icon [SmallUtils::dict_getdefault $btndict icon ""]
+			set description [SmallUtils::dict_getdefault $btndict description ""]
+			
+			set btn [ttk::button $toolframe.pluginbtn$nplugin -text $shortname -image [BessyHDFViewer::IconGet $icon] \
+					 -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
+			grid $btn -row 0 -column $cmdnr -sticky nw
+			incr cmdnr
+			
+			if {$description ne {}} {
+				tooltip::tooltip $btn $description
+			}
+
+			lappend plugindirs $pdir
+		} else {
+			puts stderr "WARNING: No button definition found in plugin dir $pdir"
+		}
 	}
 
 

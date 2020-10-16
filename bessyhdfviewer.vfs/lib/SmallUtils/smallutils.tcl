@@ -4,7 +4,7 @@ namespace eval SmallUtils {
 	variable ns [namespace current]
 	variable Requests {}
 
-	namespace export defer autovar autofd enumerate dict_getdefault dict_assign nohup
+	namespace export defer autovar autofd enumerate dict_getdefault dict_assign nohup script2dict
 
 	proc defer {cmd} {
 		# defer cmd to idle time. Multiple requests are merged
@@ -385,4 +385,38 @@ namespace eval SmallUtils {
 			puts stderr [dict get $errdict -errorinfo]
 		}
 	}
+
+	## Function to parse a script as a dictionary
+	#  The script should contain commands with single args
+	#  which are understood as a dictionary
+	#  This allows to embed comments and to check that 
+	proc script2dict {s} {
+		variable ns
+		variable resultstore {}
+
+		# evaluate s as a dict
+		set crazycmd {Tcl no touchy don't muck with this cmd!}
+		set i [interp create -safe]
+		$i eval [list namespace unknown [list $crazycmd]]
+		set cmds [$i eval {info commands}]
+		foreach c $cmds {$i hide $c}
+
+		interp alias $i $crazycmd {} ${ns}::s2d_newentry
+		$i eval $s
+		return $resultstore
+	}
+
+	proc s2d_newentry {args} {
+		variable resultstore
+		if {[llength $args] != 2} {
+			error "Unbalanced arguments: $args"
+		}
+		lassign $args key val
+		if {[dict exists $resultstore $key]} {
+			error "'$key' already defined ($args)"
+		}
+		dict set resultstore $key $val
+	}
+
+
 }
