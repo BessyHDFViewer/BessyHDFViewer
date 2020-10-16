@@ -1158,20 +1158,6 @@ namespace eval DataEvaluation {
 			BHDFDialog .dialog -datastorens ${ns}::$pns \
 				-hdfs $BessyHDFViewer::HDFFiles -shortname [dict get $extracmds $pns shortname]
 			
-			if {0} {
-			# filter line continuation
-			set dialog [string map {"\\\n" " "} $dialog]
-			foreach line [split $dialog \n] {
-				if {[llength $line] > 0 && ![regexp {^\s*#} $line]} {
-					puts "$line"
-					.dialog {*}$line
-				}
-			}
-			
-			.dialog UpdateStates {}
-			}
-
-
 			namespace eval $pns $dialog
 			set answer [.dialog execute]
 			if {$answer eq {}} {
@@ -1179,7 +1165,11 @@ namespace eval DataEvaluation {
 				return
 			}
 			set ${pns}::inputs $answer
-		#	array set ${pns}::input $answer
+
+			# set individual variables - easier access
+			dict for {var val} $answer {
+				set ${pns}::$var $val
+			}
 		}
 
 		# add extra command "python"
