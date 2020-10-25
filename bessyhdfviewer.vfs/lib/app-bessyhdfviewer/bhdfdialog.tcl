@@ -1,3 +1,75 @@
+package require numeric_entry
+
+
+snit::widget thresholdpicker {
+	hulltype ttk::frame
+	component numentry
+	component dragline
+
+	option -variable -default {}
+
+	delegate option -orient to dragline
+	delegate option * to numentry
+	
+	typevariable id 0
+
+	constructor {args} {
+		install numentry using numeric_entry $win.nume
+		pack $numentry -expand yes -fill both
+		set dragline [ukaz::dragline .BHDFthrpick$id]
+		incr id
+		$BessyHDFViewer::w(Graph) addcontrol $dragline
+		
+		$self configurelist $args
+		# set the variable for both widgets
+		$dragline configure -variable $options(-variable)
+		$numentry configure -variable $options(-variable)
+	}
+
+	destructor {
+		catch { $dragline destroy }
+	}
+}
+
+snit::widget rangepicker {
+	hulltype ttk::frame
+	component numentry_min
+	component numentry_max
+	component dragregion
+
+	option -minvariable -default {}
+	option -maxvariable -default {}
+
+	delegate option -orient to dragregion
+	delegate option -label to dragregion
+	
+	typevariable id 0
+
+	constructor {args} {
+		install numentry_min using numeric_entry $win.nume_min
+		install numentry_max using numeric_entry $win.nume_max
+		set lbl [ttk::label $win.lbl -text \u2014]
+
+		grid $numentry_min $lbl $numentry_max -sticky nsew
+		grid columnconfigure $win $numentry_min -weight 1
+		grid columnconfigure $win $numentry_max -weight 1
+
+		set dragregion [ukaz::dragregion .BHDFregion$id]
+		incr id
+		$BessyHDFViewer::w(Graph) addcontrol $dragregion
+		
+		$self configurelist $args
+		# set the variable for both widgets
+		$dragregion configure -minvariable $options(-minvariable) -maxvariable $options(-maxvariable)
+		$numentry_min configure -variable $options(-minvariable)
+		$numentry_max configure -variable $options(-maxvariable)
+	}
+
+	destructor {
+		catch { $dragregion destroy }
+	}
+}
+
 snit::widget BHDFFilePicker {
 	hulltype ttk::frame
 	component fname_entry
@@ -165,7 +237,7 @@ snit::widget BHDFDialog {
 	option -datastorens
 
 	# supported entry types:	
-	variable aliases { enum channel number bool radio path hdf separator entry }
+	variable aliases { enum channel number threshold range bool radio path hdf separator entry }
 
 	constructor {args} {
 		$self configurelist $args
@@ -358,10 +430,41 @@ snit::widget BHDFDialog {
 	method number {label var args} {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
-		set widgets($var) [ttk::entry $formfr.e$id -textvariable ${dns}::input($var)]
+		set widgets($var) [numeric_entry $formfr.e$id -variable ${dns}::input($var)]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
 	}
+
+	method threshold {label var args} {
+		$self parseargs
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+		set widgets($var) [thresholdpicker $formfr.t$id -variable ${dns}::input($var) {*}$args]
+		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
+		grid $lbl($var) $widgets($var) -sticky nsew
+		# TODO compute sensible value to start with from xmin, xmax, ymin ymax
+		# 
+	}	
+
+	method range {label var args} {
+		$self parseargs
+		set lbl($var) [ttk::label $formfr.l$id -text $label]
+
+		set minv ${dns}::input(${var}_min)
+		set maxv ${dns}::input(${var}_max)
+		set widgets($var) [rangepicker $formfr.r$id \
+			-minvariable $minv -maxvariable $maxv {*}$args]
+		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
+		grid $lbl($var) $widgets($var) -sticky nsew
+
+		upvar #0 ${dns}::input($var) myvar
+		if {[info exists myvar]} {
+			lassign $myvar $minv $maxv
+		}
+
+		# TODO compute sensible value to start with from xmin, xmax, ymin ymax
+
+		# TODO read/write preferences
+	}	
 
 	method entry {label var args} {
 		$self parseargs
@@ -419,6 +522,7 @@ snit::widget BHDFDialog {
 
 	method UpdateStates {var args} {
 		upvar #0 ${dns}::input input
+		
 		# check enableif and links
 		dict for {cvar cond} $conditions {
 			if {$var ne $cvar} {
