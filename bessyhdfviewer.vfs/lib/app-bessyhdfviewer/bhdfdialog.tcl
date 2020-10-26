@@ -37,11 +37,20 @@ snit::widget rangepicker {
 	component numentry_max
 	component dragregion
 
-	option -minvariable -default {}
-	option -maxvariable -default {}
+
+	variable minvalue {}
+	variable maxvalue {}
+
+	# machinery to attach a list variable
+	option -variable -default {} -configuremethod SetVariable
+	option -command -default {}
+
+	variable loopescape false
+	variable commandescape false
 
 	delegate option -orient to dragregion
 	delegate option -label to dragregion
+	delegate option -color to dragregion
 	
 	constructor {args} {
 		install numentry_min using numeric_entry $win.nume_min
@@ -57,14 +66,74 @@ snit::widget rangepicker {
 		
 		$self configurelist $args
 		# set the variable for both widgets
-		$dragregion configure -minvariable $options(-minvariable) -maxvariable $options(-maxvariable)
-		$numentry_min configure -variable $options(-minvariable)
-		$numentry_max configure -variable $options(-maxvariable)
+		$dragregion configure -minvariable [myvar minvalue] -maxvariable [myvar maxvalue]
+		$numentry_min configure -variable [myvar minvalue]
+		$numentry_max configure -variable [myvar maxvalue]
+
 	}
 
 	destructor {
+		$self untrace
 		catch { $dragregion destroy }
 	}
+	
+	method SetVariable {option varname} {
+		$self untrace
+		if {$varname != {}} {
+			upvar #0 $varname v
+			if {![info exists v]} { set v {} }
+			
+			trace add variable v write [mymethod SetValue]
+			trace add variable minvalue write [mymethod DoTraces]
+			trace add variable maxvalue write [mymethod DoTraces]
+			set options(-variable) $varname
+			$self SetValue
+		}
+	}
+
+	method untrace {} {
+		if {$options(-variable)!={} } {
+			upvar #0 $options(-variable) v
+			trace remove variable v write [mymethod SetValue]
+			trace remove variable minvalue write [mymethod DoTraces]
+			trace remove variable maxvalue write [mymethod DoTraces]
+			set options(-variable) {}
+		}
+	}
+	
+	method SetValue {args} {
+		if {$loopescape} {
+			set loopescape false
+			return
+		}
+		set loopescape true
+		upvar #0 $options(-variable) v
+		if {[info exists v]} {
+			# ignore any errors if the graph is incomplete
+			lassign $v minvalue maxvalue
+		}
+	}
+
+	method DoTraces {args} {
+		if {$loopescape} {
+			set loopescape false
+		} else {
+			if {$options(-variable)!={}} {
+				set loopescape true
+				upvar #0 $options(-variable) v
+				set v [list $minvalue $maxvalue]
+			}
+		}
+
+		if {$options(-command)!={}} {
+			if {$commandescape} {
+				set commandescape false
+			} else {
+				uplevel #0 [list {*}$options(-command) $minvalue $maxvalue]
+			}
+		}
+	}
+
 }
 
 snit::widget BHDFFilePicker {
@@ -438,7 +507,10 @@ snit::widget BHDFDialog {
 		set widgets($var) [thresholdpicker $formfr.t$id -variable ${dns}::input($var) {*}$args]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
+
 		# compute sensible value to start with from xmin, xmax, ymin ymax
+		
+		# retrieve orientation to check if the widget is visible
 		set orient [$widgets($var) cget -orient]
 		if {$orient == "horizontal"} {
 			set min [set ${dns}::ymin]
@@ -448,6 +520,7 @@ snit::widget BHDFDialog {
 			set max [set ${dns}::xmax]
 		}
 
+		# set to default if it is not visible
 		upvar #0 ${dns}::input($var) myvar
 		if {! [info exists myvar] || $myvar < $min || $myvar > $max} {
 			set myvar [expr {($min + $max) / 2}]
@@ -458,21 +531,37 @@ snit::widget BHDFDialog {
 		$self parseargs
 		set lbl($var) [ttk::label $formfr.l$id -text $label]
 
-		set minv ${dns}::input(${var}_min)
-		set maxv ${dns}::input(${var}_max)
-		set widgets($var) [rangepicker $formfr.r$id \
-			-minvariable $minv -maxvariable $maxv {*}$args]
+		set widgets($var) [rangepicker $formfr.r$id -variable ${dns}::input($var) {*}$args]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
-
-		upvar #0 ${dns}::input($var) myvar
-		if {[info exists myvar]} {
-			lassign $myvar $minv $maxv
+		
+		# retrieve orientation to check if the widget is visible
+		set orient [$widgets($var) cget -orient]
+		if {$orient == "horizontal"} {
+			set min [set ${dns}::ymin]
+			set max [set ${dns}::ymax]
+		} else {
+			set min [set ${dns}::xmin]
+			set max [set ${dns}::xmax]
 		}
 
-		# TODO compute sensible value to start with from xmin, xmax, ymin ymax
+		#  compute sensible value to start with from xmin, xmax, ymin ymax
+		set defmin [expr {$min*0.4 + $max*0.6}]
+		set defmax [expr {$min*0.6 + $max*0.4}]
+		set default [list $defmin $defmax]
 
-		# TODO read/write preferences
+		# set to default if it is not visible
+		upvar #0 ${dns}::input($var) myvar
+	
+		if {![info exists myvar]} {
+			set myvar $default
+		} else {
+			lassign $myvar vmin vmax
+			if { $vmin < $min || $vmin > $max || $vmax < $min || $vmax > $max } {
+				set myvar $default
+			}
+		}
+
 	}	
 
 	method entry {label var args} {
