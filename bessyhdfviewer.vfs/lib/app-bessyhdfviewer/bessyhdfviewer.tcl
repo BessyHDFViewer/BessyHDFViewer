@@ -840,10 +840,13 @@ namespace eval BessyHDFViewer {
 				{{All Files}        *  }
 			}
 
-			set fns [tk_getOpenFile -title "Select BessyHDFViewer package..." -filetypes $filetypes -multiple yes]
+			set fns [tk_getOpenFile -title "Select BessyHDFViewer package..." \
+				-filetypes $filetypes -multiple yes \
+				-initialdir [PreferenceGet PackageDefaultDir {/soft/prog}]]
 
 			foreach fn $fns {
 				InstallPackage $fn
+				PreferenceSet PackageDefaultDir [file dirname $fn]
 			}
 		}
 
