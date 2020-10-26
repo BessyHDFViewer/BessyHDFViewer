@@ -10,13 +10,13 @@ snit::widget thresholdpicker {
 
 	delegate option -orient to dragline
 	delegate option * to numentry
-	
-	typevariable id 0
 
+	delegate method gotoRel to dragline
+	
 	constructor {args} {
 		install numentry using numeric_entry $win.nume
 		pack $numentry -expand yes -fill both
-		set dragline [ukaz::dragline .BHDFthrpick$id]
+		set dragline [ukaz::dragline $win.line]
 		incr id
 		$BessyHDFViewer::w(Graph) addcontrol $dragline
 		
@@ -43,8 +43,6 @@ snit::widget rangepicker {
 	delegate option -orient to dragregion
 	delegate option -label to dragregion
 	
-	typevariable id 0
-
 	constructor {args} {
 		install numentry_min using numeric_entry $win.nume_min
 		install numentry_max using numeric_entry $win.nume_max
@@ -54,8 +52,7 @@ snit::widget rangepicker {
 		grid columnconfigure $win $numentry_min -weight 1
 		grid columnconfigure $win $numentry_max -weight 1
 
-		set dragregion [ukaz::dragregion .BHDFregion$id]
-		incr id
+		set dragregion [ukaz::dragregion $win.region]
 		$BessyHDFViewer::w(Graph) addcontrol $dragregion
 		
 		$self configurelist $args
@@ -441,8 +438,20 @@ snit::widget BHDFDialog {
 		set widgets($var) [thresholdpicker $formfr.t$id -variable ${dns}::input($var) {*}$args]
 		bind $widgets($var)	<FocusOut> [mymethod UpdateStates $var]
 		grid $lbl($var) $widgets($var) -sticky nsew
-		# TODO compute sensible value to start with from xmin, xmax, ymin ymax
-		# 
+		# compute sensible value to start with from xmin, xmax, ymin ymax
+		set orient [$widgets($var) cget -orient]
+		if {$orient == "horizontal"} {
+			set min [set ${dns}::ymin]
+			set max [set ${dns}::ymax]
+		} else {
+			set min [set ${dns}::xmin]
+			set max [set ${dns}::xmax]
+		}
+
+		upvar #0 ${dns}::input($var) myvar
+		if {! [info exists myvar] || $myvar < $min || $myvar > $max} {
+			set myvar [expr {($min + $max) / 2}]
+		}
 	}	
 
 	method range {label var args} {
