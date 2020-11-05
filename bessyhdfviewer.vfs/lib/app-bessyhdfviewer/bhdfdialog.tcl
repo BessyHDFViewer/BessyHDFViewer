@@ -405,8 +405,8 @@ snit::widget BHDFDialog {
 			set persist false
 		} else {
 			if {[dict exists $uargs -persistent]} {
-				set persist [dict get $uargs -persistency]
-				dict unset uargs -persistency
+				set persist [dict get $uargs -persistent]
+				dict unset uargs -persistent
 			} else {
 				set persist true
 			}
