@@ -44,10 +44,15 @@ set tversion [package require tkcon]
 #  So we cheat, and call tkcon internals to create
 #  the console and customize it to our application.
 #------------------------------------------------------
+
 set tkcon::PRIV(showOnStartup) 0
 set tkcon::PRIV(root) .console
 set tkcon::PRIV(protocol) {tkcon hide}
 set tkcon::OPT(exec) ""
+
+# defer the console init after startup,
+# otherwise strange geometry of the main window
+after 0 {tkcon::Init}
 
 namespace eval BessyHDFViewer {
 	variable ns [namespace current]
