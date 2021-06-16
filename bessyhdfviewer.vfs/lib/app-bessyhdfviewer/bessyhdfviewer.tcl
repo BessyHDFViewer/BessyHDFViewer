@@ -1675,34 +1675,57 @@ namespace eval BessyHDFViewer {
 			$w(xent0) icursor end
 		}
 
-		# get units / axis labels for the current plot
-		if {[catch {dict get $plotdata $xformat(0) attrs Unit} xunit]} {
-			$w(Graph) set xlabel "$xformat(0)"
-		} else {
-			$w(Graph) set xlabel "$xformat(0) ($xunit)"
+		# determine plot styles for the data sets
+		
+		# enumerate data to plot
+		set xyformats {}
+		set Nvalidformats 0
+		set xfcounter 0
+		for {set i 0} {$i < $Nformats} {incr i} {
+			if {[not_only_whitespace $yformat($i)]} {
+				if {[not_only_whitespace $xformat($i)]} {
+					lappend xyformats $xformat($i)
+					incr xfcounter
+				} else {
+					lappend xyformats $xformat(0)
+				}
+				lappend xyformats $yformat($i)
+
+				incr Nvalidformats
+			}
 		}
 		
-		if {[catch {dict get $plotdata $yformat(0) attrs Unit} yunit]} {
-			$w(Graph) set ylabel "$yformat(0)"
-		} else {
-			$w(Graph) set ylabel "$yformat(0) ($yunit)"
+		# enumerate data sets to plot and create titles
+		set plotlabels {}
+		foreach fn $HDFFiles {
+			foreach {xf yf} $xyformats {
+				set label [file tail $fn]
+				if {$Nvalidformats > 1 } {
+					if {$xfcounter > 1} {
+						append label " $xf, $yf"
+					} else {
+						append label " $yf"
+					}
+				}
+				dict lappend plotlabels $fn $xf $yf $label
+
+			}
 		}
-
-
-		# determine plot styles for the data sets
-
+	
 		# transform available styles into dictionary
 		foreach style [PreferenceGet PlotStyles { {linespoints color black pt circle } }] {
 			dict set plotstylesfree $style 1
 		}
 
 		set styles {}
-		foreach fn $HDFFiles {
-			if {[dict exists $plotstylecache $fn]} {
-				# first reserve all styles with the same style that has been used before
-				set style [dict get $plotstylecache $fn]
-				dict set styles $fn $style
-				dict set plotstylesfree $style 0
+		dict for {fn fmtlist} $plotlabels {
+			foreach {xf yf label} $fmtlist {
+				if {[dict exists $plotstylecache $label]} {
+					# first reserve all styles with the same style that has been used before
+					set style [dict get $plotstylecache $label]
+					dict set styles $label $style
+					dict set plotstylesfree $style 0
+				}
 			}
 		}
 		
@@ -1710,21 +1733,46 @@ namespace eval BessyHDFViewer {
 		set plotstylesfree [dict keys [dict filter $plotstylesfree value 1]]
 
 		# 2nd pass: alloc styles for remaining files
-		foreach fn $HDFFiles {
-			if {[llength $plotstylesfree]==0} { break }
+		dict for {fn fmtlist} $plotlabels {
+			foreach {xf yf label} $fmtlist {
+				if {[llength $plotstylesfree]==0} { break }
 
-			if {![dict exists $styles $fn]} {
-				set plotstylesfree [lassign $plotstylesfree style]
-				dict set styles $fn $style
+				if {![dict exists $styles $label]} {
+					set plotstylesfree [lassign $plotstylesfree style]
+					dict set styles $label $style
+				}
 			}
-
 		}
-
+		
 		# reset plot range if not requested otherwise
 		if {!$keepzoom} {
 			$w(Graph) set auto x
 			$w(Graph) set auto y
 		}
+
+		# get units / axis labels for the current plot
+		# if there are more than one, disable labels
+		if {$xfcounter == 1 } {
+			if {[catch {dict get $plotdata $xformat(0) attrs Unit} xunit]} {
+				$w(Graph) set xlabel "$xformat(0)"
+			} else {
+				$w(Graph) set xlabel "$xformat(0) ($xunit)"
+			}
+		} else {
+			$w(Graph) set xlabel ""
+		}
+		
+		if {$Nvalidformats == 1} {
+			if {[catch {dict get $plotdata $yformat(0) attrs Unit} yunit]} {
+				$w(Graph) set ylabel "$yformat(0)"
+			} else {
+				$w(Graph) set ylabel "$yformat(0) ($yunit)"
+			}
+		} else {
+			$w(Graph) set ylabel ""
+		}
+
+
 
 		
 		# plot the data
@@ -1735,19 +1783,8 @@ namespace eval BessyHDFViewer {
 		# cache the current data sets in this list
 		variable HDFsshown {}
 
-		set xyformats {}
-		for {set i 0} {$i < $Nformats} {incr i} {
-			if {[not_only_whitespace $yformat($i)]} {
-				if {[not_only_whitespace $xformat($i)]} {
-					lappend xyformats $xformat($i)
-				} else {
-					lappend xyformats $xformat(0)
-				}
-				lappend xyformats $yformat($i)
-			}
-		}
-		
-		dict for {fn style} $styles {
+	
+		dict for {fn fmtlist} $plotlabels {
 			if {$nfiles != 1} {
 				# for multiple files, read the content to hdfdata
 				# for single file, it's already there
@@ -1755,14 +1792,15 @@ namespace eval BessyHDFViewer {
 				set hdfdata [bessy_reshape $fn -shallow]
 			}
 			
-			foreach {xf yf} $xyformats {
+			foreach {xf yf title} $fmtlist {
 				set fmtlist [list $xf $yf]
+				if {![dict exists $styles $title]} { continue }
 
+				set style [dict get $styles $title]
 				set data [SELECTdata $fmtlist $hdfdata -allnan true -allnumeric true -extravars $extravars]
+				
 				# reduce to flat list
 				set data [concat {*}$data]
-
-				set title [file tail $fn]
 
 				if {[llength $data] >= 2} {
 					set id [$w(Graph) plot $data with {*}$style title $title]
@@ -1775,8 +1813,8 @@ namespace eval BessyHDFViewer {
 			lappend aclist {*}[bessy_get_keys $hdfdata]
 		}
 
-		# only show key for more than 1 file
-		if {$nfiles > 1} {
+		# disable key if there is only one file in one format
+		if {$Nvalidformats > 1 || $nfiles > 1} {
 			$w(Graph) set key on
 		} else {
 			$w(Graph) set key off
