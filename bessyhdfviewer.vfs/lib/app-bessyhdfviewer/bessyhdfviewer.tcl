@@ -453,6 +453,7 @@ namespace eval BessyHDFViewer {
 		variable yformat
 		variable xformatlist
 		variable yformatlist
+		variable aclist
 
 		set i $Nformats
 		incr Nformats
@@ -467,8 +468,8 @@ namespace eval BessyHDFViewer {
 		
 		bind $w(xent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
-		AutoComplete $w(xent$i) -aclist {Energy Row}
-		AutoComplete $w(yent$i) -aclist {Energy Row}
+		AutoComplete $w(xent$i) -aclist $aclist
+		AutoComplete $w(yent$i) -aclist $aclist
 		bind $w(xent$i) <Return> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent$i) <Return> [list ${ns}::DisplayPlot -explicit true]
 	}
@@ -1516,6 +1517,7 @@ namespace eval BessyHDFViewer {
 		regexp {\S} $string
 	}
 
+	variable aclist {Energy Row}
 	variable plotstylecache {}
 	variable xformatlist {}
 	variable yformatlist {}
@@ -1531,6 +1533,7 @@ namespace eval BessyHDFViewer {
 		variable keepformat
 		variable keepzoom
 		variable Nformats
+		variable aclist
 
 		variable plotstylecache
 		
@@ -1826,8 +1829,8 @@ namespace eval BessyHDFViewer {
 		set aclist [lsort -uniq -dictionary $aclist]
 		
 		for {set i 0} {$i < $Nformats} {incr i} {
-			$w(xent0) configure -aclist $aclist
-			$w(yent0) configure -aclist $aclist
+			$w(xent$i) configure -aclist $aclist
+			$w(yent$i) configure -aclist $aclist
 		}
 
 		HighlightRefresh
