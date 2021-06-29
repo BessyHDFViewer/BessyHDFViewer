@@ -1631,17 +1631,20 @@ namespace eval BessyHDFViewer {
 		# append history to format entries
 		# if the value in xformat or yformat is no standard axis, add to dropdown list
 		set formathistory [PreferenceGet FormatHistory {x {} y {}}] 
-		if {$explicit && $xformat(0) ne {} && $yformat(0) ne {}} {
-			if {$xformat(0) ni $xformatlist} {
-				dict unset formathistory x $xformat(0)
-				dict set formathistory x $xformat(0) 1
-			}
+		if {$explicit} {
+			for {set i 0} {$i < $Nformats} {incr i} {
+				set xf $xformat($i)
+				set yf $yformat($i)
+				if {$xf ne {} && $xf ni $xformatlist} {
+					dict unset formathistory x $xf
+					dict set formathistory x $xf 1
+				}
 
-			if {$yformat(0) ni $yformatlist} {
-				dict unset formathistory y $yformat(0)
-				dict set formathistory y $yformat(0) 1
+				if {$yf ne {} && $yf ni $yformatlist} {
+					dict unset formathistory y $yf
+					dict set formathistory y $yf 1
+				}
 			}
-
 			# for more than 10 entries, clear format history
 			set maxhistsize [PreferenceGet MaxFormatHistorySize 10]
 			dict with formathistory {
