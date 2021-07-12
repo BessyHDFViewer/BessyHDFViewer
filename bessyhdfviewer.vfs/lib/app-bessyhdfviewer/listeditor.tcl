@@ -1,5 +1,5 @@
 package require snit
-package require tablelist_tile 5.9
+package require tablelist_tile
 
 snit::widget ListEditor {
 	# dialog for choosing and sorting a subset of a large list

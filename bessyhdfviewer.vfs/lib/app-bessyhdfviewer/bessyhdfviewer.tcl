@@ -4,7 +4,7 @@ package require hdfpp
 package require ukaz 2.1
 package require Tk
 package require tooltip
-package require tablelist_tile 5.9
+package require tablelist_tile
 package require sqlite3
 package require vfs::zip
 

@@ -9,7 +9,7 @@
 # Copyright (c) 2010-2012  Csaba Nemethi (E-mail: csaba.nemethi@t-online.de)
 #==============================================================================
 
-package require tablelist_tile 5.6
+package require tablelist_tile
 package require snit
 package require SmallUtils
 
