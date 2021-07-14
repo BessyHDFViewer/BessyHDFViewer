@@ -743,63 +743,89 @@ namespace eval BessyHDFViewer {
 		variable ActiveColumns $columns
 	}
 
+	snit::widget scrollingtext {
+		hulltype ttk::frame
+		component text
+		component hsb
+		component vsb
+
+		delegate option * to text
+		delegate method * to text
+
+		constructor {args} {
+			install text using text $win.text \
+				-xscrollcommand [list $win.hsb set] \
+				-yscrollcommand [list $win.vsb set]
+
+			install hsb using ttk::scrollbar $win.hsb -orient horizontal -command [list $text xview]
+			install vsb using ttk::scrollbar $win.vsb -orient vertical -command [list $text yview]
+
+			grid $text $vsb -sticky nsew
+			grid $hsb  -    -sticky nsew
+			
+			grid rowconfigure $win $text -weight 1
+			grid columnconfigure $win $text -weight 1
+
+			$self configurelist $args
+		}
+	}
+
 	snit::widget AboutDialog {
 		hulltype toplevel
-		component text
-		component vsb
-		component hsb
+		component notebook
+		component plugininfo
+		component thirdpartylicenses
 
 		variable title
 		variable copyright
 		variable vinfotext
 		variable envinfotext
 		variable pluginfo
+		variable basedir
 
-		constructor {args} {
+		constructor {bdir args} {
 			$self CreateText
 			
 			wm title $win $title
 			
+			set basedir $bdir
+			
 			set mfr [ttk::frame $win.mfr]
 			pack $mfr -expand yes -fill both
 
-			set textfr [ttk::frame $mfr.textfr]
+			install notebook using ttk::notebook $mfr.notebook
+			install plugininfo using scrollingtext $notebook.plugininfo
+			$notebook add $plugininfo -text "Plugins"
+
 			set butfr [ttk::frame $mfr.butfr]
 			set eyecandy [ttk::label $mfr.icon -image [IconGet BessyHDFViewer_large]]
 			set cplabel [ttk::label $mfr.lbl -text $copyright]
 			
 			grid $eyecandy $cplabel -sticky nsew -padx 10 -pady 10
-			grid $textfr - -sticky nsew -padx 10
+			grid $notebook - -sticky nsew -padx 10
 			grid $butfr - 
 
-			grid rowconfigure $mfr $textfr -weight 1
-			grid columnconfigure $mfr $textfr -weight 1
+			grid rowconfigure $mfr $notebook -weight 1
+			grid columnconfigure $mfr $notebook -weight 1
 			
-			
-			install text using text $textfr.text \
-				-xscrollcommand [list $textfr.hsb set] \
-				-yscrollcommand [list $textfr.vsb set]
-
-			install hsb using ttk::scrollbar $textfr.hsb -orient horizontal -command [list $text xview]
-			install vsb using ttk::scrollbar $textfr.vsb -orient vertical -command [list $text yview]
-
-			grid $text $vsb -sticky nsew
-			grid $hsb  -    -sticky nsew
-			
-			grid rowconfigure $textfr $text -weight 1
-			grid columnconfigure $textfr $text -weight 1
-
-			$text insert 1.0 $vinfotext
+			$plugininfo insert 1.0 $vinfotext
 			# create text and buttons to remove plugins
 			set count 0
 			dict for {pdir desc} $pluginfo {
-				$text insert end "\n[file tail $pdir]:"
-				set btn [ttk::button $text.remove[incr count] -text "Remove"]
+				$plugininfo insert end "\n[file tail $pdir]:"
+				set btn [ttk::button $plugininfo.remove[incr count] -text "Remove"]
 				$btn configure -command [mymethod RemovePluginCmd $btn $pdir]
-				$text window create end -window $btn
-				$text insert end \n$desc\n
+				$plugininfo window create end -window $btn
+				$plugininfo insert end \n$desc\n
 			}
-			$text insert end $envinfotext
+			$plugininfo insert end $envinfotext
+
+			# add license information
+			
+			install thirdpartylicenses using scrollingtext $notebook.thirdpartylicenses
+			$notebook add $thirdpartylicenses -text "3rd party licenses"
+			
+			$thirdpartylicenses insert end [$self CollectLicenses]
 
 			# add buttons
 			set okbut [ttk::button $butfr.ok -text "OK" -command [mymethod Quit] -default active]
@@ -810,19 +836,19 @@ namespace eval BessyHDFViewer {
 			bind $self <Escape> [mymethod Quit]
 		}
 
-		method AddText {msg} {
-			$text insert end $msg
-			$text see end
-			raise $win
-		}
-		
 		method CreateText {} {	
 			set exebasedir [info nameofexecutable]
 			set version [AboutReadVersion $exebasedir]
 			set title "About BessyHDFViewer"
-			set copyright "BessyHDFViewer - a program for browsing\nand analysing PTB@BESSY measurement files"
-			append copyright "\n(C) Christian Gollwitzer, PTB 2012 - [clock format [clock scan now] -format %Y]"
-			append copyright "\nAll rights reserved"
+			set copyright "BessyHDFViewer \u2013 a program for browsing\nand analysing PTB@BESSY measurement files"
+			append copyright "\n\n\u00a9 2012 \u2013 [clock format [clock scan now] -format %Y]"
+			append copyright " Physikalisch-Technische Bundesanstalt (PTB)"
+			append copyright "\nAuthored by: Christian Gollwitzer and others"
+			append copyright "\n\nBessyHDFViewer is free software: you can redistribute it and/or modify"
+			append copyright "\nit under the terms of the GNU General Public License as published by"
+			append copyright "\nthe Free Software Foundation, either version 3 of the License, or"
+			append copyright "\n(at your option) any later version."
+			append copyright "\n"
 			append copyright "\nUsing Tcl [info patchlevel]"
 
 			set vinfotext "Git version:\n"
@@ -838,6 +864,36 @@ namespace eval BessyHDFViewer {
 			append envinfotext "\n Tcl platform info:\n"
 			append envinfotext [join [lmap {key val} [array get ::tcl_platform] { string cat "   $key = $val" }] \n]
 
+		}
+
+		method CollectLicenses {} {
+			# basedir points to one directory under lib
+			set libdir [file dirname $basedir]
+			set licensefiles [fileutil::findByPattern $libdir -glob -- license.terms*]
+			set licenses {}
+			set libnames {}
+			foreach fn $licensefiles {
+				set license [fileutil::cat $fn]
+				set fnpart [file tail $fn]
+				# extract name of the library
+				if {! [regexp {^license\.terms\.(.+)$} $fnpart -> libname] } {
+					# the file is named just license.terms
+					# library name is then the directory name
+					set libname [file tail [file dirname $fn]]
+				}
+				
+				lappend libnames $libname
+				lappend licenses $libname ""
+				lappend licenses $license
+			}
+
+			set licensetext "This software includes the following 3rd party code,\n"
+			append licensetext "for which separate licenses apply:\n\n"
+			append licensetext [join $libnames \n]\n
+			append licensetext "=======================================================\n"
+			append licensetext "Licenses:\n"
+			append licensetext [join $licenses \n]
+			return $licensetext
 		}
 
 		method InstallPackageCmd {} {
@@ -869,7 +925,8 @@ namespace eval BessyHDFViewer {
 
 	proc About {} {
 		# create dialog window
-		AboutDialog .about
+		variable basedir
+		AboutDialog .about $basedir
 		tkwait window .about
 	}
 
