@@ -1,6 +1,27 @@
-#!/bin/sh
-# the next line restarts using wish \
-	exec wish "$0" ${1+"$@"}
+#   dirViewer.tcl
+#
+#   (C) Copyright 2021 Physikalisch-Technische Bundesanstalt (PTB)
+#   Christian Gollwitzer
+#  
+#   This file is part of BessyHDFViewer.
+#
+#   BessyHDFViewer is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   BessyHDFViewer is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with BessyHDFViewer.  If not, see <https://www.gnu.org/licenses/>.
+# 
+
+# This file was adapted from the dirViewer example of tablelist
+# and extended with a classification callback of the file content
+# for icon selection and property columns
 
 #==============================================================================
 # Demonstrates how to use a tablelist widget for displaying the contents of a
