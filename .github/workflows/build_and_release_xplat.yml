@@ -39,7 +39,9 @@ jobs:
             - name: Create Binary macOS
               if: ${{ matrix.os == 'macos-latest' }}
               run: make macapp
-
+            
+            - name: Load test HDFs 
+              run: make test
 
             - name: upload result
               uses: actions/upload-artifact@v2

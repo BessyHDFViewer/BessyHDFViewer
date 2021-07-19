@@ -41,5 +41,6 @@ cp -r "$kbskitdir/licenses/"* "$libdir/3rdparty"
 
 if [ "$machine" == "$hostmachine" ]; then 
 	cp "$kbskitdir/bin/sdx"* "$rtdir"
+	
 fi
 

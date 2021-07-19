@@ -2,7 +2,7 @@ INSTALLDIR=/soft/prog/BessyHDFViewer/
 WININSTALLDIR=/soft/pc_files/radiolab/Software/
 BAMINSTALLDIR=ptb@193.149.11.227:/soft/BessyHDFViewer_bin/
 
-all: starpacks
+all: linuxapp
 
 version:
 	git log -1 --decorate-refs nothing > bessyhdfviewer.vfs/VERSION
@@ -11,14 +11,18 @@ dist:
 	mkdir -p dist
 
 linuxapp: version dist
+	rm -rf bessyhdfviewer.vfs/lib/hdfpp0.5
 	tar xvjf dependencies/HDFpp_Linux-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
 	Runtime/sdx wrap dist/BessyHDFViewer_Linux64 -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn
 
 winapp: version dist
+	rm -rf bessyhdfviewer.vfs/lib/hdfpp0.5
 	tar xvjf dependencies/HDFpp_Windows-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
 	Runtime/sdx wrap dist/BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn.exe
 
 macapp: version dist
+	rm -rf bessyhdfviewer.vfs/lib/hdfpp0.5
+	tar xvjf dependencies/HDFpp_Darwin-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
 	# create application for Mac OSX
 	mkdir -p BessyHDFViewer.app/Contents/MacOS/
 	Runtime/sdx wrap BessyHDFViewer.app/Contents/MacOS/BessyHDFViewer -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn
@@ -31,7 +35,7 @@ macapp: version dist
 	mkdir dmg
 	cp -r BessyHDFViewer.app dmg/
 	ln -s /Applications dmg/
-	rm -f BessyHDFViewer.dmg; hdiutil create -srcfolder dmg -format UDZO -volname BessyHDFViewer.dmg dist/BessyHDFViewer.dmg
+	rm -f dist/BessyHDFViewer.dmg; hdiutil create -srcfolder dmg -format UDZO -volname BessyHDFViewer.dmg dist/BessyHDFViewer.dmg
 	rm -rf dmg
 
 install: linuxapp winapp

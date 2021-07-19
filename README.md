@@ -15,6 +15,32 @@ With BessyHDFViewer you can:
 
 BessyHDFViewer is written in [Tcl/Tk](https://wiki.tcl-lang.org/) and can be extended by plugins written either in Tcl, or as independent programs in other languages, such as [Python](https://www.python.org/).
 
+
+Binary Installation
+===================
+
+You can use the precompiled binaries as the result from Github Actions available at the [Release page](https://github.com/BessyHDFViewer/BessyHDFViewer/releases). Using these depends on the system:
+* Windows: Copy ``BessyHDFViewer.exe`` to some directory, e.g. your desktop, and run by double-clicking. 
+* macOS: Open ``BessyHDFViewer.dmg`` and drag the icon to your applications folder. The binary is not signed, you must right-click first and accept to execute as an unsigned binary
+* Linux: Copy ``BessyHDFViewer_Linux64`` into your path, e.g. ``/usr/local/bin`` and make it executable:
+    chmod +x https://github.com/BessyHDFViewer/HDFpp/releases
+
+
+Installation from source
+========================
+
+This repository only contains the Tcl code, not the compiled code for the execution of BessyHDFViewer (Tcl interpreter and the [HDFpp library](https://github.com/BessyHDFViewer/HDFpp) for reading HDF files. For convenience, the script ``make-dependencies.sh`` can be used, which downloads the binaries from the latest Github release. In order to run BessyHDFViewer from the directory of the repo, do:
+
+    ./make-dependencies.sh
+    make linuxapp
+
+``linuxapp``must be replaced by ``macapp``and ``winapp`` for the corresponding platform. This creates a binary under ``dist/``.
+Once the dependencies are installed using this command, you can also run the code can directly from the repository for development; to do this, run
+    
+	make run
+
+
+
     BessyHDFViewer is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
