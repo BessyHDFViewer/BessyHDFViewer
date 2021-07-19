@@ -18,7 +18,7 @@ linuxapp: version dist
 winapp: version dist
 	rm -rf bessyhdfviewer.vfs/lib/hdfpp0.5
 	tar xvjf dependencies/HDFpp_Windows-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
-	Runtime/sdx wrap dist/BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn.exe
+	Runtime/sdx wrap dist/BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-gui.exe
 
 macapp: version dist
 	rm -rf bessyhdfviewer.vfs/lib/hdfpp0.5
