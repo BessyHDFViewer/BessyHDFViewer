@@ -35,8 +35,8 @@ clean:
 	rm -rf BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg
 
 test:
-	Runtime/Linux_runtime64 bessyhdfviewer.vfs/main.tcl Test Test-HDF/
+	Runtime/kbsvq8.6-dyn bessyhdfviewer.vfs/main.tcl Test Test-HDF/
 
 run:
-	Runtime/Linux_runtime64 bessyhdfviewer.vfs/main.tcl
+	Runtime/kbsvq8.6-dyn bessyhdfviewer.vfs/main.tcl
 
