@@ -1,0 +1,77 @@
+name: build-and-release
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-latest, windows-latest]
+        steps:
+            - name: checkout repo
+              uses: actions/checkout@v2
+            - name: Install git sdk
+              if: ${{ matrix.os == 'windows-latest' }}
+              uses: git-for-windows/setup-git-for-windows-sdk@v1
+              with:
+                flavor: full
+
+            - name: download binary components
+              run: ./make-dependencies.sh
+
+            - name: Create Binary Windows
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: make winapp
+
+            - name: Create Binary Linux
+              if: ${{ matrix.os == 'ubuntu-latest' }}
+              run: make linuxapp
+
+            - name: Create Binary macOS
+              if: ${{ matrix.os == 'macos-latest' }}
+              run: make macapp
+
+
+            - name: upload result
+              uses: actions/upload-artifact@v2
+              with:
+                name: build-${{ matrix.os }}
+                path: dist/*
+
+    deploy:
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Download build artifacts
+              uses: actions/download-artifact@v2
+              id: download
+              with:
+                path: ~/downloads
+
+            - name: Create binary dir
+              run: mkdir binary
+
+            - name: Collect all artifacts
+              run: find ${{steps.download.outputs.download-path}} -type f -exec mv {} binary \;
+
+            - name: Display structure of downloaded files
+              run: ls -R
+
+            - name: Release result
+              uses: marvinpinto/action-automatic-releases@v1.2.1
+              with:
+                  repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                  automatic_release_tag: "latest"
+                  prerelease: true
+                  title: "Development Build"
+                  files: |
+                    binary/*

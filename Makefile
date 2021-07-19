@@ -7,15 +7,18 @@ all: starpacks
 version:
 	git log -1 --decorate-refs nothing > bessyhdfviewer.vfs/VERSION
 
-linuxapp: version
+dist:
+	mkdir -p dist
+
+linuxapp: version dist
 	tar xvjf dependencies/HDFpp_Linux-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
-	Runtime/sdx wrap BessyHDFViewer_Linux64 -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn
+	Runtime/sdx wrap dist/BessyHDFViewer_Linux64 -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn
 
-winapp: version
+winapp: version dist
 	tar xvjf dependencies/HDFpp_Windows-x86_64.tar.bz2 -C bessyhdfviewer.vfs/lib
-	Runtime/sdx wrap BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn.exe
+	Runtime/sdx wrap dist/BessyHDFViewer.exe -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn.exe
 
-macapp: version
+macapp: version dist
 	# create application for Mac OSX
 	mkdir -p BessyHDFViewer.app/Contents/MacOS/
 	Runtime/sdx wrap BessyHDFViewer.app/Contents/MacOS/BessyHDFViewer -vfs bessyhdfviewer.vfs/ -runtime Runtime/kbsvq8.6-dyn
@@ -28,16 +31,16 @@ macapp: version
 	mkdir dmg
 	cp -r BessyHDFViewer.app dmg/
 	ln -s /Applications dmg/
-	rm -f BessyHDFViewer.dmg; hdiutil create -srcfolder dmg -format UDZO -volname BessyHDFViewer.dmg BessyHDFViewer.dmg
+	rm -f BessyHDFViewer.dmg; hdiutil create -srcfolder dmg -format UDZO -volname BessyHDFViewer.dmg dist/BessyHDFViewer.dmg
 	rm -rf dmg
 
 install: linuxapp winapp
-	-cp -p BessyHDFViewer_Linux64 BessyHDFViewer.exe $(INSTALLDIR)
+	-cp -p dist/BessyHDFViewer_Linux64 dist/BessyHDFViewer.exe $(INSTALLDIR)
 	-chmod 775 $(INSTALLDIR)/BessyHDFViewer.exe $(INSTALLDIR)/BessyHDFViewer_Linux64
-	-scp BessyHDFViewer_Linux64 BessyHDFViewer.exe $(BAMINSTALLDIR)
+	-scp dist/BessyHDFViewer_Linux64 dist/BessyHDFViewer.exe $(BAMINSTALLDIR)
 
 clean:
-	rm -rf BessyHDFViewer_Linux64 BessyHDFViewer.exe BessyHDFViewer.dmg dmg
+	rm -rf dist/BessyHDFViewer_Linux64 dist/BessyHDFViewer.exe dist/BessyHDFViewer.dmg dmg
 
 test:
 	Runtime/kbsvq8.6-dyn bessyhdfviewer.vfs/main.tcl Test Test-HDF/
