@@ -1,6 +1,6 @@
 all: mac
 
-INKSCAPE= /Applications/Inkscape.app/Contents/Resources/bin/inkscape
+INKSCAPE= /Applications/Inkscape.app/Contents/MacOS/inkscape
 
 mac:
 	mkdir -p BessyHDFViewer.iconset
