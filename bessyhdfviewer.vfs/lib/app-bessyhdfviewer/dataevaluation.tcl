@@ -648,60 +648,72 @@ namespace eval DataEvaluation {
 		expr {$y0+double($y1-$y0)*double($xval-$x0)/double($x1-$x0)}
 	}
 
+	variable refindex 0
+	variable saveddata
+	
 	proc RefDivide {} {
+		variable refindex
+		variable saveddata
 		# divide all datasets by the first one
 		# shorten if necessary
 
+	
 		# check if there was a previous division
 		if {! $BessyHDFViewer::RePlotFlag} {
-			puts "Open menu and select"
-			return
-		}
+			# 2nd call - use the saved datasets
+			incr refindex
+			if {$refindex >= [llength $saveddata]} {
+				set refindex 0
+			}
+			puts "Take next index: $refindex"
+		} else {
+			# first call - retrieve data
+			
+			set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
 
-
-		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
-		if {[llength $plotids] < 2} {
-			return -code error "Need at least two datasets"
-		}
+			if {[llength $plotids] < 2} {
+				return -code error "Need at least two datasets"
+			}
 		
-		# check if there was a previous division
-		if {! $BessyHDFViewer::RePlotFlag} {
-			puts "Open menu and select"
-			return
-		}
-
-		set saveddata {}
-		foreach id $plotids {
-			# filter NaNs from the dataset
-			set data [$BessyHDFViewer::w(Graph) getdata $id data]
-			set title [$BessyHDFViewer::w(Graph) getdata $id title]
-			set fdata {}
-			foreach {x y} $data {
-				if {isnan($x) || isnan($y)} { continue }
-				lappend fdata $x $y
-			}
-			set style ""
-			lappend saveddata [dict create data $fdata title $title plotstyle $style]
-		}
-
-		set refindex 0
-		set start true
-		foreach {fdata title} {
-			if {$start} {
-				set refdata [mkspline $fdata]
-				set rtitle $title
-				$BessyHDFViewer::w(Graph) remove $id
-				set start false
-			} else {
-				set divdata {}
-				foreach {x y} $fdata {
-					set rval [evalspline $refdata $x]
-					if {![catch {expr {$y/$rval}} val]} {
-						lappend divdata $x $val
-					}
+			set saveddata {}
+			foreach id $plotids {
+				# filter NaNs from the dataset
+				set data [$BessyHDFViewer::w(Graph) getdata $id data]
+				set title [$BessyHDFViewer::w(Graph) getdata $id title]
+				set style [$BessyHDFViewer::w(Graph) getstyle $id]
+				set fdata {}
+				foreach {x y} $data {
+					if {isnan($x) || isnan($y)} { continue }
+					lappend fdata $x $y
 				}
-				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
+				lappend saveddata [dict create data $fdata title $title plotstyle $style]
 			}
+		}
+
+		set refdset [lindex $saveddata $refindex]
+		set refdata [mkspline [dict get $refdset data]]
+		set rtitle  [dict get $refdset title]
+		
+		$BessyHDFViewer::w(Graph) clear
+		
+		set i 0
+		foreach dset $saveddata {
+			# skip the refdata itself
+			if {$i == $refindex} { continue }
+
+			set plotstyle [dict get $dset plotstyle]
+			set fdata [dict get $dset data]
+			set title [dict get $dset title]
+			
+			set divdata {}
+			foreach {x y} $fdata {
+				set rval [evalspline $refdata $x]
+				if {![catch {expr {$y/$rval}} val]} {
+					lappend divdata $x $val
+				}
+			}
+			$BessyHDFViewer::w(Graph) plot $divdata {*}$plotstyle title "$title / $rtitle"
+			incr i
 		}
 		set BessyHDFViewer::RePlotFlag false
 	}
