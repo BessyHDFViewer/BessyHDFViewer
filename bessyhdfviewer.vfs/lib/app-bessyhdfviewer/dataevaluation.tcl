@@ -651,13 +651,26 @@ namespace eval DataEvaluation {
 	proc RefDivide {} {
 		# divide all datasets by the first one
 		# shorten if necessary
+
+		# check if there was a previous division
+		if {! $BessyHDFViewer::RePlotFlag} {
+			puts "Open menu and select"
+			return
+		}
+
+
 		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
 		if {[llength $plotids] < 2} {
 			return -code error "Need at least two datasets"
 		}
+		
+		# check if there was a previous division
+		if {! $BessyHDFViewer::RePlotFlag} {
+			puts "Open menu and select"
+			return
+		}
 
-		set start true
-
+		set saveddata {}
 		foreach id $plotids {
 			# filter NaNs from the dataset
 			set data [$BessyHDFViewer::w(Graph) getdata $id data]
@@ -667,7 +680,13 @@ namespace eval DataEvaluation {
 				if {isnan($x) || isnan($y)} { continue }
 				lappend fdata $x $y
 			}
-			
+			set style ""
+			lappend saveddata [dict create data $fdata title $title plotstyle $style]
+		}
+
+		set refindex 0
+		set start true
+		foreach {fdata title} {
 			if {$start} {
 				set refdata [mkspline $fdata]
 				set rtitle $title
@@ -684,6 +703,7 @@ namespace eval DataEvaluation {
 				$BessyHDFViewer::w(Graph) update $id data $divdata title "$title / $rtitle"
 			}
 		}
+		set BessyHDFViewer::RePlotFlag false
 	}
 
 	proc XRR-FFT {} {

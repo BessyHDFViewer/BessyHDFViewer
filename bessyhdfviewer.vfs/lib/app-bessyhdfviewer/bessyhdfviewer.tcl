@@ -1599,6 +1599,8 @@ namespace eval BessyHDFViewer {
 	variable plotstylecache {}
 	variable xformatlist {}
 	variable yformatlist {}
+	
+	variable RePlotFlag false
 	proc DisplayPlot {args} {
 		variable w
 		variable plotdata
@@ -1916,6 +1918,7 @@ namespace eval BessyHDFViewer {
 
 		HighlightRefresh
 		ValidateDisplay Plot
+		variable RePlotFlag true
 	}
 
 	proc DisplayTextDump {} {
