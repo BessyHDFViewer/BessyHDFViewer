@@ -659,16 +659,9 @@ namespace eval DataEvaluation {
 
 	
 		# check if there was a previous division
-		if {! $BessyHDFViewer::RePlotFlag} {
-			# 2nd call - use the saved datasets
-			incr refindex
-			if {$refindex >= [llength $saveddata]} {
-				set refindex 0
-			}
-			puts "Take next index: $refindex"
-		} else {
+		if {$BessyHDFViewer::RePlotFlag} {
 			# first call - retrieve data
-			
+			set refindex 0
 			set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
 
 			if {[llength $plotids] < 2} {
@@ -688,6 +681,13 @@ namespace eval DataEvaluation {
 				}
 				lappend saveddata [dict create data $fdata title $title plotstyle $style]
 			}
+		} else {
+			# 2nd call - use the saved datasets
+			incr refindex
+			if {$refindex >= [llength $saveddata]} {
+				set refindex 0
+			}
+			puts "Take next index: $refindex"
 		}
 
 		set refdset [lindex $saveddata $refindex]
@@ -698,8 +698,10 @@ namespace eval DataEvaluation {
 		
 		set i 0
 		foreach dset $saveddata {
+		
 			# skip the refdata itself
-			if {$i == $refindex} { continue }
+			if {$i == $refindex} { incr i; continue }
+			incr i
 
 			set plotstyle [dict get $dset plotstyle]
 			set fdata [dict get $dset data]
@@ -713,7 +715,6 @@ namespace eval DataEvaluation {
 				}
 			}
 			$BessyHDFViewer::w(Graph) plot $divdata {*}$plotstyle title "$title / $rtitle"
-			incr i
 		}
 		set BessyHDFViewer::RePlotFlag false
 	}
