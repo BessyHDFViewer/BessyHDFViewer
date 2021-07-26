@@ -40,19 +40,22 @@ namespace eval DataEvaluation {
 	}
 
 	variable plugindirs {}
-
+	
+	variable commandbuttons {}
 	proc maketoolbar {f} {
 		# pack the toolbuttons into f
 		variable commands
+		variable commandbuttons
 		variable ns
 		variable toolframe $f
 		
 		variable cmdnr 0
 		foreach {cmd icon description} $DataEvaluation::commands {
-			set btn [ttk::button $f.cmdbtn$cmdnr -text $description -image [BessyHDFViewer::IconGet $icon] \
-			         -command ${ns}::$cmd -style Toolbutton]
+			set btn [optionbutton $f.cmdbtn$cmdnr -text $description -image [BessyHDFViewer::IconGet $icon] \
+			         -command ${ns}::$cmd]
 			grid $btn -row 0 -column $cmdnr -sticky nw
 			tooltip::tooltip $btn $description
+			dict set commandbuttons $cmd $btn
 			incr cmdnr
 		}
 
@@ -66,6 +69,10 @@ namespace eval DataEvaluation {
 		foreach pdir $pdirs {
 			LoadPluginFromDir $pdir
 		}
+		
+		# hard-coded popup menu for RefDivide
+		variable refdivbtn [dict get $commandbuttons RefDivide] 
+		$refdivbtn configure -optcallback [list ${ns}::RefDivide list]
 	}
 
 	proc LoadPluginFromDir {pdir} {
@@ -119,6 +126,8 @@ namespace eval DataEvaluation {
 					 -command [list ${ns}::RunUserCmd $pns] -style Toolbutton]
 			grid $btn -row 0 -column $cmdnr -sticky nw
 			incr cmdnr
+
+			dict set extracmds $pns button $btn
 			
 			if {$description ne {}} {
 				tooltip::tooltip $btn $description
@@ -650,10 +659,11 @@ namespace eval DataEvaluation {
 
 	variable refindex 0
 	variable saveddata
-	
-	proc RefDivide {} {
+
+	proc RefDivide {{index {}}} {
 		variable refindex
 		variable saveddata
+		variable refdivbtn
 		# divide all datasets by the first one
 		# shorten if necessary
 
@@ -689,7 +699,18 @@ namespace eval DataEvaluation {
 			}
 			puts "Take next index: $refindex"
 		}
+		
+		if {$index eq "list"} {
+			# only retrieve the list of options
+			set titles [lmap x $saveddata {dict get $x title}]
+			$refdivbtn configure -values $titles -headline "Select reference data"
+			return
+		}
 
+		if {$index ne ""} {
+			set refindex $index
+		}
+		
 		set refdset [lindex $saveddata $refindex]
 		set refdata [mkspline [dict get $refdset data]]
 		set rtitle  [dict get $refdset title]
