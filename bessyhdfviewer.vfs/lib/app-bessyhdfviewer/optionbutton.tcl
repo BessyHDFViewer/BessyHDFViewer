@@ -46,7 +46,7 @@ snit::widgetadaptor	optionbutton {
 
 	constructor {args} {
 		installhull using ttk::menubutton -style Toolbutton
-		install optmenu using menu $win.m
+		install optmenu using menu $win.m -tearoff false
 		$hull configure -menu $optmenu
 
 		$self configurelist $args
