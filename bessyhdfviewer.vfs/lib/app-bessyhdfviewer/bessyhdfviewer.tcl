@@ -3280,7 +3280,7 @@ namespace eval BessyHDFViewer {
 			}
 			
 			for {set i 0} {$i<$maxcolnum} {incr i} {
-				set x [lindex $dconv $i]
+				set x [lindex $data $i]
 				if {$x eq {}} { set x NaN }
 				dict lappend table $i $x
 			}
