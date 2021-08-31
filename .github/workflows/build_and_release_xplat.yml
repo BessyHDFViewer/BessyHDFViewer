@@ -25,6 +25,13 @@ jobs:
               with:
                 flavor: full
 
+            - name: Install wget
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: |
+                pacman -Syu
+                pacman --noconfirm -S --needed wget
+
+
             - name: download binary components
               run: ./make-dependencies.sh
 
