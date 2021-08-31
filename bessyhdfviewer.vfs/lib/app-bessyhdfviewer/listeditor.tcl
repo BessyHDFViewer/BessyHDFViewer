@@ -40,6 +40,7 @@ snit::widget ListEditor {
 	option -initiallist
 	option -values -default {} -configuremethod SetValues
 	option -valuetree -default {} -configuremethod  SetValueTree
+	option -showtree -default false
 	option -resultvar {}
 	option -title -default {Select options} -configuremethod SetTitle
 	option -parent -default {}
@@ -76,18 +77,31 @@ snit::widget ListEditor {
 		set curframe [ttk::frame $editframe.curframe]
 		set avlframe [ttk::frame $editframe.avlframe]
 		set pmbar [ttk::frame $editframe.pmbar]
-		install newent using ttk::combobox $editframe.newent -textvariable [myvar newitem]
+
+		install newent using ttk::combobox $curframe.newent -textvariable [myvar newitem]
 		AutoComplete $newent
 
 		bind $newent <Return> [mymethod Add]
 
-		grid $curlabel $avllabel -sticky nsew
-		grid $pmbar $newent -sticky ew
-		grid $curframe $avlframe -sticky nsew
+		if {$options(-showtree)} {
+			grid $curlabel $avllabel -sticky nsew
+		} else {
+			grid $curlabel -sticky nsew
+		}
+		grid $pmbar -sticky ew
+		grid $newent -sticky ew
+		if {$options(-showtree)} {
+			grid $curframe $avlframe -sticky nsew
+		} else {
+			grid $curframe -sticky nsew
+		}
 
 		grid rowconfigure $editframe 1 -weight 1
 		grid columnconfigure $editframe 0 -weight 1
-		grid columnconfigure $editframe 1 -weight 1
+
+		if {$options(-showtree)} {
+			grid columnconfigure $editframe 1 -weight 1
+		}
 
 		# create tablelist elements
 		install includetbl using tablelist::tablelist $curframe.tbl \
@@ -146,7 +160,7 @@ snit::widget ListEditor {
 			wm transient $win $options(-parent)
 		}
 
-		set includelist $options(-initiallist)
+		set includelist [lmap x $options(-initiallist) {list $x}]
 	}
 
 	method SetValues {option values} {
@@ -216,7 +230,7 @@ snit::widget ListEditor {
 			if {[llength $insertpos] != 1} {
 				set insertpos end
 			}
-			$includetbl insert $insertpos $newitem
+			$includetbl insert $insertpos [list $newitem]
 		}
 	}
 
@@ -231,7 +245,7 @@ snit::widget ListEditor {
 	method OK {} {
 		if {$options(-resultvar) != {}} {
 			upvar #0 $options(-resultvar) var
-			set var $includelist
+			set var [lmap x $includelist {lindex $x 0}]
 		}
 		destroy $win
 	}

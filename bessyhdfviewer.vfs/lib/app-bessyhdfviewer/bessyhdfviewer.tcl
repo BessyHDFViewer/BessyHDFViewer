@@ -976,7 +976,7 @@ namespace eval BessyHDFViewer {
 	proc ColumnEdit {} {
 		variable ActiveColumns
 		set ColumnsAvailableTree [PreferenceGet ColumnsAvailableTree {{GROUP General {{LIST {Motor Detector Modified}}}} {GROUP Motors {{LIST {Energy}}}}}]
-		set columns [ListEditor getList -initiallist $ActiveColumns -valuetree $ColumnsAvailableTree -title "Select columns" -parent . -aclist [GetCachedFieldNames]]
+		set columns [ListEditor getList -initiallist $ActiveColumns -showtree false -valuetree $ColumnsAvailableTree -title "Select columns" -parent . -aclist [GetCachedFieldNames]]
 		if {$columns != $ActiveColumns} {
 			ChooseColumns $columns
 			PreferenceSet Columns $columns 
