@@ -11,7 +11,7 @@ function download() {
 	url="$1"
 	target="$2"
 	if [ -e "$target" ]; then return; fi
-	wget "$url" -O "$target"
+	curl "$url" -LJo "$target"
 }
 
 topdir="$(pwd)"
