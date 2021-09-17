@@ -384,28 +384,6 @@ namespace eval BessyHDFViewer {
 
 		$w(displayfr) add $w(plotfr) -text "Plot"
 
-		
-
-		# Text display tab
-		# 
-		set w(tdumpfr) [ttk::frame $w(displayfr).textfr]
-		set w(textdump) [text $w(tdumpfr).text]
-		set w(textvsb) [ttk::scrollbar $w(tdumpfr).vsb -orient vertical -command [list $w(textdump) yview]]
-		set w(texthsb) [ttk::scrollbar $w(tdumpfr).hsb -orient horizontal -command [list $w(textdump) xview]]
-		$w(textdump) configure -xscrollcommand [list $w(texthsb) set] -yscrollcommand [list $w(textvsb) set]
-
-		grid $w(textdump) $w(textvsb) -sticky nsew
-		grid $w(texthsb)  x           -sticky nsew
-
-		grid columnconfigure $w(tdumpfr) 0 -weight 1
-		grid rowconfigure $w(tdumpfr) 0 -weight 1
-
-		$w(displayfr) add $w(tdumpfr) -text "Text"
-		
-		#update
-		# bug in tablelist? Creation blocks if update is left out
-		# no, bug in tkcon :(
-
 		# Table display tab
 		#
 		set w(ttblfr) [ttk::frame $w(displayfr).tblfr]
@@ -443,7 +421,7 @@ namespace eval BessyHDFViewer {
 		grid columnconfigure $w(ttreefr) 0 -weight 1
 		grid rowconfigure $w(ttreefr) 0 -weight 1
 
-		$w(displayfr) add $w(ttreefr) -text "Tree"
+		# $w(displayfr) add $w(ttreefr) -text "Tree"
 		
 		# Difference display tab
 		#
@@ -463,7 +441,24 @@ namespace eval BessyHDFViewer {
 		grid columnconfigure $w(difffr) 0 -weight 1
 		grid rowconfigure $w(difffr) 0 -weight 1
 
-		$w(displayfr) add $w(difffr) -text "Diff"
+		$w(displayfr) add $w(difffr) -text "Diff / Tree"
+
+		# Text display tab
+		#
+		set w(tdumpfr) [ttk::frame $w(displayfr).textfr]
+		set w(textdump) [text $w(tdumpfr).text]
+		set w(textvsb) [ttk::scrollbar $w(tdumpfr).vsb -orient vertical -command [list $w(textdump) yview]]
+		set w(texthsb) [ttk::scrollbar $w(tdumpfr).hsb -orient horizontal -command [list $w(textdump) xview]]
+		$w(textdump) configure -xscrollcommand [list $w(texthsb) set] -yscrollcommand [list $w(textvsb) set]
+
+		grid $w(textdump) $w(textvsb) -sticky nsew
+		grid $w(texthsb)  x           -sticky nsew
+
+		grid columnconfigure $w(tdumpfr) 0 -weight 1
+		grid rowconfigure $w(tdumpfr) 0 -weight 1
+
+		$w(displayfr) add $w(tdumpfr) -text "Text"
+
 	}
 
 	proc AddPlotRow {} {
@@ -2025,7 +2020,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		# compute difference
-		foreach category  {Motor Detector Dataset Meta} {
+		foreach category  {Meta Motor Detector Dataset} {
 			set node [$w(difftbl) insertchild root end [list $category]]
 			set diff {}
 			foreach key [dict get $allkeys $category] {
@@ -2033,7 +2028,7 @@ namespace eval BessyHDFViewer {
 				foreach dataset $data {
 					lappend values [bessy_get_field $dataset $key]
 				}
-				if {!allequal($values)} {
+				if {!allequal($values) || [llength $values] == 1} {
 					set fmts {}
 					foreach value $values {
 						lappend fmts [ListFormat %g $value]
@@ -2096,7 +2091,7 @@ namespace eval BessyHDFViewer {
 					DisplayTree
 				}
 			}
-			Diff {
+			"Diff / Tree" {
 				if {![dict get $displayvalid Diff]} {
 					DisplayDiff
 				}
