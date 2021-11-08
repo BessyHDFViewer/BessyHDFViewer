@@ -1096,6 +1096,8 @@ namespace eval BessyHDFViewer {
 		return $result
 	}
 
+	variable HDFFiles {}
+	
 	proc PreviewFile {files} {
 		# get selected file from list
 		variable w
@@ -1594,6 +1596,7 @@ namespace eval BessyHDFViewer {
 	variable plotstylecache {}
 	variable xformatlist {}
 	variable yformatlist {}
+	variable oldHDFFiles {}
 	
 	variable RePlotFlag false
 	proc DisplayPlot {args} {
@@ -1607,6 +1610,7 @@ namespace eval BessyHDFViewer {
 		variable yformatlist
 		variable keepformat
 		variable keepzoom
+		variable oldHDFFiles
 		variable Nformats
 		variable aclist
 
@@ -1629,6 +1633,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		set nfiles [llength $HDFFiles]
+
 		if {$nfiles==0} { return }
 		# nothing to plot
 
@@ -1687,7 +1692,19 @@ namespace eval BessyHDFViewer {
 				return
 			}
 
-			if {!$explicit && !$keepformat} {
+			set resetformat false
+			if {[lindex $HDFFiles 0] ni $oldHDFFiles || [llength $oldHDFFiles] == 1} {
+				# a single file to plot, which was not in the previous set
+				# This is an indication to reset the default plot axis
+				# unless "Keep format" is checked or the format was set by the user (-explicit)
+				if {!$explicit && !$keepformat} {
+					set resetformat true
+				}
+			}
+
+			puts "$HDFFiles in $oldHDFFiles -> $resetformat"
+
+			if {$resetformat} {
 				set xformat(0) $stdx
 				set yformat(0) $stdy
 
@@ -2052,6 +2069,9 @@ namespace eval BessyHDFViewer {
 
 	proc ValidateDisplay {what} {
 		variable displayvalid
+		variable HDFFiles
+		variable oldHDFFiles $HDFFiles
+		
 		if {$what=="all"} {
 			foreach display {Plot Text Table Tree Diff} {
 				ValidateDisplay $display
@@ -2059,6 +2079,7 @@ namespace eval BessyHDFViewer {
 		} else {
 			dict set displayvalid $what 1
 		}
+		
 	}
 
 	proc ReDisplay {} {
