@@ -2037,7 +2037,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		# compute difference
-		foreach category  {Meta Motor Detector Dataset} {
+		foreach {category expanded} {Meta false Motor true Detector false Dataset true} {
 			set node [$w(difftbl) insertchild root end [list $category]]
 			set diff {}
 			foreach key [dict get $allkeys $category] {
@@ -2054,6 +2054,11 @@ namespace eval BessyHDFViewer {
 				}
 			}
 			$w(difftbl) insertchildlist $node end $diff
+			if {$expanded} {
+				$w(difftbl) expand $node
+			} else {
+				$w(difftbl) collapse $node
+			}
 		}
 		ValidateDisplay Diff
 	}
