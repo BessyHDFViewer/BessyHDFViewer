@@ -567,8 +567,8 @@ snit::widget BHDFDialog {
 		}
 
 		#  compute sensible value to start with from xmin, xmax, ymin ymax
-		set defmin [expr {$min*0.4 + $max*0.6}]
-		set defmax [expr {$min*0.6 + $max*0.4}]
+		set defmin [expr {$min*0.6 + $max*0.4}]
+		set defmax [expr {$min*0.4 + $max*0.6}]
 		set default [list $defmin $defmax]
 
 		# set to default if it is not visible
