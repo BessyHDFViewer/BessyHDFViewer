@@ -2977,7 +2977,8 @@ namespace eval BessyHDFViewer {
 
 			4.0 -
 			5.0 -
-			6  {
+			6   -
+			7  {
 				set path [list data $chain data main data]
 				set optpath [list data $chain data snapshot data]
 				set subfieldpaths [list $chain/main/standarddev $chain/main/averagemeta]
