@@ -2502,30 +2502,48 @@ namespace eval BessyHDFViewer {
 		dict for {var entry} $table {
 			set maxlength [tcl::mathfunc::max $maxlength [llength [dict get $entry data]]]
 		}
-
-		for {set i 0} {($i<$maxlength || [dict size $snapshots] > 0) && $Row<$limit} {incr i; incr Row} {
+		
+		# reverse snapshot lists for efficient snapshot evaluation
+		set snapshots [dict map {key slist} $snapshots {lreverse $slist}]
+		set snapidx [dict map {key slist} $snapshots {llength $slist}]
+		set snappos 0 ;# indicates the next position where to act on
+		
+		for {set i 0} {($i<$maxlength || [dict size $snapidx] > 0) && $Row<$limit} {incr i; incr Row} {
 			namespace eval ::SELECT [list set Row $Row] 
 			
 			if {[dict exists $table PosCounter] && $i < $maxlength} {
-				set poscounter [lindex [dict get $table PosCounter data] $i]]
+				set poscounter [lindex [dict get $table PosCounter data] $i]
 			} else {
 				set poscounter $i
 			}
 			
 			# update values from the snapshot table
-			set updsnaps {}
-			dict for {key slist} $snapshots {
-				set rest [lassign $slist pos val]
-				if {$poscounter >= $pos} {
-					namespace eval ::SELECT [list set $key $val]
-					if {[llength $rest] > 1} { 
-						dict set updsnaps $key $rest
+			if {$poscounter >= $snappos} {
+				set nextsnappos Inf
+				dict for {key idx} $snapidx {
+					set snap [dict get $snapshots $key]
+					set posidx [expr {$idx - 1}]
+					set validx [expr {$idx - 2}]
+					
+
+					set pos [lindex $snap $posidx]
+					set val [lindex $snap $validx] 
+					if {$poscounter >= $pos} {
+						namespace eval ::SELECT [list set $key $val]
+						incr idx -2
+						if {$idx > 0} {
+							dict set snapidx $key $idx
+							set nextsnappos [expr {min($nextsnappos, [lindex $snap [expr {$posidx - 2}]])}]
+						} else {
+							dict unset snapidx $key
+						}
+					} else {
+						set nextsnappos [expr {min($nextsnappos, $pos)}]
 					}
-				} else {
-					dict set updsnaps $key $slist
 				}
+				
+				set snappos $nextsnappos
 			}
-			set snapshots $updsnaps
 
 			dict for {var entry} $table {
 				namespace eval ::SELECT [list set $var [lindex [dict get $entry data] $i]]
