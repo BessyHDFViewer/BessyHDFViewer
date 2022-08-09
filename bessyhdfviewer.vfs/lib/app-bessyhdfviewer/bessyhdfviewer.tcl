@@ -195,7 +195,7 @@ namespace eval BessyHDFViewer {
 		
 		variable browsepath [PreferenceGet HomeDir {/messung/}]
 		if {![file isdirectory $browsepath]} {
-			set browsepath [file normalize [pwd]]
+			set browsepath [SmallUtils::abspath [pwd]]
 		}
 
 		bind $w(pathent) <FocusOut> ${ns}::RestoreCWD
@@ -2246,7 +2246,7 @@ namespace eval BessyHDFViewer {
 			# check if the argument is a directory
 			lassign $files dir
 			if {[file isdirectory $dir]} {
-				set absdir [file normalize $dir]
+				set absdir [SmallUtils::abspath $dir]
 				$w(filelist) display $absdir
 				DirChanged $absdir
 				return
@@ -2255,9 +2255,9 @@ namespace eval BessyHDFViewer {
 		# find common ancestor
 		set ancestor [SmallUtils::file_common_dir $files]
 		$w(filelist) display $ancestor
-		DirChanged [file normalize $ancestor]
+		DirChanged [SmallUtils::abspath $ancestor]
 		$w(filelist) selectfiles $files
-		set fileabs [lmap x $files {file normalize $x}]
+		set fileabs [lmap x $files {SmallUtils::abspath $x}]
 		PreviewFile $fileabs
 	}
 

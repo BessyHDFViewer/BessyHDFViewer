@@ -20,12 +20,19 @@
 # 
 
 package provide SmallUtils 1.0
+package require fileutil
 
 namespace eval SmallUtils {
 	variable ns [namespace current]
 	variable Requests {}
 
-	namespace export defer autovar autofd enumerate dict_getdefault dict_assign nohup script2dict
+	namespace export abspath defer autovar autofd enumerate dict_getdefault dict_assign nohup script2dict
+
+	proc abspath {fn} {
+		# return the absolute path to a file
+		# without resolving symbolic links, as [file normalize] does
+		return [fileutil::lexnormalize [file join [pwd] $fn]]
+	}
 
 	proc defer {cmd} {
 		# defer cmd to idle time. Multiple requests are merged
@@ -109,7 +116,7 @@ namespace eval SmallUtils {
 		# find common directory for files in flist
 		set flistabs {}
 		foreach fn $flist {
-			lappend flistabs [file dirname [file normalize $fn]]
+			lappend flistabs [file dirname [abspath $fn]]
 		}
 		set ancestor [file split [lindex $flistabs 0]]
 		foreach fn $flistabs {

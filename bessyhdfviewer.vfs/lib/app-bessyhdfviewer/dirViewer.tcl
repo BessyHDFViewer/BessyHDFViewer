@@ -340,7 +340,7 @@ namespace eval dirViewer {} {
 			set itemList {}
 			
 			foreach dirname $directories {
-				set dirname [file normalize $dirname]
+				set dirname [SmallUtils::abspath $dirname]
 				set dirtail [file tail $dirname]
 				if {$dirtail eq ""} {
 					# on Windows, file tail truncates C:/ to ""
@@ -361,7 +361,7 @@ namespace eval dirViewer {} {
 			}
 			
 			foreach fn $files {
-				set fullname [file normalize $fn]
+				set fullname [SmallUtils::abspath $fn]
 				set tail [file tail $fn]
 				
 				if {$options(-classifycommand) != {}} {
@@ -736,13 +736,13 @@ namespace eval dirViewer {} {
 			# iteratively expand directories
 			# such that the files given in flist can 
 			# be selected. Silently ignore errors
-			set cwds [file split [file normalize $cwd]]
+			set cwds [file split [SmallUtils::abspath $cwd]]
 			set splitidx [expr {[llength $cwds]-1}]
 
 			set selectkeys {}
 
 			foreach fn $flist {
-				set abspath [file normalize $fn]
+				set abspath [SmallUtils::abspath $fn]
 				# skip directories
 				if {[file isdirectory $abspath]} { continue }
 				
