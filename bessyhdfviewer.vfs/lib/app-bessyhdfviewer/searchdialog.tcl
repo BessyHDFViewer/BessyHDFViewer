@@ -358,7 +358,7 @@ snit::widget SearchDialog {
 					HDFCache eval BEGIN
 				}
 				
-				set fullname [file normalize $fn]
+				set fullname [SmallUtils::abspath $fn]
 				BessyHDFViewer::UpdateCacheForFile $fullname false		
 				incr count
 			}
