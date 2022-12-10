@@ -55,7 +55,17 @@ PlotStyles {
 
 }
 
+DeepMerge { ImageDetectorFilePathRules }
+
 ImageDetectorFilePathRules {
+	
+	Pilatus__FileName {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
+
+
 	Pilatus_filename {
 		regex {.}
 		exprlist {$img}
@@ -67,6 +77,7 @@ ImageDetectorFilePathRules {
 		exprlist {$2 int($img)}
 		fmtstring {pilatus_%s_%04d.tif}
 	}
+
 
 	WAXS_filename {
 		regex {.}

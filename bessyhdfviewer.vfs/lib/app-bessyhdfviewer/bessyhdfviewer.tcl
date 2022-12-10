@@ -503,6 +503,8 @@ namespace eval BessyHDFViewer {
 		close $fd
 
 		set PrefVersion [dict get $Preferences Version]
+		set mergekeys [dict get $Preferences DeepMerge]
+		dict unset Preferences DeepMerge
 		
 		# read from profile dir
 		if {$profiledir == {}} {
@@ -519,7 +521,22 @@ namespace eval BessyHDFViewer {
 				# hopefully this is a valid dict
 				if {[dict get $UserPreferences Version] == $PrefVersion} {
 					# throws for invalid dict and non-existent version
+					
+					
+					# the keys in DeepMerge indicate dicts which should be merged
+					# between the user prefs and the default prefs
+					# Note: defaults override user prefs here
+					foreach mkey $mergekeys {
+						set mergedict [dict merge \
+							[SmallUtils::dict_getdefault $UserPreferences $mkey {}] \
+							[dict get $Preferences $mkey]]
+						
+						dict set UserPreferences $mkey $mergedict
+					}
+
+					# for other keys, user prefs override defaults
 					set Preferences [dict merge $Preferences $UserPreferences]
+					
 				} else {
 					tk_messageBox -title "Settings were reset" -message "Your settings were reset to defaults because of an update of BessyHDFViewer."
 				}
