@@ -59,12 +59,17 @@ DeepMerge { ImageDetectorFilePathRules }
 
 ImageDetectorFilePathRules {
 	
-	Pilatus__FileName {
+	Pilatus__FullFileName {
 		regex {.}
 		exprlist {$img}
 		fmtstring {%s}
 	}
 
+	WAXS__FullFileName {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
 
 	Pilatus_filename {
 		regex {.}
