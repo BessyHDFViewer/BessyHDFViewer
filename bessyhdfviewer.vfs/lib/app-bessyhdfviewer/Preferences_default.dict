@@ -59,6 +59,18 @@ DeepMerge { ImageDetectorFilePathRules }
 
 ImageDetectorFilePathRules {
 	
+	Pilatus__FullFileName_RBV {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
+
+	WAXS__FullFileName_RBV {
+		regex {.}
+		exprlist {$img}
+		fmtstring {%s}
+	}
+
 	Pilatus__FullFileName {
 		regex {.}
 		exprlist {$img}
