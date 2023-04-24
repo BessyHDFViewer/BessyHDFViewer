@@ -265,7 +265,8 @@ namespace eval BessyHDFViewer {
 		set w(bbar) [ttk::frame $w(listfr).bbar]
 		set w(bhome) [ttk::button $w(bbar).bhome -text "Home" -image [IconGet go-home] -compound left -command [list $w(filelist) goHome]]
 		set w(bupwards) [ttk::button $w(bbar).bupwards -text "Parent" -image [IconGet go-up] -compound left -command [list $w(filelist) goUp]]
-		set w(brefresh) [ttk::button $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left  -command [list $w(filelist) RefreshRequest]]
+		set w(brefresh) [optionbutton $w(bbar).brefresh -text "Refresh" -image [IconGet view-refresh] -compound left \
+							-style TButton -command ${ns}::RefreshList -values {"Soft refresh" "Force refresh"}]
 		set w(dumpButton) [ttk::button $w(bbar).dumpbut -command ${ns}::ExportCmd -text "Export" -image [IconGet document-export] -compound left]
 		set w(bsearch) [ttk::button $w(bbar).bsearch -command ${ns}::SearchCmd -text "Search" -image [IconGet dialog-search] -compound left]
 
@@ -1031,12 +1032,31 @@ namespace eval BessyHDFViewer {
 		tooltip::tooltip $w(filterbut) $msg
 	}
 
+
+	proc RefreshList {{idx 0}} {
+		variable w
+		variable ForceUpdate
+		switch $idx {
+			0 { # Soft refresh
+				set ForceUpdate false
+			}
+			1 { # hard refresh - read all HDF files
+				set ForceUpdate true
+			}
+		}
+
+		$w(filelist) RefreshRequest
+
+	}
+
+
 	proc ClassifyHDF {type fn} {
 		variable w
 		variable ActiveColumns
 		variable IconClassMap
 		variable filterexpression
 		variable filterenabled
+		variable ForceUpdate
 		
 		if {[catch {file mtime $fn} mtime]} {
 			# could not get mtime - something is wrong
@@ -1061,7 +1081,7 @@ namespace eval BessyHDFViewer {
 
 		# check cache
 		set metainfo [FindCache $fn $mtime]
-		if {[llength $metainfo] == 0} {
+		if {([llength $metainfo] == 0) || $ForceUpdate} {
 			# the file was not found in the cache, or the mtime was different
 			# read the file and update the cache
 			# puts "$fn $mtime not found in cache"
@@ -2303,8 +2323,12 @@ namespace eval BessyHDFViewer {
 		}
 	}
 
+	variable ForceUpdate false
+
 	proc OpenFinished {} {
 		variable w
+		variable ForceUpdate
+
 		$w(progbar) configure -value 0
 		# sometimes tk busy fails - simply catch the error
 		if {[catch { tk_busy forget . } err]} {
@@ -2314,6 +2338,8 @@ namespace eval BessyHDFViewer {
 		}
 
 		FilterFinish
+		set ForceUpdate false
+
 		nohup {HDFCache eval COMMIT}
 	}
 
