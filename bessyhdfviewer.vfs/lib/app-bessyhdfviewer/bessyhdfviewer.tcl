@@ -2599,13 +2599,15 @@ namespace eval BessyHDFViewer {
 
 			proc last {list} { lindex $list end }
 
-			proc mean {list} { expr {[sum $list]/[count $list]} }
+			proc mean {list} { set flist [filternan $list]; expr {[sum $flist]/[count $flist]} }
 
-			proc truncmean {quant list} {
+			proc truncmean {quant nlist} {
 				# compute a truncated mean
 				# which discards quant amount of the data
 				# at the low and high end and computes the mean
 				# of the remaining data
+				
+				set list [filternan $flist]
 				
 				set count [llength $list]
 				
@@ -2629,9 +2631,21 @@ namespace eval BessyHDFViewer {
 				return $result
 			}
 
-			proc min {list} { tcl::mathfunc::min {*}$list }
-
-			proc max {list} { tcl::mathfunc::max {*}$list }
+			proc min {list} { 
+				set flist [filternan $list]
+				if {[llength $flist] >=1} {
+					return [tcl::mathfunc::min {*}$flist]
+				}
+				return NaN
+			}
+			
+			proc max {list} { 
+				set flist [filternan $list]
+				if {[llength $flist] >=1} {
+					return [tcl::mathfunc::min {*}$flist]
+				}
+				return NaN
+			}
 	 
 			proc count {list} { llength $list }
 		} 
