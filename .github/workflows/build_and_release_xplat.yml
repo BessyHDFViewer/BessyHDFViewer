@@ -15,12 +15,12 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [macos-10.15, ubuntu-18.04, windows-2019]
+                os: [macos-12, ubuntu-20.04, windows-2022]
         steps:
             - name: checkout repo
               uses: actions/checkout@v2
             - name: Install git sdk
-              if: ${{ matrix.os == 'windows-2019' }}
+              if: ${{ matrix.os == 'windows-2022' }}
               uses: git-for-windows/setup-git-for-windows-sdk@v1
               with:
                 flavor: full
@@ -29,15 +29,15 @@ jobs:
               run: ./make-dependencies.sh
 
             - name: Create Binary Windows
-              if: ${{ matrix.os == 'windows-2019' }}
+              if: ${{ matrix.os == 'windows-2022' }}
               run: make winapp
 
             - name: Create Binary Linux
-              if: ${{ matrix.os == 'ubuntu-18.04' }}
+              if: ${{ matrix.os == 'ubuntu-20.04' }}
               run: make linuxapp
 
             - name: Create Binary macOS
-              if: ${{ matrix.os == 'macos-10.15' }}
+              if: ${{ matrix.os == 'macos-12' }}
               run: make macapp
               
             - name: upload result
