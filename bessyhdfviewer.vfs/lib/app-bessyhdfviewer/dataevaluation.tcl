@@ -1213,14 +1213,15 @@ namespace eval DataEvaluation {
 			BessyHDFViewer::dict_assign $result xmin xmax ymin ymax
 		}
 
-		set xformula [if_exists BessyHDFViewer::xformat(0) ""]
-		set yformula [if_exists BessyHDFViewer::yformat(0) ""]
+		# parse the format of first plotting formula into nominator / denominator
+		set xyformulae $BessyHDFViewer::xyformats
+		lassign $xyformulae xformula yformula
 
 		lassign [parseformula $xformula] xnom xdenom
 		lassign [parseformula $yformula] ynom ydenom
 
 		foreach var {xmin xmax ymin ymax hdfs hdf1 
-					xformula yformula 
+					xformula yformula xyformulae
 					xnom xdenom ynom ydenom} {
 			set ${pns}::$var [set $var]
 		}

@@ -1634,7 +1634,8 @@ namespace eval BessyHDFViewer {
 	variable xformatlist {}
 	variable yformatlist {}
 	variable oldHDFFiles {}
-	
+	variable xyformats {}
+
 	variable RePlotFlag false
 	proc DisplayPlot {args} {
 		variable w
@@ -1650,6 +1651,7 @@ namespace eval BessyHDFViewer {
 		variable oldHDFFiles
 		variable Nformats
 		variable aclist
+		variable xyformats
 
 		variable plotstylecache
 		
