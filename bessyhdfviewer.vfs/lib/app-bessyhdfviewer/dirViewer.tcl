@@ -349,9 +349,13 @@ namespace eval dirViewer {} {
 				}
 
 				if {$options(-classifycommand) != {}} {
-					set class [uplevel #0 $options(-classifycommand) [list directory $dirname]]
+					if {[catch {uplevel #0 $options(-classifycommand) [list directory $dirname]} class]} {
+						puts stderr "Classifier error: $class"
+						# in case the classifier fails, set the default icon
+						set class [$self classifydefault directory $dirname]
+					}
 				} else {
-					set class [$self classifydefault [list directory $dirname]]
+					set class [$self classifydefault directory $dirname]
 				}
 
 				lappend itemList [list [list directory $dirtail] {*}$class $dirname]
@@ -365,9 +369,13 @@ namespace eval dirViewer {} {
 				set tail [file tail $fn]
 				
 				if {$options(-classifycommand) != {}} {
-					set class [uplevel #0 $options(-classifycommand) [list file $fullname]]
+					if {[catch {uplevel #0 $options(-classifycommand) [list file $fullname]} class]} {
+						puts stderr "Classifier error: $class"
+						# in case the classifier fails, set the default icon
+						set  class [$self classifydefault file $fullname]
+					}
 				} else {
-					set class [$self classifydefault [list file $fullname]]
+					set class [$self classifydefault file $fullname]
 				}
 				
 				# if the classification is SKIP, don't show this file
@@ -539,7 +547,7 @@ namespace eval dirViewer {} {
 
 				}
 			} err]} {
-				puts stderr "Error in handling inotify event: $err"
+				puts stderr "Error in handling inotify event: $err $::errorInfo"
 			}
 		}
 
@@ -612,8 +620,10 @@ namespace eval dirViewer {} {
 			}
 		}
 
-		proc classifydefault {type fn} {
-			return [BessyHDFViewer::IconGet unknown]
+		method classifydefault {pathspec what} {
+			set emptycols [lmap x $options(-columns) {string cat}] 
+			lappend emptycols [BessyHDFViewer::IconGet unknown]
+			return $emptycols
 		}
 
 		#------------------------------------------------------------------------------
