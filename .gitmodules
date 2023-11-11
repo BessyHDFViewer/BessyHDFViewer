@@ -1,0 +1,3 @@
+[submodule "bessyhdfviewer.vfs/lib/ukaz"]
+	path = bessyhdfviewer.vfs/lib/ukaz
+	url = https://github.com/auriocus/ukaz.git

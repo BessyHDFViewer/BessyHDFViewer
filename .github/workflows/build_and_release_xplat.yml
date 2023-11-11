@@ -19,6 +19,8 @@ jobs:
         steps:
             - name: checkout repo
               uses: actions/checkout@v2
+              with:
+                submodules: recursive
             - name: Install git sdk
               if: ${{ matrix.os == 'windows-2022' }}
               uses: git-for-windows/setup-git-for-windows-sdk@v1
