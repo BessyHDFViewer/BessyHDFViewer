@@ -344,6 +344,22 @@ namespace eval BessyHDFViewer {
 			-command [list ${ns}::PlotProperties]]
 		variable ylog 0
 		tooltip::tooltip $w(ylog) "Switch logscale for y-axis"
+		
+		set w(y2axis0) [ttk::checkbutton $w(axebar).y2axis -variable ${ns}::y2axis(0) -style Toolbutton \
+			-image [list [IconGet yaxis] selected [IconGet y2axis]] \
+			-command [list ${ns}::PlotProperties]]
+		set ${ns}::y2axis(0) 0
+		
+		set w(zlbl) [ttk::label $w(axebar).zlbl -text "Z axis:"]
+		set w(zent0) [ttk::combobox $w(axebar).zent -textvariable ${ns}::zformat(0) -exportselection 0]
+		set w(zlog) [ttk::checkbutton $w(axebar).zlog -variable ${ns}::zlog -style Toolbutton \
+			-image [list [IconGet linscale] selected [IconGet logscale]] \
+			-command [list ${ns}::PlotProperties]]
+		variable zlog 0
+		variable zformat
+		set zformat(0) ""
+		tooltip::tooltip $w(zlog) "Switch logscale for z-axis (color)"
+		
 
 		set w(gridon) [ttk::checkbutton $w(axebar).grid -variable ${ns}::gridon -style Toolbutton \
 			-image [IconGet grid] \
@@ -366,14 +382,18 @@ namespace eval BessyHDFViewer {
 
 		bind $w(xent0) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent0) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
+		bind $w(zent0) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		AutoComplete $w(xent0) -aclist {Energy Row}
 		AutoComplete $w(yent0) -aclist {Energy Row}
+		AutoComplete $w(zent0) -aclist {Energy Row}
 		bind $w(xent0) <Return> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent0) <Return> [list ${ns}::DisplayPlot -explicit true]
+		bind $w(zent0) <Return> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(xlbl) <1> ${ns}::ConsoleShow
 
-		grid $w(addrow) $w(xlbl) $w(xlog) $w(xent0) $w(ylbl) $w(ylog) $w(yent0) $w(gridon) \
+		grid $w(addrow) $w(xlbl) $w(xlog) $w(xent0) $w(ylbl) $w(y2axis0) $w(ylog) $w(yent0) $w(gridon) \
 			$w(keep) $w(keepformat) $w(keepzoom) -sticky ew
+		grid x  x  x x $w(zlbl) x $w(zlog) $w(zent0) -sticky ew
 		variable Nformats 1
 
 		grid columnconfigure $w(axebar) $w(xent0) -weight 1
@@ -468,27 +488,42 @@ namespace eval BessyHDFViewer {
 		variable ns
 		variable xformat
 		variable yformat
+		variable zformat
 		variable xformatlist
 		variable yformatlist
+		variable zformatlist
+
 		variable aclist
 
 		set i $Nformats
 		incr Nformats
 		set w(xlbl$i) [ttk::label $w(axebar).xlbl$i -text "X axis"]
 		set w(ylbl$i) [ttk::label $w(axebar).ylbl$i -text "Y axis"]
+		set w(zlbl$i) [ttk::label $w(axebar).zlbl$i -text "Z axis"]
 		set w(xent$i) [ttk::combobox $w(axebar).xent$i -textvariable ${ns}::xformat($i) -exportselection 0 -values $xformatlist]
 		set w(yent$i) [ttk::combobox $w(axebar).yent$i -textvariable ${ns}::yformat($i) -exportselection 0 -values $yformatlist]
+		set w(zent$i) [ttk::combobox $w(axebar).yent$i -textvariable ${ns}::zformat($i) -exportselection 0 -values $zformatlist]
+		
+		set w(y2axis$i) [ttk::checkbutton $w(axebar).y2axis -variable ${ns}::y2axis($i) -style Toolbutton \
+			-image [list [IconGet yaxis] selected [IconGet y2axis]] \
+			-command [list ${ns}::DisplayPlot]]
+		set ${ns}::y2axis(0) 0
+
 
 		set xformat($i) ""
 		set yformat($i) ""
-		grid x $w(xlbl$i) x $w(xent$i) $w(ylbl$i) x $w(yent$i) -sticky nsew
+		set zformat($i) ""
+		grid x $w(xlbl$i) x $w(xent$i) $w(ylbl$i) x $w(y2axis$i) $w(yent$i) -sticky nsew
 		
 		bind $w(xent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
+		bind $w(zent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		AutoComplete $w(xent$i) -aclist $aclist
 		AutoComplete $w(yent$i) -aclist $aclist
+		AutoComplete $w(zent$i) -aclist $aclist
 		bind $w(xent$i) <Return> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent$i) <Return> [list ${ns}::DisplayPlot -explicit true]
+		bind $w(zent$i) <Return> [list ${ns}::DisplayPlot -explicit true]
 	}
 
 
@@ -1629,12 +1664,18 @@ namespace eval BessyHDFViewer {
 		regexp {\S} $string
 	}
 
+	proc only_whitespace {string} {
+		expr {![regexp {\S} $string]}
+	}
+
 	variable aclist {Energy Row}
 	variable plotstylecache {}
 	variable xformatlist {}
 	variable yformatlist {}
+	variable zformatlist {}
 	variable oldHDFFiles {}
 	variable xyformats {}
+	variable zformats {}
 
 	variable RePlotFlag false
 	proc DisplayPlot {args} {
@@ -1644,8 +1685,10 @@ namespace eval BessyHDFViewer {
 		variable HDFFiles
 		variable xformat
 		variable yformat
+		variable zformat
 		variable xformatlist
 		variable yformatlist
+		variable zformatlist
 		variable keepformat
 		variable keepzoom
 		variable oldHDFFiles
@@ -1759,6 +1802,8 @@ namespace eval BessyHDFViewer {
 			set yformatlist {}
 		}
 
+		set zformatlist {}
+
 		# append history to format entries
 		# if the value in xformat or yformat is no standard axis, add to dropdown list
 		set formathistory [PreferenceGet FormatHistory {x {} y {}}] 
@@ -1794,10 +1839,12 @@ namespace eval BessyHDFViewer {
 
 		lappend xformatlist {*}[lreverse [dict keys [dict get $formathistory x]]]
 		lappend yformatlist {*}[lreverse [dict keys [dict get $formathistory y]]]
+		lappend zformatlist {*}[lreverse [dict keys [dict get $formathistory y]]]
 
 		for {set i 0} {$i < $Nformats} {incr i} {
 			$w(xent$i) configure -values $xformatlist
 			$w(yent$i) configure -values $yformatlist
+			$w(zent$i) configure -values $zformatlist
 		}
 
 		if {$explicit && $focus=="x"} {
@@ -1827,15 +1874,16 @@ namespace eval BessyHDFViewer {
 					lappend xyformats $xformat(0)
 				}
 				lappend xyformats $yformat($i)
+				lappend zformats $zformat($i)
 
 				incr Nvalidformats
 			}
 		}
 		
 		# enumerate data sets to plot and create titles
-		set plotlabels {}
+		set plotformats {}
 		foreach fn $HDFFiles {
-			foreach {xf yf} $xyformats {
+			foreach {xf yf} $xyformats zf $zformats {
 				set label [file tail $fn]
 				if {$Nvalidformats > 1 } {
 					if {$xfcounter > 1} {
@@ -1844,7 +1892,10 @@ namespace eval BessyHDFViewer {
 						append label " $yf"
 					}
 				}
-				dict lappend plotlabels $fn $xf $yf $label
+				if {[only_whitespace $zf]} {
+					set zf ""
+				}
+				dict lappend plotformats $fn $xf $yf $zf $label
 
 			}
 		}
@@ -1855,8 +1906,8 @@ namespace eval BessyHDFViewer {
 		}
 
 		set styles {}
-		dict for {fn fmtlist} $plotlabels {
-			foreach {xf yf label} $fmtlist {
+		dict for {fn fmtlist} $plotformats {
+			foreach {xf yf zf label} $fmtlist {
 				if {[dict exists $plotstylecache $label]} {
 					# first reserve all styles with the same style that has been used before
 					set style [dict get $plotstylecache $label]
@@ -1870,8 +1921,8 @@ namespace eval BessyHDFViewer {
 		set plotstylesfree [dict keys [dict filter $plotstylesfree value 1]]
 
 		# 2nd pass: alloc styles for remaining files
-		dict for {fn fmtlist} $plotlabels {
-			foreach {xf yf label} $fmtlist {
+		dict for {fn fmtlist} $plotformats {
+			foreach {xf yf zf label} $fmtlist {
 				if {[llength $plotstylesfree]==0} { break }
 
 				if {![dict exists $styles $label]} {
@@ -1921,7 +1972,7 @@ namespace eval BessyHDFViewer {
 		variable HDFsshown {}
 
 	
-		dict for {fn fmtlist} $plotlabels {
+		dict for {fn fmtlist} $plotformats {
 			if {$nfiles != 1} {
 				# for multiple files, read the content to hdfdata
 				# for single file, it's already there
@@ -1929,18 +1980,38 @@ namespace eval BessyHDFViewer {
 				set hdfdata [bessy_reshape $fn -shallow]
 			}
 			
-			foreach {xf yf title} $fmtlist {
+			foreach {xf yf zf title} $fmtlist {
 				set fmtlist [list $xf $yf]
+				if {$zf ne ""} {
+					lappend fmtlist $zf
+				}
 				if {![dict exists $styles $title]} { continue }
 
 				set style [dict get $styles $title]
 				set data [SELECTdata $fmtlist $hdfdata -allnan true -allnumeric true -extravars $extravars]
 				
 				# reduce to flat list
-				set data [concat {*}$data]
+				set flatdata [concat {*}$data]
+
+				# for 3D plots, zdata must be spliced off the list
+				if {$zf ne ""} {
+					set data {}
+					set zdata {}
+					foreach {x y z} $data {
+						lappend data $x $y
+						lappend zdata $z
+					}
+				} else {
+					set data $flatdata
+				}
+
 
 				if {[llength $data] >= 2} {
-					set id [$w(Graph) plot $data with {*}$style title $title]
+					if {$zf eq ""} {
+						set id [$w(Graph) plot $data with {*}$style title $title]
+					} else {
+						set id [$w(Graph) plot $data zdata $zdata with {*}$style varying color title $title]
+					}
 					lappend plotid $id
 					dict set HDFsshown $id $fn
 				}
@@ -1965,6 +2036,7 @@ namespace eval BessyHDFViewer {
 		for {set i 0} {$i < $Nformats} {incr i} {
 			$w(xent$i) configure -aclist $aclist
 			$w(yent$i) configure -aclist $aclist
+			$w(zent$i) configure -aclist $aclist
 		}
 
 		HighlightRefresh
