@@ -1973,6 +1973,7 @@ namespace eval BessyHDFViewer {
 		if {!$keepzoom} {
 			$w(Graph) set auto x
 			$w(Graph) set auto y
+			$w(Graph) set auto y2 
 		}
 
 		# get units / axis labels for the current plot
