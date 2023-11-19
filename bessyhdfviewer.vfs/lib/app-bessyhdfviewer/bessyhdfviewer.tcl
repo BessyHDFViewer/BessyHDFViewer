@@ -355,9 +355,15 @@ namespace eval BessyHDFViewer {
 		set w(zlog) [ttk::checkbutton $w(axebar).zlog -variable ${ns}::zlog -style Toolbutton \
 			-image [list [IconGet linscale] selected [IconGet logscale]] \
 			-command [list ${ns}::PlotProperties]]
+		set w(zraster0) [ttk::checkbutton $w(axebar).zraster0 -variable ${ns}::zraster(0) -style Toolbutton \
+			-image [list [IconGet 2Dnoraster] selected [IconGet 2Draster]] \
+			-command [list ${ns}::DisplayPlot -explicit true] -compound right]
+
 		variable zlog 0
 		variable zformat
+		variable zraster
 		set zformat(0) ""
+		set zraster(0) 0
 		tooltip::tooltip $w(zlog) "Switch logscale for z-axis (color)"
 		
 
@@ -393,7 +399,7 @@ namespace eval BessyHDFViewer {
 
 		grid $w(addrow) $w(xlbl) $w(xlog) $w(xent0) $w(ylbl) $w(y2axis0) $w(ylog) $w(yent0) $w(gridon) \
 			$w(keep) $w(keepformat) $w(keepzoom) -sticky ew
-		grid x  x  x x $w(zlbl) x $w(zlog) $w(zent0) -sticky ew
+		grid x  x  x $w(zraster0) $w(zlbl) x $w(zlog) $w(zent0) -sticky ew
 		variable Nformats 1
 
 		grid columnconfigure $w(axebar) $w(xent0) -weight 1
@@ -489,6 +495,7 @@ namespace eval BessyHDFViewer {
 		variable xformat
 		variable yformat
 		variable zformat
+		variable zraster
 		variable xformatlist
 		variable yformatlist
 		variable zformatlist
@@ -502,18 +509,24 @@ namespace eval BessyHDFViewer {
 		set w(zlbl$i) [ttk::label $w(axebar).zlbl$i -text "Z axis"]
 		set w(xent$i) [ttk::combobox $w(axebar).xent$i -textvariable ${ns}::xformat($i) -exportselection 0 -values $xformatlist]
 		set w(yent$i) [ttk::combobox $w(axebar).yent$i -textvariable ${ns}::yformat($i) -exportselection 0 -values $yformatlist]
-		set w(zent$i) [ttk::combobox $w(axebar).yent$i -textvariable ${ns}::zformat($i) -exportselection 0 -values $zformatlist]
+		set w(zent$i) [ttk::combobox $w(axebar).zent$i -textvariable ${ns}::zformat($i) -exportselection 0 -values $zformatlist]
 		
-		set w(y2axis$i) [ttk::checkbutton $w(axebar).y2axis -variable ${ns}::y2axis($i) -style Toolbutton \
+		set w(y2axis$i) [ttk::checkbutton $w(axebar).y2axis$i -variable ${ns}::y2axis($i) -style Toolbutton \
 			-image [list [IconGet yaxis] selected [IconGet y2axis]] \
-			-command [list ${ns}::DisplayPlot]]
+			-command [list ${ns}::DisplayPlot -explicit true]]
 		set ${ns}::y2axis(0) 0
 
+		set w(zraster$i) [ttk::checkbutton $w(axebar).zraster$i -variable ${ns}::zraster($i) -style Toolbutton \
+			-image [list [IconGet 2Dnoraster] selected [IconGet 2Draster]] \
+			-command [list ${ns}::DisplayPlot -explicit true] -compound right]
+
+		set zraster($i) 0
 
 		set xformat($i) ""
 		set yformat($i) ""
 		set zformat($i) ""
-		grid x $w(xlbl$i) x $w(xent$i) $w(ylbl$i) x $w(y2axis$i) $w(yent$i) -sticky nsew
+		grid x $w(xlbl$i) x $w(xent$i) $w(ylbl$i) $w(y2axis$i) x $w(yent$i) -sticky nsew
+		grid x  x  x $w(zraster$i) $w(zlbl$i) x x $w(zent$i) -sticky ew
 		
 		bind $w(xent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
 		bind $w(yent$i) <<ComboboxSelected>> [list ${ns}::DisplayPlot -explicit true]
@@ -1652,11 +1665,13 @@ namespace eval BessyHDFViewer {
 	proc PlotProperties {} {
 		variable xlog
 		variable ylog
+		variable zlog
 		variable gridon
 		variable w
 
 		$w(Graph) set log x $xlog
 		$w(Graph) set log y $ylog
+		$w(Graph) set log z $zlog
 		$w(Graph) set grid $gridon
 	}
 
@@ -1686,6 +1701,7 @@ namespace eval BessyHDFViewer {
 		variable xformat
 		variable yformat
 		variable zformat
+		variable zraster
 		variable xformatlist
 		variable yformatlist
 		variable zformatlist
@@ -1789,10 +1805,12 @@ namespace eval BessyHDFViewer {
 			if {$resetformat} {
 				set xformat(0) $stdx
 				set yformat(0) $stdy
+				set zformat(0) ""
 
 				for {set i 1} {$i < $Nformats} {incr i} {
 					set xformat($i) ""
 					set yformat($i) ""
+					set zformat($i) ""
 				}
 			}
 
@@ -1863,6 +1881,8 @@ namespace eval BessyHDFViewer {
 		
 		# enumerate data to plot
 		set xyformats {}
+		set zformats {}
+		set raster {}
 		set Nvalidformats 0
 		set xfcounter 0
 		for {set i 0} {$i < $Nformats} {incr i} {
@@ -1875,7 +1895,7 @@ namespace eval BessyHDFViewer {
 				}
 				lappend xyformats $yformat($i)
 				lappend zformats $zformat($i)
-
+				lappend raster $zraster($i)
 				incr Nvalidformats
 			}
 		}
@@ -1883,7 +1903,7 @@ namespace eval BessyHDFViewer {
 		# enumerate data sets to plot and create titles
 		set plotformats {}
 		foreach fn $HDFFiles {
-			foreach {xf yf} $xyformats zf $zformats {
+			foreach {xf yf} $xyformats zf $zformats zr $raster {
 				set label [file tail $fn]
 				if {$Nvalidformats > 1 } {
 					if {$xfcounter > 1} {
@@ -1895,7 +1915,7 @@ namespace eval BessyHDFViewer {
 				if {[only_whitespace $zf]} {
 					set zf ""
 				}
-				dict lappend plotformats $fn $xf $yf $zf $label
+				dict lappend plotformats $fn $xf $yf $zf $zr $label
 
 			}
 		}
@@ -1907,7 +1927,7 @@ namespace eval BessyHDFViewer {
 
 		set styles {}
 		dict for {fn fmtlist} $plotformats {
-			foreach {xf yf zf label} $fmtlist {
+			foreach {xf yf zf zr label} $fmtlist {
 				if {[dict exists $plotstylecache $label]} {
 					# first reserve all styles with the same style that has been used before
 					set style [dict get $plotstylecache $label]
@@ -1922,7 +1942,7 @@ namespace eval BessyHDFViewer {
 
 		# 2nd pass: alloc styles for remaining files
 		dict for {fn fmtlist} $plotformats {
-			foreach {xf yf zf label} $fmtlist {
+			foreach {xf yf zf zr label} $fmtlist {
 				if {[llength $plotstylesfree]==0} { break }
 
 				if {![dict exists $styles $label]} {
@@ -1980,7 +2000,7 @@ namespace eval BessyHDFViewer {
 				set hdfdata [bessy_reshape $fn -shallow]
 			}
 			
-			foreach {xf yf zf title} $fmtlist {
+			foreach {xf yf zf zr title} $fmtlist {
 				set fmtlist [list $xf $yf]
 				if {$zf ne ""} {
 					lappend fmtlist $zf
@@ -1997,7 +2017,7 @@ namespace eval BessyHDFViewer {
 				if {$zf ne ""} {
 					set data {}
 					set zdata {}
-					foreach {x y z} $data {
+					foreach {x y z} $flatdata {
 						lappend data $x $y
 						lappend zdata $z
 					}
@@ -2010,7 +2030,11 @@ namespace eval BessyHDFViewer {
 					if {$zf eq ""} {
 						set id [$w(Graph) plot $data with {*}$style title $title]
 					} else {
-						set id [$w(Graph) plot $data zdata $zdata with {*}$style varying color title $title]
+						if {$zr} {
+							set id [$w(Graph) plot $data zdata $zdata with raster title $title]
+						} else {
+							set id [$w(Graph) plot $data zdata $zdata with {*}$style varying color title $title]
+						}
 					}
 					lappend plotid $id
 					dict set HDFsshown $id $fn

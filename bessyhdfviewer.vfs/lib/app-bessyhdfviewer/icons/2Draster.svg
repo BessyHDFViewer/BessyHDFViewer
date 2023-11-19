@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="32"
+   height="32"
+   id="svg2"
+   version="1.1"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   sodipodi:docname="2Draster.svg"
+   inkscape:export-filename="/home/chris/Programmieren/BessyHDFViewer/BessyHDFViewer/bessyhdfviewer.vfs/lib/app-bessyhdfviewer/icons/2Draster.png"
+   inkscape:export-xdpi="48"
+   inkscape:export-ydpi="48">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="11.2"
+     inkscape:cx="8.8215513"
+     inkscape:cy="10.739778"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:window-width="1229"
+     inkscape:window-height="733"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:document-rotation="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2985"
+       empspacing="4"
+       visible="true"
+       enabled="true"
+       snapvisiblegridlinesonly="true"
+       dotted="false" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1020.3622)">
+    <rect
+       style="color:#000000;fill:#ffffff;fill-opacity:0.65873012;fill-rule:nonzero;stroke:none;stroke-width:2;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3800-6"
+       width="30"
+       height="30"
+       x="1"
+       y="1021.3622" />
+    <rect
+       style="fill:#ff0000;stroke-width:1.08333"
+       id="rect835"
+       width="13"
+       height="13.000017"
+       x="3"
+       y="1023.3622" />
+    <rect
+       style="fill:#008000;stroke-width:1.08333"
+       id="rect837"
+       width="13"
+       height="12.999983"
+       x="3"
+       y="1036.3622" />
+    <rect
+       style="fill:#ffff00;stroke-width:1.08333"
+       id="rect839"
+       width="13"
+       height="13.000017"
+       x="16"
+       y="1023.3622" />
+    <rect
+       style="fill:#0000ff;stroke-width:1.08333"
+       id="rect841"
+       width="13"
+       height="12.999983"
+       x="16"
+       y="1036.3622" />
+  </g>
+</svg>
