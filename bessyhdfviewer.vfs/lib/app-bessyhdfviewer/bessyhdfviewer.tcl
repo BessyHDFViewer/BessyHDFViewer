@@ -347,7 +347,7 @@ namespace eval BessyHDFViewer {
 		
 		set w(y2axis0) [ttk::checkbutton $w(axebar).y2axis -variable ${ns}::y2axis(0) -style Toolbutton \
 			-image [list [IconGet yaxis] selected [IconGet y2axis]] \
-			-command [list ${ns}::PlotProperties]]
+			-command [list ${ns}::DisplayPlot -explicit true]]
 		set ${ns}::y2axis(0) 0
 		
 		set w(zlbl) [ttk::label $w(axebar).zlbl -text "Z axis:"]
@@ -514,7 +514,7 @@ namespace eval BessyHDFViewer {
 		set w(y2axis$i) [ttk::checkbutton $w(axebar).y2axis$i -variable ${ns}::y2axis($i) -style Toolbutton \
 			-image [list [IconGet yaxis] selected [IconGet y2axis]] \
 			-command [list ${ns}::DisplayPlot -explicit true]]
-		set ${ns}::y2axis(0) 0
+		set ${ns}::y2axis($i) 0
 
 		set w(zraster$i) [ttk::checkbutton $w(axebar).zraster$i -variable ${ns}::zraster($i) -style Toolbutton \
 			-image [list [IconGet 2Dnoraster] selected [IconGet 2Draster]] \
@@ -1701,6 +1701,7 @@ namespace eval BessyHDFViewer {
 		variable xformat
 		variable yformat
 		variable zformat
+		variable y2axis
 		variable zraster
 		variable xformatlist
 		variable yformatlist
@@ -1885,6 +1886,8 @@ namespace eval BessyHDFViewer {
 		set raster {}
 		set Nvalidformats 0
 		set xfcounter 0
+		set y1fcounter 0
+		set y2fcounter 0
 		for {set i 0} {$i < $Nformats} {incr i} {
 			if {[not_only_whitespace $yformat($i)]} {
 				if {[not_only_whitespace $xformat($i)]} {
@@ -1896,14 +1899,23 @@ namespace eval BessyHDFViewer {
 				lappend xyformats $yformat($i)
 				lappend zformats $zformat($i)
 				lappend raster $zraster($i)
+				lappend y2axes  $y2axis($i)
 				incr Nvalidformats
+
+				if {$y2axis($i)} {
+					incr y2fcounter
+					set y2fmt $yformat($i)
+				} else {
+					incr y1fcounter
+					set y1fmt $yformat($i) 
+				}
 			}
 		}
 		
 		# enumerate data sets to plot and create titles
 		set plotformats {}
 		foreach fn $HDFFiles {
-			foreach {xf yf} $xyformats zf $zformats zr $raster {
+			foreach {xf yf} $xyformats zf $zformats zr $raster yax $y2axes {
 				set label [file tail $fn]
 				if {$Nvalidformats > 1 } {
 					if {$xfcounter > 1} {
@@ -1915,7 +1927,12 @@ namespace eval BessyHDFViewer {
 				if {[only_whitespace $zf]} {
 					set zf ""
 				}
-				dict lappend plotformats $fn $xf $yf $zf $zr $label
+				if {$yax} {
+					set yax y2
+				} else {
+					set yax y
+				}
+				dict lappend plotformats $fn $xf $yf $zf $zr $yax $label
 
 			}
 		}
@@ -1927,7 +1944,7 @@ namespace eval BessyHDFViewer {
 
 		set styles {}
 		dict for {fn fmtlist} $plotformats {
-			foreach {xf yf zf zr label} $fmtlist {
+			foreach {xf yf zf zr yax label} $fmtlist {
 				if {[dict exists $plotstylecache $label]} {
 					# first reserve all styles with the same style that has been used before
 					set style [dict get $plotstylecache $label]
@@ -1942,7 +1959,7 @@ namespace eval BessyHDFViewer {
 
 		# 2nd pass: alloc styles for remaining files
 		dict for {fn fmtlist} $plotformats {
-			foreach {xf yf zf zr label} $fmtlist {
+			foreach {xf yf zf zr yax label} $fmtlist {
 				if {[llength $plotstylesfree]==0} { break }
 
 				if {![dict exists $styles $label]} {
@@ -1970,17 +1987,25 @@ namespace eval BessyHDFViewer {
 			$w(Graph) set xlabel ""
 		}
 		
-		if {$Nvalidformats == 1} {
-			if {[catch {dict get $plotdata $yformat(0) attrs Unit} yunit]} {
-				$w(Graph) set ylabel "$yformat(0)"
+		if {$y1fcounter == 1} {
+			if {[catch {dict get $plotdata $y1fmt attrs Unit} yunit]} {
+				$w(Graph) set ylabel "$y1fmt"
 			} else {
-				$w(Graph) set ylabel "$yformat(0) ($yunit)"
+				$w(Graph) set ylabel "$y1fmt ($yunit)"
 			}
 		} else {
 			$w(Graph) set ylabel ""
 		}
-
-
+		
+		if {$y2fcounter == 1} {
+			if {[catch {dict get $plotdata $y2fmt attrs Unit} yunit]} {
+				$w(Graph) set y2label "$y2fmt"
+			} else {
+				$w(Graph) set y2label "$y2fmt ($yunit)"
+			}
+		} else {
+			$w(Graph) set y2label ""
+		}
 
 		
 		# plot the data
@@ -2000,7 +2025,7 @@ namespace eval BessyHDFViewer {
 				set hdfdata [bessy_reshape $fn -shallow]
 			}
 			
-			foreach {xf yf zf zr title} $fmtlist {
+			foreach {xf yf zf zr yax title} $fmtlist {
 				set fmtlist [list $xf $yf]
 				if {$zf ne ""} {
 					lappend fmtlist $zf
@@ -2028,7 +2053,7 @@ namespace eval BessyHDFViewer {
 
 				if {[llength $data] >= 2} {
 					if {$zf eq ""} {
-						set id [$w(Graph) plot $data with {*}$style title $title]
+						set id [$w(Graph) plot $data with {*}$style title $title yaxis $yax]
 					} else {
 						if {$zr} {
 							set id [$w(Graph) plot $data zdata $zdata with raster title $title]
