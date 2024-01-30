@@ -119,8 +119,21 @@ namespace eval SpectrumViewer {
 						dict set allspectra $fn $Pos $spectrometer $counts
 					}
 				}
-
-				dict set spectrometers $fn [dict keys $devices]
+				
+				set devicelist [dict keys $devices]
+				foreach device $devicelist {
+					# try to get calibration data
+					set basename [regsub {spectrum$} $device ""]
+					set caliblist [BessyHDFViewer::SELECTdata [list PosCounter ${basename}_CalO ${basename}_CalS ${basename}_CalQ] $hdfdata -allnan true]
+					# reformat into dict format
+					set calib {}
+					foreach {pc calo cals calq} [concat {*}$caliblist] {
+						dict set calib $pc CalO $calo
+						dict set calib $pc CalS $cals
+						dict set calib $pc CalQ $calq
+					}
+					dict set spectrometers $fn $device calib $calib
+				}
 
 				# check for data points with spectra
 				foreach {dpnr Pos}  [SmallUtils::enumerate $poscounter] {
@@ -136,14 +149,41 @@ namespace eval SpectrumViewer {
 		method export_spectra {dir} {
 			dict for {fn fndata} $allspectra {
 				dict for {pos posdata} $fndata {
-					dict for {spectrometer counts} $posdata {
+					puts "Exporting $pos"
+					dict for {spectrometer countlist} $posdata {
 						set base [file rootname [file tail $fn]]
 						set npos [format %05d $pos]
 						set outfn [file join $dir ${base}_${spectrometer}_${npos}.dat]
+						# find out calibration coefficients, if known
+						set calo [dict get $spectrometers $fn $spectrometer calib $pos CalO]
+						set cals [dict get $spectrometers $fn $spectrometer calib $pos CalS]
+						set calq [dict get $spectrometers $fn $spectrometer calib $pos CalQ]
+						
+						if {isfinite($calo) && isfinite($cals) && isfinite($calq)} {
+							set calibrated true
+						} else {
+							set calibrated false
+						}
+
 						set lines [list "# File = $fn"]
 						lappend lines "# Spectrometer = $spectrometer"
 						lappend lines "# PosCounter = $pos"
-						lappend lines {*}$counts
+						if {$calibrated} {
+							lappend lines "# Energy\tCounts"
+							set channel 0
+							foreach counts $countlist {
+								set energy [expr {$calo + $cals*$channel + $calq*$channel**2}]
+								incr channel
+								lappend lines "$energy\t$counts"
+							}
+						} else {
+							lappend lines "# Channel Counts"
+							set channel 0
+							foreach counts $countlist {
+								lappend lines "$channel\t$counts"
+								incr channel
+							}
+						}
 						fileutil::writeFile $outfn [join $lines \n]
 					}
 				}
@@ -357,9 +397,10 @@ namespace eval SpectrumViewer {
 				set first true
 				dict for {rname reg} $regions {
 					lassign [$reg getPosition] cmin cmax
-
-					set Ndevices [llength [dict get $spectrometers $fn]]
-					foreach spectrometer [dict get $spectrometers $fn] {
+					
+					set devicenames [dict keys [dict get $spectrometers $fn]]
+					set Ndevices [llength $devicenames]
+					foreach spectrometer $devicenames {
 						set column {}
 						foreach posc $counter {
 							lappend column [$self ROIeval $spectrum $spectrometer $posc $cmin $cmax]
