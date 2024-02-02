@@ -359,12 +359,18 @@ namespace eval BessyHDFViewer {
 			-image [list [IconGet 2Dnoraster] selected [IconGet 2Draster]] \
 			-command [list ${ns}::DisplayPlot -explicit true] -compound right]
 
+		set w(equalaxes) [ttk::checkbutton $w(axebar).equalaxes -variable ${ns}::equalaxes -text "Equal axes" \
+			-command ${ns}::PlotProperties]
+		
 		variable zlog 0
+		variable equalaxes 0
 		variable zformat
 		variable zraster
 		set zformat(0) ""
 		set zraster(0) 0
 		tooltip::tooltip $w(zlog) "Switch logscale for z-axis (color)"
+		tooltip::tooltip $w(equalaxes) "Set the same units for x and y axis\n(useful for raster images)"
+		tooltip::tooltip $w(zraster0) "Display 2D maps as raster instead of symbols"
 		
 
 		set w(gridon) [ttk::checkbutton $w(axebar).grid -variable ${ns}::gridon -style Toolbutton \
@@ -399,7 +405,7 @@ namespace eval BessyHDFViewer {
 
 		grid $w(addrow) $w(xlbl) $w(xlog) $w(xent0) $w(ylbl) $w(y2axis0) $w(ylog) $w(yent0) $w(gridon) \
 			$w(keep) $w(keepformat) $w(keepzoom) -sticky ew
-		grid x  x  x $w(zraster0) $w(zlbl) x $w(zlog) $w(zent0) -sticky ew
+		grid x  x  x x $w(zlbl) x $w(zlog) $w(zent0) $w(zraster0) x $w(equalaxes) - -sticky ew
 		variable Nformats 1
 
 		grid columnconfigure $w(axebar) $w(xent0) -weight 1
@@ -1667,11 +1673,14 @@ namespace eval BessyHDFViewer {
 		variable ylog
 		variable zlog
 		variable gridon
+		variable equalaxes
 		variable w
 
 		$w(Graph) set log x $xlog
 		$w(Graph) set log y $ylog
+		$w(Graph) set log y2 $ylog
 		$w(Graph) set log z $zlog
+		$w(Graph) set aspectsquare $equalaxes
 		$w(Graph) set grid $gridon
 	}
 
@@ -1974,6 +1983,7 @@ namespace eval BessyHDFViewer {
 			$w(Graph) set auto x
 			$w(Graph) set auto y
 			$w(Graph) set auto y2 
+			$w(Graph) set auto z
 		}
 
 		# get units / axis labels for the current plot
