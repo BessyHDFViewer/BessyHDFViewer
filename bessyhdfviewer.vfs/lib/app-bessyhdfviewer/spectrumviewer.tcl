@@ -22,6 +22,18 @@
 namespace eval SpectrumViewer {
 	namespace import ::SmallUtils::*
 	
+	proc transpose {matrix} {
+		set res {}
+		for {set j 0} {$j < [llength [lindex $matrix 0]]} {incr j} {
+			set newrow {}
+			foreach oldrow $matrix {
+				lappend newrow [lindex $oldrow $j]
+			}
+			lappend res $newrow
+		}
+		return $res
+	}
+	
 	proc Open {} {
 		spectrumviewer .spectrum
 	}
@@ -124,13 +136,14 @@ namespace eval SpectrumViewer {
 				foreach device $devicelist {
 					# try to get calibration data
 					set basename [regsub {spectrum$} $device ""]
-					set caliblist [BessyHDFViewer::SELECTdata [list PosCounter ${basename}_CalO ${basename}_CalS ${basename}_CalQ] $hdfdata -allnan true]
+					set caliblist [BessyHDFViewer::SELECTdata [list PosCounter ${basename}_CalO ${basename}_CalS ${basename}_CalQ ${basename}_lifeTime] $hdfdata -allnan true]
 					# reformat into dict format
 					set calib {}
-					foreach {pc calo cals calq} [concat {*}$caliblist] {
+					foreach {pc calo cals calq lifetime} [concat {*}$caliblist] {
 						dict set calib $pc CalO $calo
 						dict set calib $pc CalS $cals
 						dict set calib $pc CalQ $calq
+						dict set calib $pc LifeTime $lifetime
 					}
 					dict set spectrometers $fn $device calib $calib
 				}
@@ -158,32 +171,75 @@ namespace eval SpectrumViewer {
 						set calo [dict get $spectrometers $fn $spectrometer calib $pos CalO]
 						set cals [dict get $spectrometers $fn $spectrometer calib $pos CalS]
 						set calq [dict get $spectrometers $fn $spectrometer calib $pos CalQ]
+						set lifetime [dict get $spectrometers $fn $spectrometer calib $pos LifeTime]
 						
 						if {isfinite($calo) && isfinite($cals) && isfinite($calq)} {
 							set calibrated true
 						} else {
 							set calibrated false
 						}
+						
+						if {isfinite($lifetime) && ($lifetime > 0.0)} {
+							set normalize true
+						} else {
+							set normalize false
+						}
 
-						set lines [list "# File = $fn"]
-						lappend lines "# Spectrometer = $spectrometer"
-						lappend lines "# PosCounter = $pos"
+						set units {}
+						set header [list "# File = $fn"]
+						lappend header "# Spectrometer = $spectrometer"
+						lappend header "# PosCounter = $pos"
+	
 						if {$calibrated} {
-							lappend lines "# Energy\tCounts"
-							set channel 0
-							foreach counts $countlist {
-								set energy [expr {$calo + $cals*$channel + $calq*$channel**2}]
-								incr channel
-								lappend lines "$energy\t$counts"
+							lappend header "# CalO = $calo"
+							lappend header "# CalS = $cals"
+							lappend header "# CalQ = $calq"
+							dict set units Energy eV
+						}
+
+						if {$normalize} {
+							lappend header "# LifeTime = $lifetime"
+							dict set units Countrate s^-1
+						}
+
+						set datacols {}
+						if {$calibrated} {
+							for {set i 0} {$i<[llength $countlist]} {incr i} {
+								set energy [expr {$calo + $cals*$i + $calq*$i**2}]
+								dict lappend datacols Energy $energy
 							}
 						} else {
-							lappend lines "# Channel Counts"
-							set channel 0
-							foreach counts $countlist {
-								lappend lines "$channel\t$counts"
-								incr channel
+							for {set i 0} {$i<[llength $countlist]} {incr i} {
+								dict lappend datacols Channel $i
 							}
 						}
+
+						if {$normalize} {
+							foreach count $countlist {
+								dict lappend datacols Countrate [expr {double($count)/$lifetime}]
+							}
+						}
+						
+						dict set datacols Counts $countlist
+						
+						set lines $header
+						# append header with dataset description
+						if {$units ne {}} {
+							lappend lines "# Datasets:"
+							dict for {col unit} $units {
+								lappend lines "# \t$col:"
+								lappend lines "# \t\tUnit\t= $unit"
+							}
+						}
+
+						# append column names
+						set colnames [dict keys $datacols]
+						lappend lines "# [join $colnames \t]"
+
+						foreach dataline [transpose [dict values $datacols]] {
+							lappend lines [join $dataline \t]
+						}
+						
 						fileutil::writeFile $outfn [join $lines \n]
 					}
 				}
