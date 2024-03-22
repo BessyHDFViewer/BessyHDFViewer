@@ -1387,7 +1387,7 @@ namespace eval BessyHDFViewer {
 		}
 
 		# check Snapshot 
-		if {[dict exists $hdfdata SnapshotValues]} {
+		if {[dict exists $hdfdata SnapshotValues] && "Attributes" in $headerfmt} {
 			append result "# SnapshotValues:\n"
 			foreach category {Motor Detector Meta} {
 				if {[dict exists $hdfdata SnapshotValues $category]} {
