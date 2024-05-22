@@ -2749,6 +2749,19 @@ namespace eval BessyHDFViewer {
 		
 		catch {namespace delete ::GROUP}
 		namespace eval ::GROUP {
+			proc filternan {l} {
+				# return list where all NaN values are removed
+				# strict filter: remove everything that is not finite double value
+				set result {}
+				foreach v $l {
+					if {!isnan($v) && [string is double -strict $v]} {
+						lappend result $v
+					}
+				}
+				return $result
+			}
+
+			
 			proc join {sep list} {
 				# same as ::join, but with different order
 				::join $list $sep
@@ -2759,7 +2772,15 @@ namespace eval BessyHDFViewer {
 
 			proc last {list} { lindex $list end }
 
-			proc mean {list} { set flist [filternan $list]; expr {[sum $flist]/[count $flist]} }
+			proc mean {list} { 
+				set flist [filternan $list] 
+				set length [count $flist]
+				if {$length > 0 } {
+					return [expr {[sum $flist]/$length}]
+				} else {
+					return NaN
+				}
+			}
 
 			proc truncmean {quant nlist} {
 				# compute a truncated mean
