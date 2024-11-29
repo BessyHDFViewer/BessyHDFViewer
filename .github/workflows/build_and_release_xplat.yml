@@ -43,7 +43,7 @@ jobs:
               run: make macapp
               
             - name: upload result
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                 name: build-${{ matrix.os }}
                 path: dist/*
@@ -54,7 +54,7 @@ jobs:
         if: github.event_name != 'pull_request' 
         steps:
             - name: Download build artifacts
-              uses: actions/download-artifact@v2
+              uses: actions/download-artifact@v4
               id: download
               with:
                 path: ~/downloads
