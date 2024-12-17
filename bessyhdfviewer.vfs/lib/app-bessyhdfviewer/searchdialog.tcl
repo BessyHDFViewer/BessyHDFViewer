@@ -126,7 +126,9 @@ snit::widget SearchDialog {
 
 		set ncrit 1
 		$self CreateCriteriaWidgets
-		
+		$self Deserialize {{Comment contains SAXS}}
+		$self modeselect 0
+
 		if {$options(-parent) != {}} {
 			wm transient $win $options(-parent)
 		}
@@ -135,6 +137,7 @@ snit::widget SearchDialog {
 
 	method RunSearch {} {
 		set settings [$self Serialize]
+		puts "Hier > $settings <"
 		set criteria [lmap c $settings {$self AdjustCriterion $c}]
 
 		set count [BessyHDFViewer::SearchHDF $foldername $criteria $limit]
@@ -227,10 +230,10 @@ snit::widget SearchDialog {
 			if {$text ne ""} {
 				grid [ttk::label $frame.l$i -text $text] -column [expr {2*$i}] -row 0 -sticky nsew
 			}
-			set ent [ttk::entry $frame.e$i -width 6 -textvariable [myvar formdata(par,$ind,$i)]]
+			set ent [ttk::entry $frame.e$i -width 12 -textvariable [myvar formdata(par,$ind,$i)]]
 			bind $ent <Key-Return> [mymethod RunSearch]
 			grid $ent -column [expr {2*$i+1}] -row 0 -sticky nsew
-			
+			grid columnconfigure $frame $ent -weight 1
 			incr i
 		}
 	}
