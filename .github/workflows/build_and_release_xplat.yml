@@ -15,7 +15,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [macos-13, ubuntu-20.04, windows-2022]
+                os: [macos-13, ubuntu-22.04, windows-2022]
         steps:
             - name: checkout repo
               uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
               run: make winapp
 
             - name: Create Binary Linux
-              if: ${{ matrix.os == 'ubuntu-20.04' }}
+              if: ${{ matrix.os == 'ubuntu-22.04' }}
               run: make linuxapp
 
             - name: Create Binary macOS
