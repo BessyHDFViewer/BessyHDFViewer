@@ -73,6 +73,10 @@ namespace eval DataEvaluation {
 		# hard-coded popup menu for RefDivide
 		variable refdivbtn [dict get $commandbuttons RefDivide] 
 		$refdivbtn configure -optcallback [list ${ns}::RefDivide list]
+
+		# pop-up menu for SaveData
+		variable savedatabtn [dict get $commandbuttons SaveData]
+		$savedatabtn configure -values {{Save all in one} {Save individually}}
 	}
 
 	proc LoadPluginFromDir {pdir} {
@@ -863,40 +867,84 @@ namespace eval DataEvaluation {
 		$BessyHDFViewer::w(Graph) set key on
 	}
 
-	proc SaveData {} {
-		# prompt for file name and save 
-		# ASCII data of the plot
-		set filename [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
-			-defaultextension .dat \
-			-title "Select ASCII file for export"]
-		
-		if {$filename eq ""} { return }
+	proc SaveData {{menuindex 0}} {
 
-		set idx 0
-		set output {}
-		lappend output "# ASCII export from BessyHDFViewer"
-		lappend output "# xlabel: [$BessyHDFViewer::w(Graph) cget -xlabel]"
-		lappend output "# ylabel: [$BessyHDFViewer::w(Graph) cget -ylabel]"
+		# if menuindex==0, then we should save everything in one file
+		# otherwise, save it in separate files (with sanitized names)
+		if {$menuindex==0} {
+			set saveseparate false
+		} else {
+			set saveseparate true
+		}
+		
+		if {$saveseparate} {
+			# prompt for folder and save
+			# each ASCII data in a file with the corresponding title
+			set folderpath [tk_getDirectory -title "Select directory to export ASCII files" \
+				-filetypes { {{HDF files} {.hdf}} {{ASCII data files} {.dat}} {{All files} {*}}} ]
+			if {$folderpath == ""} { return }
+		} else {
+			# prompt for file name and save
+			# ASCII data of the plot
+			set filename [tk_getSaveFile -filetypes { {{ASCII data files} {.dat}} {{All files} {*}}} \
+				-defaultextension .dat \
+				-title "Select ASCII file for export"]
+			
+			if {$filename eq ""} { return }
+		}
+		
+
+		lappend header "# ASCII export from BessyHDFViewer"
+		lappend header "# xlabel: [$BessyHDFViewer::w(Graph) cget -xlabel]"
+		lappend header "# ylabel: [$BessyHDFViewer::w(Graph) cget -ylabel]"
+		
 		set plotids [$BessyHDFViewer::w(Graph) getdatasetids]
+		
+		set idx 0
+		dict set output $idx {}
 		foreach id $plotids {
 			set data [$BessyHDFViewer::w(Graph) getdata $id data]
 			set title [$BessyHDFViewer::w(Graph) getdata $id title]
 			
-			lappend output "# Dataset $idx"
-			lappend output "# $title"
-			lappend output "# [BessyHDFViewer::quotedjoin [list $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)]]"
+			dict set plottitles $idx $title
+			dict lappend output $idx "# Dataset $idx"
+			dict lappend output $idx "# $title"
+			dict lappend output $idx "# [BessyHDFViewer::quotedjoin [list $BessyHDFViewer::xformat(0) $BessyHDFViewer::yformat(0)]]"
 			foreach {x y} $data {
-				lappend output "$x $y"
+				dict lappend output $idx "$x $y"
 			}
-			lappend output "" ""
 			incr idx
 		}
 
-		set fd [open $filename w]
-		puts $fd [join $output \n]
-		close $fd
+		if {$saveseparate} {
+			for {set i 0} {$i < $idx} {incr i} {
+				set title [dict get $plottitles $i]
+				set filename [file join $folderpath [SanitizeFName $title]].dat
+				set content [dict get $output $i]
+
+				set fd [open $filename w]
+				puts $fd [join [concat $header $content] \n]
+				close $fd
+			}
+		} else {
+			set fd [open $filename w]
+			puts $fd [join $header \n]
+			for {set i 0} {$i < $idx} {incr i} {
+				set content [dict get $output $i]
+
+				puts $fd [join $content \n]
+				puts $fd "\n"
+			}
+
+			close $fd
+		}
 	}
 
+	proc SanitizeFName {fname} {
+		# replace all metacharacters by _
+		string map {/ _ : _ * _ \" _ \\ _ > _ < _ | _ ? _ \n _} $fname
+	}
+	
 	proc SavePDF {} {
 		set filename [tk_getSaveFile -filetypes { {{PDF files} {.pdf}} {{All files} {*}}} \
 			-defaultextension .pdf \
