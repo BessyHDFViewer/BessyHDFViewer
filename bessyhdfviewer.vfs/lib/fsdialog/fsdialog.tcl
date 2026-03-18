@@ -936,7 +936,10 @@ proc ::ttk::dialog::file::NewDirExit {w {save 0}} {
 	if {$save} {
 		set dir [lindex $data(history) $data(histpos)]
 		set newdir [truejoin $dir [$w.new.f.box get]]
-		if {[catch {file mkdir $newdir} err]} {
+		if {[catch {
+			file mkdir $newdir
+			file attributes $newdir -permissions 0775
+		} err]} {
 			tk_messageBox -type ok -parent $w.new -icon error -message "$err"
 			return
 		} else {
