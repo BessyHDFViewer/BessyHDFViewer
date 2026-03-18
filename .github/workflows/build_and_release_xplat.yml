@@ -15,10 +15,10 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [macos-13, ubuntu-22.04, windows-2022]
+                os: [macos-15-intel, ubuntu-22.04, windows-2022]
         steps:
             - name: checkout repo
-              uses: actions/checkout@v2
+              uses: actions/checkout@v5
               with:
                 submodules: recursive
             - name: Install git sdk
@@ -39,11 +39,11 @@ jobs:
               run: make linuxapp
 
             - name: Create Binary macOS
-              if: ${{ matrix.os == 'macos-13' }}
+              if: ${{ matrix.os == 'macos-15-intel' }}
               run: make macapp
               
             - name: upload result
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                 name: build-${{ matrix.os }}
                 path: dist/*
@@ -54,7 +54,7 @@ jobs:
         if: github.event_name != 'pull_request' 
         steps:
             - name: Download build artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               id: download
               with:
                 path: ~/downloads
